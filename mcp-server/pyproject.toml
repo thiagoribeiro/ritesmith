@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ritesmith-mcp"
+version = "0.1.0"
+description = "MCP server exposing RiteSmith tools and generation meta-tools to the Agent Core"
+requires-python = ">=3.12"
+dependencies = [
+    "mcp>=1.0",
+    "httpx>=0.28",
+    "ritesmith",          # installed from repo root (same venv)
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ritesmith_mcp"]

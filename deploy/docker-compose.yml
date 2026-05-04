@@ -1,0 +1,32 @@
+services:
+  ritesmith-migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: >
+      sh -c "alembic upgrade head"
+    env_file: .env
+    networks:
+      - deploy_default
+    restart: "no"
+
+  ritesmith:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: ritesmith
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    env_file: .env
+    volumes:
+      - /home/thiago/reports:/reports
+    networks:
+      - deploy_default
+    depends_on:
+      ritesmith-migrate:
+        condition: service_completed_successfully
+
+networks:
+  deploy_default:
+    external: true

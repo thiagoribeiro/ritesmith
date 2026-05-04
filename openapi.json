@@ -1,0 +1,2033 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RiteSmith API",
+    "version": "0.1.0",
+    "summary": "Capability-aware code and workflow generation engine.",
+    "description": "RiteSmith is a capability-aware generation engine for safe, reusable automation artifacts.\n\nIt can discover available tools/capabilities, search its memory/repository for reusable artifacts,\ngenerate Lua scripts, shell scripts, and Trama workflows, validate generated artifacts with\nguardrails, persist approved artifacts, and optionally delegate execution to external runtimes.\n\nRiteSmith is not just a storage service. It is the generator, reviewer, validator, catalog-aware\nplanner, and artifact repository.\n\nMain responsibilities:\n\n- discover available tools and providers\n- search reusable scripts/workflows from memory\n- generate Lua scripts\n- generate shell scripts\n- generate Trama workflows\n- compose scripts and workflows into executable plans\n- validate artifacts against guardrails\n- persist generated artifacts with metadata and audit trail\n- delegate execution to external runtimes when allowed\n\nSecurity model:\n\n- generation is not execution\n- execution requires explicit policy and runtime permission\n- dangerous capabilities require approval/policy checks\n- artifacts should be versioned, auditable, and reproducible\n"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8081",
+      "description": "Local development"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Capabilities"
+    },
+    {
+      "name": "Plans"
+    },
+    {
+      "name": "Artifacts"
+    },
+    {
+      "name": "Generation"
+    },
+    {
+      "name": "Validation"
+    },
+    {
+      "name": "Execution"
+    },
+    {
+      "name": "Memory"
+    },
+    {
+      "name": "Policies"
+    },
+    {
+      "name": "Providers"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "tags": [
+          "Capabilities"
+        ],
+        "summary": "List available capabilities",
+        "operationId": "listCapabilities",
+        "description": "Returns the capability catalog known by RiteSmith.\n\nCapabilities represent things RiteSmith may use when generating scripts or workflows,\nsuch as tool calls, HTTP providers, Trama workflow targets, local runtime functions,\nstorage providers, or notification providers.\n",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CapabilityKind"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/CapabilityStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capabilities.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/capabilities/{capabilityId}": {
+      "get": {
+        "tags": [
+          "Capabilities"
+        ],
+        "summary": "Get capability details",
+        "operationId": "getCapability",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CapabilityId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capability"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/providers/discover": {
+      "post": {
+        "tags": [
+          "Providers"
+        ],
+        "summary": "Discover capabilities from configured providers",
+        "operationId": "discoverProviders",
+        "description": "Refreshes capability metadata from configured providers.\n\nExamples:\n- tool discovery\n- Trama workflow endpoint discovery\n- HTTP provider catalog discovery\n- local runtime capability discovery\n",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderDiscoveryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Discovery started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderDiscoveryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/plans": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "summary": "Create a generation plan from user intent",
+        "operationId": "createPlan",
+        "description": "Main RiteSmith entrypoint.\n\nGiven a user intent, RiteSmith searches memory, discovers capabilities, proposes a plan,\ngenerates or reuses artifacts, validates them, and optionally persists them.\n\nA plan may produce:\n- Lua scripts\n- shell scripts\n- Trama workflow definitions\n- composed execution plans\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanRequest"
+              },
+              "examples": {
+                "bitcoin_drop_monitor": {
+                  "value": {
+                    "intent": "Notify me if Bitcoin drops 3% from its current price.",
+                    "requested_artifact_types": [
+                      "lua_script",
+                      "trama_workflow"
+                    ],
+                    "mode": "propose",
+                    "constraints": {
+                      "require_approval_for_execution": true,
+                      "allow_shell": false,
+                      "allow_network": true
+                    },
+                    "context": {
+                      "room_id": "room_personal"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plan created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/plans/{planId}": {
+      "get": {
+        "tags": [
+          "Plans"
+        ],
+        "summary": "Get plan details",
+        "operationId": "getPlan",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlanId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/plans/{planId}/approve": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "summary": "Approve a proposed plan",
+        "operationId": "approvePlan",
+        "description": "Approves a proposed plan. Approval may allow persistence, workflow creation,\nor execution depending on policy.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlanId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan approved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/plans/{planId}/reject": {
+      "post": {
+        "tags": [
+          "Plans"
+        ],
+        "summary": "Reject a proposed plan",
+        "operationId": "rejectPlan",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlanId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/plans/{planId}/artifacts": {
+      "post": {
+        "tags": [
+          "Plans",
+          "Artifacts"
+        ],
+        "summary": "Persist generated artifacts from a plan",
+        "operationId": "persistPlanArtifacts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlanId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersistArtifactsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Artifacts persisted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/generate/lua": {
+      "post": {
+        "tags": [
+          "Generation"
+        ],
+        "summary": "Generate a Lua script",
+        "operationId": "generateLuaScript",
+        "description": "Generates a Lua script from intent and capability context.\n\nThe script is validated against Lua guardrails before being returned.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateScriptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lua script generated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/generate/shell": {
+      "post": {
+        "tags": [
+          "Generation"
+        ],
+        "summary": "Generate a shell script",
+        "operationId": "generateShellScript",
+        "description": "Generates a shell script from intent and capability context.\n\nShell generation is high risk and should be disabled or approval-gated by default.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateScriptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Shell script generated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/generate/trama-workflow": {
+      "post": {
+        "tags": [
+          "Generation"
+        ],
+        "summary": "Generate a Trama workflow",
+        "operationId": "generateTramaWorkflow",
+        "description": "Generates a Trama workflow definition.\n\nRiteSmith may compose scripts, tool calls, sleep/loop patterns, switch nodes,\ncallbacks, and notification steps into a workflow.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateWorkflowRequest"
+              },
+              "examples": {
+                "bitcoin_drop_monitor": {
+                  "value": {
+                    "intent": "Monitor Bitcoin and notify if it drops 3%.",
+                    "target_runtime": "trama",
+                    "required_capabilities": [
+                      "crypto.get_price",
+                      "math.percentage_change",
+                      "notification.send"
+                    ],
+                    "constraints": {
+                      "polling_interval_seconds": 900,
+                      "require_approval_for_execution": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Trama workflow generated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/validate": {
+      "post": {
+        "tags": [
+          "Validation"
+        ],
+        "summary": "Validate an artifact",
+        "operationId": "validateArtifact",
+        "description": "Validates an artifact against syntax, capability, policy, and guardrail rules.\n\nValidation does not execute the artifact.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateArtifactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/artifacts": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Search artifacts",
+        "operationId": "searchArtifacts",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "artifact_type",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ArtifactType"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ArtifactStatus"
+            }
+          },
+          {
+            "name": "tags",
+            "in": "query",
+            "description": "Comma-separated tags.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching artifacts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Create an artifact manually",
+        "operationId": "createArtifact",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateArtifactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Artifact created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artifact"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/artifacts/{artifactId}": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Get artifact",
+        "operationId": "getArtifact",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ArtifactId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artifact.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artifact"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/artifacts/{artifactId}/versions": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "List artifact versions",
+        "operationId": "listArtifactVersions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ArtifactId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artifact versions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArtifactVersionListResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/artifacts/{artifactId}/versions/{version}": {
+      "get": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Get artifact version",
+        "operationId": "getArtifactVersion",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ArtifactId"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Artifact version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artifact"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/memory/search": {
+      "post": {
+        "tags": [
+          "Memory"
+        ],
+        "summary": "Search reusable memory/artifacts",
+        "operationId": "searchMemory",
+        "description": "Searches prior artifacts, reusable snippets, workflow templates, and capability notes.\n\nImplementations may use full-text search, embeddings, tags, metadata filters, or hybrid search.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemorySearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorySearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/executions": {
+      "post": {
+        "tags": [
+          "Execution"
+        ],
+        "summary": "Request artifact execution",
+        "operationId": "requestExecution",
+        "description": "Requests execution or delegation of an artifact.\n\nRiteSmith may execute only in an explicitly configured runtime, or delegate to a workflow/runtime system.\nExecution is policy-gated and may require approval.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExecutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Execution accepted or queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/executions/{executionId}": {
+      "get": {
+        "tags": [
+          "Execution"
+        ],
+        "summary": "Get execution status",
+        "operationId": "getExecution",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ExecutionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Execution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/policies/evaluate": {
+      "post": {
+        "tags": [
+          "Policies"
+        ],
+        "summary": "Evaluate policy for a proposed operation",
+        "operationId": "evaluatePolicy",
+        "description": "Evaluates whether an operation is allowed, denied, or approval-gated.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyEvaluationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy decision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyDecision"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque"
+      }
+    },
+    "parameters": {
+      "PlanId": {
+        "name": "planId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ArtifactId": {
+        "name": "artifactId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CapabilityId": {
+        "name": "capabilityId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ExecutionId": {
+        "name": "executionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Invalid request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing, invalid, expired, or revoked access token.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Operation is not allowed by policy or permissions.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict with current state.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactType": {
+        "type": "string",
+        "enum": [
+          "lua_script",
+          "shell_script",
+          "trama_workflow",
+          "workflow_template",
+          "prompt_template",
+          "capability_adapter",
+          "plan"
+        ]
+      },
+      "ArtifactStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "proposed",
+          "validated",
+          "approved",
+          "active",
+          "deprecated",
+          "rejected",
+          "archived"
+        ]
+      },
+      "PlanStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "proposed",
+          "validating",
+          "blocked",
+          "approved",
+          "rejected",
+          "persisted",
+          "executing",
+          "completed",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "GenerationMode": {
+        "type": "string",
+        "enum": [
+          "propose",
+          "generate",
+          "validate_only",
+          "persist",
+          "execute"
+        ]
+      },
+      "CapabilityKind": {
+        "type": "string",
+        "enum": [
+          "tool",
+          "provider",
+          "runtime",
+          "storage",
+          "notification",
+          "workflow_engine",
+          "script_function",
+          "catalog"
+        ]
+      },
+      "CapabilityStatus": {
+        "type": "string",
+        "enum": [
+          "available",
+          "unavailable",
+          "disabled",
+          "experimental",
+          "deprecated"
+        ]
+      },
+      "RiskLevel": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high",
+          "critical"
+        ]
+      },
+      "PolicyDecisionValue": {
+        "type": "string",
+        "enum": [
+          "allow",
+          "deny",
+          "require_approval"
+        ]
+      },
+      "Capability": {
+        "type": "object",
+        "required": [
+          "capability_id",
+          "name",
+          "kind",
+          "status"
+        ],
+        "properties": {
+          "capability_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CapabilityKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CapabilityStatus"
+          },
+          "description": {
+            "type": "string"
+          },
+          "input_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CapabilityListResponse": {
+        "type": "object",
+        "required": [
+          "capabilities"
+        ],
+        "properties": {
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderDiscoveryRequest": {
+        "type": "object",
+        "properties": {
+          "provider_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "force_refresh": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProviderDiscoveryResponse": {
+        "type": "object",
+        "required": [
+          "discovery_id",
+          "status"
+        ],
+        "properties": {
+          "discovery_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed"
+            ]
+          },
+          "capabilities_discovered": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanConstraints": {
+        "type": "object",
+        "properties": {
+          "allow_shell": {
+            "type": "boolean",
+            "default": false
+          },
+          "allow_network": {
+            "type": "boolean",
+            "default": true
+          },
+          "allow_filesystem": {
+            "type": "boolean",
+            "default": false
+          },
+          "allow_workflow_creation": {
+            "type": "boolean",
+            "default": true
+          },
+          "require_approval_for_execution": {
+            "type": "boolean",
+            "default": true
+          },
+          "max_runtime_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "polling_interval_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allowed_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "denied_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "CreatePlanRequest": {
+        "type": "object",
+        "required": [
+          "intent"
+        ],
+        "properties": {
+          "intent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requested_artifact_types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactType"
+            }
+          },
+          "mode": {
+            "$ref": "#/components/schemas/GenerationMode"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PlanConstraints"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "reuse_policy": {
+            "type": "string",
+            "enum": [
+              "prefer_reuse",
+              "force_new",
+              "reuse_or_generate"
+            ],
+            "default": "prefer_reuse"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Plan": {
+        "type": "object",
+        "required": [
+          "plan_id",
+          "status",
+          "intent",
+          "created_at"
+        ],
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanStatus"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanStep"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "validations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationResult"
+            }
+          },
+          "policy_decision": {
+            "$ref": "#/components/schemas/PolicyDecision"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PlanStep": {
+        "type": "object",
+        "required": [
+          "step_id",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "step_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "running",
+              "completed",
+              "failed",
+              "skipped",
+              "blocked"
+            ]
+          },
+          "artifact_id": {
+            "type": "string"
+          },
+          "capability_id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RejectionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PersistArtifactsRequest": {
+        "type": "object",
+        "properties": {
+          "artifact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArtifactStatus"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "GenerateScriptRequest": {
+        "type": "object",
+        "required": [
+          "intent"
+        ],
+        "properties": {
+          "intent": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "lua",
+              "shell"
+            ]
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PlanConstraints"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "save": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "GenerateWorkflowRequest": {
+        "type": "object",
+        "required": [
+          "intent"
+        ],
+        "properties": {
+          "intent": {
+            "type": "string"
+          },
+          "target_runtime": {
+            "type": "string",
+            "enum": [
+              "trama"
+            ],
+            "default": "trama"
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PlanConstraints"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "save": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "GeneratedArtifactResponse": {
+        "type": "object",
+        "required": [
+          "artifact",
+          "validation"
+        ],
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/Artifact"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationResult"
+          },
+          "reused": {
+            "type": "boolean",
+            "default": false
+          },
+          "source_artifact_id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidateArtifactRequest": {
+        "type": "object",
+        "required": [
+          "artifact_type",
+          "content"
+        ],
+        "properties": {
+          "artifact_type": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "content": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/PlanConstraints"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidationResult": {
+        "type": "object",
+        "required": [
+          "valid",
+          "checks"
+        ],
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationCheck"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ValidationCheck": {
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "warning",
+              "failed",
+              "skipped"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateArtifactRequest": {
+        "type": "object",
+        "required": [
+          "artifact_type",
+          "name",
+          "content"
+        ],
+        "properties": {
+          "artifact_type": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Artifact": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "artifact_type",
+          "name",
+          "version",
+          "status",
+          "content",
+          "created_at"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "artifact_type": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArtifactStatus"
+          },
+          "content": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "generated_by_plan_id": {
+            "type": "string"
+          },
+          "source_artifact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ValidationResult"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactListResponse": {
+        "type": "object",
+        "required": [
+          "artifacts"
+        ],
+        "properties": {
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArtifactVersionListResponse": {
+        "type": "object",
+        "required": [
+          "versions"
+        ],
+        "properties": {
+          "versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "MemorySearchRequest": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "artifact_types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArtifactType"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "search_mode": {
+            "type": "string",
+            "enum": [
+              "full_text",
+              "embeddings",
+              "hybrid"
+            ],
+            "default": "hybrid"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        },
+        "additionalProperties": false
+      },
+      "MemorySearchResponse": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemorySearchResult"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "MemorySearchResult": {
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "score"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number"
+          },
+          "artifact": {
+            "$ref": "#/components/schemas/Artifact"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateExecutionRequest": {
+        "type": "object",
+        "required": [
+          "artifact_id"
+        ],
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "runtime": {
+            "type": "string",
+            "enum": [
+              "lua_sandbox",
+              "shell_sandbox",
+              "trama"
+            ]
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          },
+          "approval_token": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "waiting",
+          "succeeded",
+          "failed",
+          "cancelled",
+          "rejected"
+        ]
+      },
+      "Execution": {
+        "type": "object",
+        "required": [
+          "execution_id",
+          "artifact_id",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "execution_id": {
+            "type": "string"
+          },
+          "artifact_id": {
+            "type": "string"
+          },
+          "artifact_version": {
+            "type": "integer"
+          },
+          "runtime": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionStatus"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "output": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "error": {
+            "type": "string"
+          },
+          "delegated_execution_id": {
+            "type": "string",
+            "description": "External runtime execution id, for example a Trama execution id."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finished_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PolicyEvaluationRequest": {
+        "type": "object",
+        "required": [
+          "operation"
+        ],
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "generate",
+              "persist",
+              "execute",
+              "discover",
+              "delegate"
+            ]
+          },
+          "artifact_type": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "capability_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk_level": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PolicyDecision": {
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/PolicyDecisionValue"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "required_approvals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blocked_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
