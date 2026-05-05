@@ -1,11 +1,13 @@
 import time
 from dataclasses import dataclass
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.observability.metrics import fts_search_duration, fts_search_results
 from ritesmith.registry.models import Artifact, ArtifactVersion
+
+_EXCLUDED_STATUSES = {"deprecated", "archived", "rejected"}
 
 
 @dataclass
@@ -49,6 +51,13 @@ async def fts_search(
         stmt = stmt.where(Artifact.tags.contains(tags))
     if status:
         stmt = stmt.where(Artifact.status == status)
+    else:
+        stmt = stmt.where(Artifact.status.not_in(_EXCLUDED_STATUSES))
+
+    # Exclude expired artifacts
+    stmt = stmt.where(
+        or_(Artifact.expires_at.is_(None), Artifact.expires_at > func.now())
+    )
 
     artifact_type_label = (artifact_types[0] if artifact_types and len(artifact_types) == 1 else "mixed")
     t0 = time.perf_counter()

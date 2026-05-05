@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     # Obsidian vault
     obsidian_vault_path: str | None = None        # RITESMITH_OBSIDIAN_VAULT_PATH
 
+    # Artifact lifecycle
+    artifact_ttl_days: int = 30                   # RITESMITH_ARTIFACT_TTL_DAYS (0 = no TTL)
+
     # Reports
     reports_path: str | None = None               # RITESMITH_REPORTS_PATH (e.g. /home/thiago/reports)
 

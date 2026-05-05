@@ -1,16 +1,19 @@
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ritesmith.config import get_settings
 from ritesmith.core.exceptions import InvalidTransitionError, NotFoundError
 from ritesmith.core.ids import generate_id
 from ritesmith.registry.models import Artifact, ArtifactVersion, Capability
 
+_TTL_TYPES = {"lua_script", "trama_workflow"}
+
 # Legal status transitions
 _ALLOWED_TRANSITIONS: dict[str, set[str]] = {
-    "draft": {"proposed", "validated", "rejected", "archived"},
+    "draft": {"proposed", "validated", "rejected", "archived", "deprecated"},
     "proposed": {"validated", "approved", "rejected", "archived"},
     "validated": {"approved", "active", "deprecated", "archived"},
     "approved": {"active", "deprecated", "archived"},
@@ -46,6 +49,12 @@ class RegistryService:
     ) -> tuple[Artifact, ArtifactVersion]:
         artifact_id = generate_id("art")
         content_hash = hashlib.sha256(content.encode()).hexdigest()
+        now = datetime.now(UTC)
+
+        expires_at: datetime | None = None
+        ttl = get_settings().artifact_ttl_days
+        if ttl > 0 and artifact_type in _TTL_TYPES:
+            expires_at = now + timedelta(days=ttl)
 
         artifact = Artifact(
             artifact_id=artifact_id,
@@ -57,6 +66,7 @@ class RegistryService:
             tags=tags,
             content_hash=content_hash,
             generated_by_plan_id=generated_by_plan_id,
+            expires_at=expires_at,
         )
         version = ArtifactVersion(
             artifact_id=artifact_id,

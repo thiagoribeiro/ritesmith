@@ -31,6 +31,7 @@ class Artifact(Base):
     content_hash: Mapped[str | None] = mapped_column(Text)
     generated_by_plan_id: Mapped[str | None] = mapped_column(Text)
     search_vector: Mapped[str | None] = mapped_column(TSVECTOR)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -39,6 +40,7 @@ class Artifact(Base):
     __table_args__ = (
         Index("artifacts_search_vector_gin", "search_vector", postgresql_using="gin"),
         Index("artifacts_type_status_idx", "artifact_type", "status"),
+        Index("artifacts_expires_at_idx", "expires_at"),
     )
 
 
@@ -140,7 +142,7 @@ class GenerationJob(Base):
     output_schema: Mapped[dict | None] = mapped_column(JSONB)
     constraints: Mapped[dict | None] = mapped_column(JSONB)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    final_artifact_id: Mapped[str | None] = mapped_column(Text)
+    final_artifact_id: Mapped[str | None] = mapped_column(Text, index=True)
     plan_id: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -25,14 +25,24 @@ from ritesmith.core.exceptions import NotFoundError, RiteSmithError
 from ritesmith.observability.metrics import execution_duration, execution_status_total
 from ritesmith.core.ids import generate_id
 from ritesmith.core.policy import PolicyEngine
-from ritesmith.registry.models import Execution as ExecutionORM
+from ritesmith.registry.models import Execution as ExecutionORM, GenerationJob
 from ritesmith.registry.service import RegistryService
 from ritesmith.runtime.lua import LuaScriptRuntime
 from ritesmith.schemas.execution import CreateExecutionRequest, Execution, ExecutionStatus
+from ritesmith.schemas.generation import GenerateScriptRequest, ScriptConstraints
 from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationRequest
 
 
 log = logging.getLogger(__name__)
+
+_CRASH_PREFIXES = ("Runtime error:", "Syntax/load error:")
+
+
+def _is_contract_crash(error_json: dict | None) -> bool:
+    if not error_json:
+        return False
+    msg = error_json.get("message", "")
+    return any(msg.startswith(p) for p in _CRASH_PREFIXES)
 
 
 class ExecutionService:
@@ -196,6 +206,8 @@ class ExecutionService:
         elif result.error:
             exec_orm.status = ExecutionStatus.failed
             exec_orm.error_json = {"message": result.error}
+            if _is_contract_crash(exec_orm.error_json):
+                await self._deprecate_and_regen(exec_orm.artifact_id, version_orm)
         else:
             exec_orm.status = ExecutionStatus.succeeded
             exec_orm.output_json = result.output
@@ -207,6 +219,45 @@ class ExecutionService:
                 "execution.completed", "execution", exec_orm.execution_id,
                 payload={"status": exec_orm.status, "duration_ms": result.duration_ms},
             )
+
+    async def _deprecate_and_regen(self, artifact_id: str, version_orm) -> None:
+        try:
+            await self.registry.update_artifact_status(artifact_id, "deprecated")
+            log.warning("artifact deprecated after runtime crash: %s", artifact_id)
+        except Exception:
+            log.warning("could not deprecate crashed artifact %s", artifact_id, exc_info=True)
+        asyncio.create_task(self._background_regen(artifact_id, version_orm))
+
+    async def _background_regen(self, artifact_id: str, version_orm) -> None:
+        from ritesmith.core.generation import GenerationService
+        from ritesmith.llm.openai_provider import OpenAIProvider
+        from ritesmith.storage.postgres import AsyncSessionLocal
+
+        job_row = await self.db.execute(
+            select(GenerationJob).where(GenerationJob.final_artifact_id == artifact_id)
+        )
+        job = job_row.scalar_one_or_none()
+        if not job:
+            log.warning("no GenerationJob found for crashed artifact %s, skipping regen", artifact_id)
+            return
+
+        profile = (version_orm.metadata_ or {}).get("runtime_profile", "transform_only")
+        req = GenerateScriptRequest(
+            intent=job.goal,
+            save=True,
+            constraints=ScriptConstraints(
+                runtime_profile=profile,
+                reuse_policy="force_new",
+            ),
+        )
+
+        try:
+            async with AsyncSessionLocal() as fresh_db:
+                llm = OpenAIProvider(self.settings)
+                await GenerationService(fresh_db, llm, self.settings).generate_lua(req)
+            log.info("background regen succeeded for crashed artifact %s", artifact_id)
+        except Exception:
+            log.error("background regen failed for crashed artifact %s", artifact_id, exc_info=True)
 
     async def _run_workflow(self, exec_orm: ExecutionORM, content: str, input_data: dict | None) -> None:
         import json
