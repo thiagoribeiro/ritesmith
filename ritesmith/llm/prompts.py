@@ -228,7 +228,7 @@ Two node kinds are supported: "task" and "switch".
       "url": "https://api.example.com/resource",
       "verb": "POST",           // GET | POST | PUT | PATCH | DELETE
       "body": {
-        "field": "{{ execution.input.field }}"
+        "field": "{{ payload.field }}"
       }
     },
     "successStatusCodes": [200, 201]
@@ -236,7 +236,7 @@ Two node kinds are supported: "task" and "switch".
   "compensation": {             // optional — only if the call has a rollback
     "url": "https://api.example.com/resource/rollback",
     "verb": "POST",
-    "body": { "id": "{{ execution.input.id }}" }
+    "body": { "id": "{{ payload.id }}" }
   },
   "next": "<next_node_id>"      // or "end" to finish the workflow
 }
@@ -248,7 +248,7 @@ Two node kinds are supported: "task" and "switch".
   "cases": [
     {
       "name": "<case_name>",
-      "when": { "==": [{ "var": "execution.input.type" }, "premium"] },
+      "when": { "==": [{ "var": "payload.type" }, "premium"] },
       "target": "<node_id_for_this_case>"
     }
   ],
@@ -266,7 +266,7 @@ synchronously but delivers the result asynchronously via callback:
     "url": "https://payments.example.com/authorize",
     "verb": "POST",
     "body": {
-      "orderId": "{{ execution.input.orderId }}",
+      "orderId": "{{ payload.orderId }}",
       "callbackUrl": "{{ runtime.callback.url }}",
       "callbackToken": "{{ runtime.callback.token }}"
     }
@@ -282,45 +282,63 @@ synchronously but delivers the result asynchronously via callback:
 TEMPLATE SYNTAX  ({{ ... }})
 ------------------------------
 Available variables in request bodies and conditions:
-  execution.input.<field>            — workflow input data
-  nodes.<nodeId>.response.body.<f>   — output of a previous task node
-  nodes.<nodeId>.request.body.<f>    — request body of a previous node
+  payload.<field>                    — workflow input data (e.g. payload.threshold)
+  nodes.<nodeId>.response.body.<f>   — LATEST result of node <nodeId> across ALL iterations
+  nodes.<nodeId>.request.body.<f>    — request body sent to node <nodeId>
+  step.<N>.body.<field>              — result of the Nth completed task (N as string: "0","1",...)
+  step.<name>.body.<field>           — same as nodes.<name>.response.body.<field>
+  steps                              — ordered list of all historical step results
+  prev.body.<field>                  — last completed step's output
   callback.body.<field>              — payload of an incoming async callback
-  runtime.callback.url               — auto-generated callback URL (async mode)
-  runtime.callback.token             — HMAC-secured callback token
+  runtime.callback.url               — auto-generated callback URL (async mode only)
+  runtime.callback.token             — HMAC-secured callback token (async mode only)
 
 JSON-LOGIC  (used in switch.cases[].when, callback.successWhen, callback.failureWhen)
 --------------------------------------------------------------------------------------
 Use standard json-logic operators: ==, !=, >, <, >=, <=, and, or, !, in, var
-Example: { "==": [{ "var": "execution.input.status" }, "active"] }
+Example: { "==": [{ "var": "payload.status" }, "active"] }
+In switch conditions, nodes.<id>.response.body.<f> is also available via var.
 
-FINITE POLLING LOOP  (monitoring / recurrent workflows)
---------------------------------------------------------
-When the intent involves repeated checking — "monitor every N minutes", "poll until",
-"watch for", "alert if", "check up to N times" — you MUST use the finite polling loop
-pattern below. Do NOT generate a single-pass workflow for monitoring intents.
+STATE PERSISTENCE AND CROSS-NODE DATA FLOW
+-------------------------------------------
+Step results propagate to all subsequent nodes within the same execution — no sleep
+required between nodes for data wiring. {{ nodes.X.response.body.* }} in node Y
+correctly reflects X's output as long as X ran before Y in the execution graph.
 
-REQUIRED: add "max_iterations": <int> at the workflow root level.
-The Trama execution engine uses this to bound the loop; RiteSmith's validator
-allows the back-edge only when this field is present.
+Sleep nodes serve ONE purpose: introducing real time delays between actions (e.g.
+"wait 5 minutes then check again"). They are NOT needed for data passing.
+
+For LOOPS: after a sleep, the next iteration starts fresh. A node can reference its
+OWN previous iteration's output via nodes.itself.response.body.* — this resolves to
+the result stored from the PREVIOUS iteration (null on first run). This is the
+"self-referential state" pattern for carrying aggregate state across iterations.
+
+PATTERN A — SELF-REFERENTIAL LOOP  (aggregate tracking, condition-based termination)
+-------------------------------------------------------------------------------------
+Use when: "monitor every N minutes", "poll until condition", "track running min/max",
+"check up to N times". Do NOT generate a single-pass workflow for these intents.
+
+REQUIRED: add "max_iterations": <int> at the workflow root level so RiteSmith's
+validator allows the back-edge. Trama itself does NOT use this value for anything.
 
 Trama has a native SLEEP node kind:
   {"id": "<id>", "kind": "sleep", "durationSeconds": <N>, "next": "<next_node_id>"}
 Use this — do NOT fake a sleep with a task calling sleep.internal.
 
-Canonical node structure:
-  1. fetch_node  — task that retrieves the monitored value
-  2. check_node  — switch with TWO cases:
-       case A: business condition met  → action_node  → "end"
-       case B: loop exhausted         → "end"
-               when: {">=": [{"var": "execution.loop_count"}, <max_iterations>]}
-       default: sleep_node
-  3. action_node — task that fires when the condition is met (alert, notify, etc.)
-  4. sleep_node  — kind: "sleep"; its "next" points BACK to fetch_node  ← intentional loop
+Structure:
+  1. fetch_node  — task: retrieves current value via capability
+  2. track_node  — task (Lua artifact): receives current value from fetch_node AND reads
+                   its OWN prior output (nodes.track_node.response.body.*) for prev state;
+                   computes new aggregate; returns { ..., iteration: N }
+  3. check_node  — switch: reads CURRENT iteration's track_node result
+       case "done":  target → send_result  (N reached or business condition met)
+       default:      sleep_node
+  4. send_result — task: sends notification, references track_node's current result
+  5. sleep_node  — kind: "sleep"; next → fetch_node  ← intentional loop back-edge
 
-COMPLETE EXAMPLE — Bitcoin price monitor using /trama/execute (poll every 5 min, max 6 times):
+COMPLETE EXAMPLE — ETH price monitor (track minimum, check every 5 min, 6 times):
 {
-  "name": "bitcoin_price_monitor",
+  "name": "eth_price_monitor",
   "version": "2.0.0",
   "entrypoint": "fetch_price",
   "max_iterations": 6,
@@ -337,9 +355,31 @@ COMPLETE EXAMPLE — Bitcoin price monitor using /trama/execute (poll every 5 mi
             "Authorization": "Bearer __TRAMA_TOKEN__",
             "Content-Type": "application/json"
           },
+          "body": { "capability_name": "crypto.eth_price", "input": {} }
+        },
+        "successStatusCodes": [200]
+      },
+      "next": "track_min"
+    },
+    {
+      "id": "track_min",
+      "kind": "task",
+      "action": {
+        "mode": "sync",
+        "request": {
+          "url": "__RS_BASE_URL__/trama/execute",
+          "verb": "POST",
+          "headers": {
+            "Authorization": "Bearer __TRAMA_TOKEN__",
+            "Content-Type": "application/json"
+          },
           "body": {
-            "capability_name": "market.bitcoin_price",
-            "input": {}
+            "artifact_id": "<lua_tracker_artifact_id>",
+            "input": {
+              "current_price": "{{ nodes.fetch_price.response.body.output.price }}",
+              "prev_min":      "{{ nodes.track_min.response.body.output.min_price }}",
+              "prev_iter":     "{{ nodes.track_min.response.body.output.iteration }}"
+            }
           }
         },
         "successStatusCodes": [200]
@@ -351,24 +391,15 @@ COMPLETE EXAMPLE — Bitcoin price monitor using /trama/execute (poll every 5 mi
       "kind": "switch",
       "cases": [
         {
-          "name": "price_dropped_3pct",
-          "when": {"<=": [
-            {"/": [{"var": "nodes.fetch_price.response.body.output.price"},
-                   {"var": "execution.input.initial_price"}]},
-            0.97
-          ]},
-          "target": "send_alert"
-        },
-        {
-          "name": "loop_exhausted",
-          "when": {">=": [{"var": "execution.loop_count"}, 6]},
-          "target": "end"
+          "name": "done",
+          "when": { ">=": [{ "var": "nodes.track_min.response.body.output.iteration" }, 6] },
+          "target": "send_result"
         }
       ],
       "default": "sleep"
     },
     {
-      "id": "send_alert",
+      "id": "send_result",
       "kind": "task",
       "action": {
         "mode": "sync",
@@ -382,7 +413,7 @@ COMPLETE EXAMPLE — Bitcoin price monitor using /trama/execute (poll every 5 mi
           "body": {
             "capability_name": "telegram.send",
             "input": {
-              "text": "BTC dropped 3%+ — current: {{ nodes.fetch_price.response.body.output.price }}"
+              "text": "ETH monitor done (6 checks). Min: ${{ nodes.track_min.response.body.output.min_price }}"
             }
           }
         },
@@ -399,17 +430,39 @@ COMPLETE EXAMPLE — Bitcoin price monitor using /trama/execute (poll every 5 mi
   ]
 }
 
+The Lua tracker artifact (track_min) handles null prev state on first iteration:
+  function run(input, context)
+    local price     = tonumber(tostring(input.current_price)) or 0
+    local prev_min  = tonumber(tostring(input.prev_min  or ""))
+    local prev_iter = tonumber(tostring(input.prev_iter or 0)) or 0
+    local new_min   = prev_min and math.min(prev_min, price) or price
+    return { min_price = new_min, iteration = prev_iter + 1, last_price = price }
+  end
+
+PATTERN B — LINEAR MULTI-FETCH  (collect exactly N samples, then compute)
+--------------------------------------------------------------------------
+Use when: "sample every N minutes for M minutes" with a fixed count, or "fetch from
+N sources and aggregate". Simpler than Pattern A — no loops, no back-edges.
+
+Structure:
+  fetch_1 → sleep_1 → fetch_2 → sleep_2 → ... → fetch_N → compute → notify → end
+
+The compute node references nodes.fetch_1.response.body.output.<field> through
+nodes.fetch_N.*. No max_iterations needed. No self-referential state needed.
+
 WIRING ANTI-PATTERNS TO AVOID
 ------------------------------
+- Do NOT use "execution.input.*" — the correct variable is "payload.*"
+- Do NOT use "execution.loop_count" — this variable does not exist in Trama
 - Do NOT put HTTP calls inside switch cases — the switch chooses a target node,
   and THAT node performs the call.
 - Do NOT make a switch node the entrypoint unless you have no initial task.
-- Do NOT create unintentional cycles — only the polling loop back-edge (sleep→fetch) is allowed,
-  and only when "max_iterations" is declared at the root.
+- Do NOT create back-edges (loops) without "max_iterations" at root — the validator
+  will reject with "Cycle detected".
 - Do NOT leave "next" pointing to a non-existent node id.
 - Every switch MUST have a "default" — never rely on all cases being exhaustive.
 - The last task node in every non-looping path MUST have "next": "end".
-- For polling loops, the sleep node MUST have "next" pointing to the fetch node, NOT "end".
+- For polling loops (Pattern A), the sleep node MUST point back to the fetch node.
 - Do NOT use a task node to simulate sleep — use kind: "sleep" with durationSeconds."""
 
 
@@ -464,12 +517,12 @@ GENERATION RULES
 - Every node id must be unique within the definition
 - Every "next" and switch "target" / "default" must reference an existing node id
 - The "entrypoint" must reference an existing node id
-- Use "{{{{ execution.input.<field> }}}}" to pass workflow input into request bodies
+- Use "{{{{ payload.<field> }}}}" to pass workflow input into request bodies
 - Use "{{{{ nodes.<id>.response.body.<field> }}}}" to wire outputs between nodes
 - Add "compensation" only when the HTTP call creates state that can be rolled back
 - Keep the definition focused: one purpose, minimum necessary nodes
-- For monitoring/polling intents: ALWAYS add "max_iterations" at the root and use the
-  finite polling loop pattern with a sleep node whose "next" points back to the fetch node
+- For monitoring/polling intents: ALWAYS use Pattern A (self-referential loop) or Pattern B
+  (linear multi-fetch); add "max_iterations" at root for Pattern A to allow the back-edge
 
 Respond with valid JSON matching the schema in the user message — nothing else."""
 
