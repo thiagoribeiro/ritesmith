@@ -17,21 +17,21 @@ class HttpWorkflowEngineAdapter(WorkflowEngineAdapter):
         definition: dict,
         input_data: dict | None = None,
     ) -> str:
-        payload = {"definition": definition, "input": input_data or {}}
+        payload = {"definition": definition, "payload": input_data or {}}
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = client.post(
-                f"{self.base_url}/workflows/execute",
+            resp = await client.post(
+                f"{self.base_url}/workflows/run",
                 json=payload,
                 headers=self.headers,
             )
             resp.raise_for_status()
             data = resp.json()
-            return data["execution_id"]
+            return data["id"]
 
     async def get_status(self, external_execution_id: str) -> dict:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = client.get(
-                f"{self.base_url}/workflows/executions/{external_execution_id}",
+            resp = await client.get(
+                f"{self.base_url}/workflows/{external_execution_id}",
                 headers=self.headers,
             )
             resp.raise_for_status()

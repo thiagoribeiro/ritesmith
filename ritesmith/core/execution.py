@@ -270,15 +270,26 @@ class ExecutionService:
         except Exception:
             definition = content
 
-        # Without a real Trama URL configured, store as delegated
-        delegated_id = generate_id("trama")
-        exec_orm.delegated_execution_id = delegated_id
-        exec_orm.status = ExecutionStatus.waiting
-        exec_orm.finished_at = None
-
-        if self.audit:
-            await self.audit.log_event("execution.delegated", "execution", exec_orm.execution_id,
-                                       payload={"delegated_id": delegated_id})
+        if self.settings.workflow_delegation_enabled and self.settings.workflow_engine_url:
+            from ritesmith.core.delegation import DelegationService
+            from ritesmith.workflows.adapters.http_workflow_engine import HttpWorkflowEngineAdapter
+            adapter = HttpWorkflowEngineAdapter(self.settings.workflow_engine_url)
+            delegation = DelegationService(adapter)
+            delegated_id = await delegation.delegate(definition, input_data)
+            exec_orm.delegated_execution_id = delegated_id
+            exec_orm.status = ExecutionStatus.waiting
+            exec_orm.finished_at = None
+            if self.audit:
+                await self.audit.log_event("execution.delegated", "execution", exec_orm.execution_id,
+                                           payload={"delegated_id": delegated_id, "engine": self.settings.workflow_engine_url})
+        else:
+            delegated_id = generate_id("trama")
+            exec_orm.delegated_execution_id = delegated_id
+            exec_orm.status = ExecutionStatus.waiting
+            exec_orm.finished_at = None
+            if self.audit:
+                await self.audit.log_event("execution.delegated", "execution", exec_orm.execution_id,
+                                           payload={"delegated_id": delegated_id})
 
     async def _find_by_idempotency_key(self, key: str) -> ExecutionORM | None:
         result = await self.db.execute(
