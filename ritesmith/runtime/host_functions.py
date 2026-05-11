@@ -146,9 +146,10 @@ PROFILES: dict[str, set[str]] = {
     "filesystem_write":  {"transform_only", "filesystem_write"},
     "reporting":         {"transform_only", "readonly_network", "analytics_local",
                           "filesystem_write", "notification"},
+    "side_effects":      {"transform_only", "readonly_network", "side_effects"},
     "trusted_internal":  {"transform_only", "readonly_network", "notification",
                           "sensitive_personal", "analytics_local", "filesystem_write",
-                          "trusted_internal"},
+                          "trusted_internal", "side_effects"},
 }
 
 

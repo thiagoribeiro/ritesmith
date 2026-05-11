@@ -22,6 +22,7 @@ class IntentAnalysis(BaseModel):
     requires_workflow: bool = False
     requires_network: bool = False
     requires_filesystem: bool = False
+    requires_side_effects: bool = False
     domain: str = "general"
     suggested_name: str = "unnamed_capability"
     summary: str = ""

@@ -55,6 +55,7 @@ _ALLOWED_TRANSITIONS: dict[PlanStatus, set[PlanStatus]] = {
     PlanStatus.approved:  {PlanStatus.persisted, PlanStatus.executing, PlanStatus.failed},
     PlanStatus.persisted: {PlanStatus.executing, PlanStatus.completed, PlanStatus.failed},
     PlanStatus.executing: {PlanStatus.completed, PlanStatus.failed},
+    PlanStatus.failed:    {PlanStatus.superseded},
 }
 
 
@@ -246,7 +247,12 @@ class PlanBuilder:
         artifact_type: str,
         intent_analysis,
     ) -> tuple[PlanStep, Artifact | None, ValidationResult | None]:
-        runtime_profile = "readonly_network" if intent_analysis.requires_network else "transform_only"
+        if getattr(intent_analysis, "requires_side_effects", False) and self.settings.casp_providers:
+            runtime_profile = "trusted_internal"
+        elif intent_analysis.requires_network:
+            runtime_profile = "readonly_network"
+        else:
+            runtime_profile = "transform_only"
 
         # Try reuse first
         if req.reuse_policy != ReusePolicy.force_new:
@@ -356,6 +362,44 @@ class PlanBuilder:
             await self.audit.log_event("plan.rejected", "plan", plan_id, payload={"reason": req.reason})
         await self.db.commit()
         return await self._orm_to_schema(plan_orm)
+
+    async def replan(self, failed_plan_id: str, failure_reason: str) -> Plan | None:
+        """Create a successor plan when execution fails.
+
+        Returns None if the re-plan budget is exhausted — caller should surface
+        the failure to the user instead of retrying.
+        """
+        failed_orm = await self._get_orm(failed_plan_id)
+        context = failed_orm.context or {}
+        replan_count = context.get("replan_count", 0)
+
+        if replan_count >= self.settings.casp_max_replan_attempts:
+            return None
+
+        self._assert_transition(failed_orm, PlanStatus.superseded)
+        failed_orm.status = PlanStatus.superseded
+        failed_orm.updated_at = datetime.now(UTC)
+        await self.db.flush()
+
+        if self.audit:
+            await self.audit.log_event(
+                "plan.superseded", "plan", failed_plan_id,
+                payload={"reason": failure_reason, "replan_count": replan_count},
+            )
+
+        new_context = {
+            **context,
+            "replan_of": failed_plan_id,
+            "replan_count": replan_count + 1,
+            "previous_failure": failure_reason,
+        }
+        new_plan = await self.build_plan(CreatePlanRequest(
+            intent=failed_orm.intent,
+            context=new_context,
+            reuse_policy=ReusePolicy.force_new,
+        ))
+        await self.db.commit()
+        return new_plan
 
     async def persist_artifacts(self, plan_id: str) -> Plan:
         plan_orm = await self._get_orm(plan_id)

@@ -1,8 +1,6 @@
 services:
   ritesmith-migrate:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+    image: ritesmith:latest
     command: >
       sh -c "alembic upgrade head"
     env_file: .env
@@ -11,14 +9,16 @@ services:
     restart: "no"
 
   ritesmith:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+    image: ritesmith:latest
     container_name: ritesmith
     restart: unless-stopped
     ports:
       - "8081:8081"
     env_file: .env
+    environment:
+      RITESMITH_LOOMHARBOR_URL: "http://loomharbor:8000"
+      RITESMITH_WORKFLOW_DELEGATION_ENABLED: "true"
+      RITESMITH_LUA_TIMEOUT_MS: "15000"
     volumes:
       - /home/thiago/reports:/reports
     networks:

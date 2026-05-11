@@ -1,0 +1,29 @@
+name: Deploy to r2d2
+
+on:
+  push:
+    branches: [r2d2]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, r2d2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t ritesmith:latest .
+
+      - name: Migrate + deploy
+        run: |
+          cp deploy/docker-compose.yml /home/thiago/ritesmith/deploy/docker-compose.yml
+          cd /home/thiago/ritesmith/deploy
+          docker compose run --rm ritesmith-migrate
+          docker compose up -d --no-deps ritesmith
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 12); do
+            curl -sf http://localhost:8081/health && exit 0
+            sleep 5
+          done
+          exit 1

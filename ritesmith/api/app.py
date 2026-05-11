@@ -11,7 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ritesmith.api.limiter import limiter
-from ritesmith.api.routes import artifacts, capabilities, executions, generations, health, memory, plans, policies, providers, trama, validation
+from ritesmith.api.routes import admin, artifacts, capabilities, executions, generations, health, memory, plans, policies, providers, trama, validation
 from ritesmith.core.exceptions import RiteSmithError
 from ritesmith.observability.metrics import http_request_duration, http_requests_total
 from ritesmith.storage.postgres import get_db
@@ -28,6 +28,25 @@ async def _lifespan(app: FastAPI):
             break
     except Exception as e:
         log.warning("Provider registration failed at startup: %s", e)
+
+    # CASP migration check — warn if persisted Lua artifacts still use home.*
+    try:
+        from ritesmith.registry.search import fts_search
+        async for db in get_db():
+            results = await fts_search(db, "home.", artifact_types=["lua_script"], limit=10)
+            home_count = sum(
+                1 for r in results
+                if r.version and r.version.content and "home." in r.version.content
+            )
+            if home_count:
+                log.warning(
+                    "CASP MIGRATION: %d artifact(s) still use home.* — migrate to casp.*. "
+                    "Check /admin/casp/migration-status for details.",
+                    home_count,
+                )
+            break
+    except Exception as e:
+        log.debug("CASP migration check skipped: %s", e)
     yield
     # Graceful shutdown: drain Lua executor and release DB pool
     log.info("shutdown: draining Lua sandbox executor")
@@ -96,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(policies.router)
     app.include_router(providers.router)
     app.include_router(trama.router)
+    app.include_router(admin.router)
 
     app.mount("/metrics", make_asgi_app())
 

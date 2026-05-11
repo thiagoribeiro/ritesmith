@@ -168,6 +168,7 @@ RULES
   - Use trama_workflow whenever the goal requires: sequential service calls,
     conditional branching, async callbacks, polling, or human approvals
   - requires_network = true if any HTTP call is needed
+  - requires_side_effects = true if the script controls physical devices, sends messages, or mutates external state
   - Set suggested_name in snake_case domain.verb format (e.g. "payments.process_refund")
 
 Respond with valid JSON matching the schema in the user message — nothing else."""

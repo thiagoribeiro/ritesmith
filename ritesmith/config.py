@@ -1,6 +1,14 @@
 from functools import lru_cache
 
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class CASPProviderConfig(BaseModel):
+    url: str
+    resource_types: list[str] = []  # empty = handles all types
+    weight: int = 100
+    priority: int = 0               # lower = tried first
 
 
 class Settings(BaseSettings):
@@ -72,6 +80,17 @@ class Settings(BaseSettings):
     # Trama integration
     public_url: str | None = None                 # RITESMITH_PUBLIC_URL (e.g. http://ritesmith:8081)
     trama_token: str | None = None                # RITESMITH_TRAMA_TOKEN (shared secret for /trama/execute)
+
+    # LoomHarbor integration (legacy home.* provider)
+    loomharbor_url: str | None = None             # RITESMITH_LOOMHARBOR_URL (e.g. http://loomharbor:8000)
+    loomharbor_secret: str | None = None          # RITESMITH_LOOMHARBOR_SECRET (Bearer token for LoomHarbor API)
+
+    # CASP providers — JSON array of CASPProviderConfig objects
+    # e.g. RITESMITH_CASP_PROVIDERS='[{"url":"http://loomharbor:8000"}]'
+    casp_providers: list[CASPProviderConfig] = []
+
+    # CASP re-planning
+    casp_max_replan_attempts: int = 2
 
 
 @lru_cache

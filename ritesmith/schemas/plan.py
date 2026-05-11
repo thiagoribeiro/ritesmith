@@ -18,6 +18,7 @@ class PlanStatus(StrEnum):
     completed = "completed"
     failed = "failed"
     cancelled = "cancelled"
+    superseded = "superseded"  # replaced by a re-plan
 
 
 class GenerationMode(StrEnum):
@@ -89,6 +90,7 @@ class CreatePlanRequest(BaseModel):
     reuse_policy: ReusePolicy = ReusePolicy.prefer_reuse
     constraints: PlanConstraints | None = None
     context: dict | None = None
+    replan_budget: int = Field(default=2, ge=0, le=5)
 
 
 class ApprovePlanRequest(BaseModel):
