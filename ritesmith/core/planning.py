@@ -247,7 +247,9 @@ class PlanBuilder:
         artifact_type: str,
         intent_analysis,
     ) -> tuple[PlanStep, Artifact | None, ValidationResult | None]:
-        if getattr(intent_analysis, "requires_side_effects", False) and self.settings.casp_providers:
+        if self.settings.casp_providers:
+            # CASP configured: always trusted_internal so casp.* host functions are available.
+            # The LLM uses them only when the intent involves device control.
             runtime_profile = "trusted_internal"
         elif intent_analysis.requires_network:
             runtime_profile = "readonly_network"

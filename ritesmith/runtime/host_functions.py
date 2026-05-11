@@ -133,6 +133,11 @@ _register(
 )
 
 
+# CASP host functions (casp.query, casp.resolve, casp.execute)
+# Registered under 'trusted_internal' profile — must import after _register is defined.
+from ritesmith.runtime.casp import host_bridge as _casp_bridge  # noqa: F401, E402
+
+
 # ------------------------------------------------------------------
 # API pública
 # ------------------------------------------------------------------

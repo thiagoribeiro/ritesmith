@@ -47,6 +47,28 @@ AVAILABLE HOST FUNCTION SIGNATURES
   http.post_json(url: string, body: table) -> table
   http.request(method: string, url: string, headers: table|nil, body: table|nil) -> table
 
+HOME DEVICE CONTROL (only when profile = trusted_internal)
+  casp.query(resource_type: string, filters: table, capability: string) -> table
+    -- Returns {resources: [{id, type, displayName, metadata}]} or {error, message}
+    -- Use when user refers to a room or area: filters = {room="cozinha"}
+    -- resource_type: "smart-switch" | "presence-sensor" | "ac-unit"
+    -- capability: "turn-on" | "turn-off" | "state" | "check"
+
+  casp.resolve(resource_type: string, capability: string, hint: string) -> table
+    -- Returns {status="resolved", resource={id,type,displayName}} or {status="ambiguous", candidates=[...]}
+    -- Use when user names a specific device: hint = "led do painel"
+
+  casp.execute(resource_id: string, resource_type: string, capability: string, input: table) -> table
+    -- Returns {status="ok"} or {status="failed", errorCode, error}
+    -- resource_id comes from casp.query or casp.resolve
+
+CASP SELECTION RULES
+  - casp.query when user says a room/area ("cozinha", "sala", "varanda")
+  - casp.resolve when user names a specific device ("led do painel", "ventilador da suite")
+  - Always check result.status or result.error before calling casp.execute
+  - For query: iterate result.resources and call casp.execute for each
+  - For resolve: only call casp.execute if result.status == "resolved"
+
 ERROR HANDLING CONVENTION
   On recoverable error, return a table with an "error" field:
     return {error = "not_found", message = "item does not exist"}
