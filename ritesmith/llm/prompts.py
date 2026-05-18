@@ -350,9 +350,9 @@ Use this — do NOT fake a sleep with a task calling sleep.internal.
 
 Structure:
   1. fetch_node  — task: retrieves current value via capability
-  2. track_node  — task (Lua artifact): receives current value from fetch_node AND reads
-                   its OWN prior output (nodes.track_node.response.body.*) for prev state;
-                   computes new aggregate; returns { ..., iteration: N }
+  2. track_node  — task (stat.min_value or stat.max_value capability): receives current value
+                   from fetch_node AND reads its OWN prior output for prev state;
+                   computes new aggregate; returns { min_value/max_value, iteration, last_value }
   3. check_node  — switch: reads CURRENT iteration's track_node result
        case "done":  target → send_result  (N reached or business condition met)
        default:      sleep_node
@@ -397,11 +397,11 @@ COMPLETE EXAMPLE — ETH price monitor (track minimum, check every 5 min, 6 time
             "Content-Type": "application/json"
           },
           "body": {
-            "artifact_id": "<lua_tracker_artifact_id>",
+            "capability_name": "stat.min_value",
             "input": {
-              "current_price": "{{ nodes.fetch_price.response.body.output.price }}",
-              "prev_min":      "{{ nodes.track_min.response.body.output.min_price }}",
-              "prev_iter":     "{{ nodes.track_min.response.body.output.iteration }}"
+              "current":      "{{ nodes.fetch_price.response.body.output.price }}",
+              "previous_min": "{{ nodes.track_min.response.body.output.min_value }}",
+              "iteration":    "{{ nodes.track_min.response.body.output.iteration }}"
             }
           }
         },
@@ -436,7 +436,7 @@ COMPLETE EXAMPLE — ETH price monitor (track minimum, check every 5 min, 6 time
           "body": {
             "capability_name": "telegram.send",
             "input": {
-              "text": "ETH monitor done (6 checks). Min: ${{ nodes.track_min.response.body.output.min_price }}"
+              "text": "ETH monitor done (6 checks). Min: ${{ nodes.track_min.response.body.output.min_value }}"
             }
           }
         },
@@ -453,15 +453,6 @@ COMPLETE EXAMPLE — ETH price monitor (track minimum, check every 5 min, 6 time
   ]
 }
 
-The Lua tracker artifact (track_min) handles null prev state on first iteration:
-  function run(input, context)
-    local price     = tonumber(tostring(input.current_price)) or 0
-    local prev_min  = tonumber(tostring(input.prev_min  or ""))
-    local prev_iter = tonumber(tostring(input.prev_iter or 0)) or 0
-    local new_min   = prev_min and math.min(prev_min, price) or price
-    return { min_price = new_min, iteration = prev_iter + 1, last_price = price }
-  end
-
 PATTERN B — LINEAR MULTI-FETCH  (collect exactly N samples, then compute)
 --------------------------------------------------------------------------
 Use when: "sample every N minutes for M minutes" with a fixed count, or "fetch from
@@ -472,6 +463,127 @@ Structure:
 
 The compute node references nodes.fetch_1.response.body.output.<field> through
 nodes.fetch_N.*. No max_iterations needed. No self-referential state needed.
+
+PATTERN C — CRON CHAIN  (unbounded periodic execution via workflow chaining)
+------------------------------------------------------------------------------
+Use when: "forever", "indefinitely", "until manually stopped", "keep monitoring".
+A single workflow cannot loop without bound — max_iterations must be ≤ 20 for stability.
+For unbounded tasks: run MAX_PER_CHAIN (= 20) iterations, then spawn the next chain via
+POST /plans, passing the accumulated state as context.continuation.
+
+The next plan receives the state as Trama payload. Access it via {{ payload.continuation.* }}.
+Use initial_min / initial_max / initial_state to seed stat capabilities from the payload
+on the first iteration of a continuation chain (when self-referential output is still null).
+
+Structure (20-iteration chain):
+  1. fetch_node   — retrieves current value
+  2. track_node   — stat.min_value with initial_min: "{{ payload.continuation.previous_min }}"
+  3. check_node   — switch:
+       case "chain":  iteration >= 20 → spawn_next
+       default:       sleep_node
+  4. sleep_node   — kind: "sleep"; next → fetch_node  (back-edge)
+  5. spawn_next   — POST __RS_BASE_URL__/plans with body carrying context.continuation state
+  6. next → "end" on spawn_next (auto-rewired to rs_complete by RiteSmith)
+  max_iterations: 20 at root (required for validator to accept back-edge)
+
+COMPLETE EXAMPLE — ETH price monitor (indefinite, track global minimum):
+{
+  "name": "eth_price_monitor_infinite",
+  "version": "2.0.0",
+  "entrypoint": "fetch_price",
+  "max_iterations": 20,
+  "nodes": [
+    {
+      "id": "fetch_price",
+      "kind": "task",
+      "action": {
+        "mode": "sync",
+        "request": {
+          "url": "__RS_BASE_URL__/trama/execute",
+          "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": { "capability_name": "market.coin_price", "input": { "symbol": "eth" } }
+        },
+        "successStatusCodes": [200]
+      },
+      "next": "track"
+    },
+    {
+      "id": "track",
+      "kind": "task",
+      "action": {
+        "mode": "sync",
+        "request": {
+          "url": "__RS_BASE_URL__/trama/execute",
+          "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": {
+            "capability_name": "stat.min_value",
+            "input": {
+              "current":      "{{ nodes.fetch_price.response.body.output.price }}",
+              "previous_min": "{{ nodes.track.response.body.output.min_value }}",
+              "initial_min":  "{{ payload.continuation.previous_min }}",
+              "iteration":    "{{ nodes.track.response.body.output.iteration }}"
+            }
+          }
+        },
+        "successStatusCodes": [200]
+      },
+      "next": "check"
+    },
+    {
+      "id": "check",
+      "kind": "switch",
+      "cases": [
+        {
+          "name": "chain",
+          "when": { ">=": [{ "var": "nodes.track.response.body.output.iteration" }, 20] },
+          "target": "spawn_next"
+        }
+      ],
+      "default": "sleep"
+    },
+    {
+      "id": "spawn_next",
+      "kind": "task",
+      "action": {
+        "mode": "sync",
+        "request": {
+          "url": "__RS_BASE_URL__/plans",
+          "verb": "POST",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "intent": "monitor ETH price indefinitely every 5 minutes, track the global minimum",
+            "mode": "execute",
+            "replan_budget": 0,
+            "context": {
+              "continuation": {
+                "previous_min": "{{ nodes.track.response.body.output.min_value }}"
+              }
+            }
+          }
+        },
+        "successStatusCodes": [200, 201]
+      },
+      "next": "end"
+    },
+    {
+      "id": "sleep",
+      "kind": "sleep",
+      "durationSeconds": 300,
+      "next": "fetch_price"
+    }
+  ]
+}
+
+CRITICAL for Pattern C:
+- spawn_next body.intent MUST be identical to the original plan intent for artifact reuse
+  (avoids LLM regeneration on every chain — same workflow artifact is reused)
+- replan_budget: 0 prevents recursive re-planning loops
+- context.continuation carries only the fields needed by the next chain
+- The next execution receives continuation as Trama payload: {{ payload.continuation.* }}
+- stat.min_value uses initial_min (from payload) to seed on first iteration of continuation;
+  on subsequent iterations within the chain, previous_min (self-referential) takes over
 
 WIRING ANTI-PATTERNS TO AVOID
 ------------------------------
@@ -533,9 +645,6 @@ Reference output fields as: nodes.<id>.response.body.output.<field>
 AVAILABLE PROVIDER CAPABILITIES (use capability_name):
 {provider_caps}
 
-For registered Lua capabilities (listed in the user message), use artifact_id instead of capability_name:
-  Body: {{"artifact_id": "<id>", "input": {{...}}}}
-
 GENERATION RULES
 - Every node id must be unique within the definition
 - Every "next" and switch "target" / "default" must reference an existing node id
@@ -546,6 +655,8 @@ GENERATION RULES
 - Keep the definition focused: one purpose, minimum necessary nodes
 - For monitoring/polling intents: ALWAYS use Pattern A (self-referential loop) or Pattern B
   (linear multi-fetch); add "max_iterations" at root for Pattern A to allow the back-edge
+- For unbounded/indefinite/forever intents: ALWAYS use Pattern C (cron chain); max_iterations
+  MUST be exactly 20; spawn_next intent must match original for reuse
 
 Respond with valid JSON matching the schema in the user message — nothing else."""
 

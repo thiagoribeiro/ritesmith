@@ -13,10 +13,12 @@ from ritesmith.runtime.providers.loomharbor import LoomHarborProvider
 from ritesmith.runtime.providers.market import MarketProvider
 from ritesmith.runtime.providers.obsidian import ObsidianProvider
 from ritesmith.runtime.providers.reports import ReportsProvider
+from ritesmith.runtime.providers.stat import StatProvider
 from ritesmith.runtime.providers.telegram import TelegramProvider
 from ritesmith.runtime.providers.web import WebProvider
 
 PROVIDERS: list[ToolProvider] = [
+    StatProvider(),
     ContextProvider(),
     WebProvider(),
     MarketProvider(),

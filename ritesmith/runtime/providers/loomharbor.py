@@ -136,6 +136,26 @@ def _sensor(target: str) -> dict:
     return result or state
 
 
+def _gps_location(device: str) -> dict:
+    """Return cached GPS location for a FindTag tracker device."""
+    return _execute("gps.location", device)
+
+
+def _findtag_zone_add(name: str, query: str = "") -> dict:
+    """Add a geofence zone by place name. query is sent to Nominatim for polygon resolution."""
+    return _execute("gps.zone_add", "findtag", {"name": name, "query": query or None})
+
+
+def _findtag_zone_delete(zone_id: str) -> dict:
+    """Soft-delete a geofence zone by its ID."""
+    return _execute("gps.zone_delete", "findtag", {"zone_id": zone_id})
+
+
+def _findtag_zone_list() -> dict:
+    """List all geofence zones (active and soft-deleted)."""
+    return _execute("gps.zone_list", "findtag")
+
+
 # ---------------------------------------------------------------------------
 # Async wrappers for MCP tools
 # ---------------------------------------------------------------------------
@@ -159,6 +179,22 @@ async def _async_state(**kwargs) -> dict:
 
 async def _async_capabilities(**kwargs) -> list:
     return await asyncio.to_thread(_list_capabilities)
+
+
+async def _async_gps_location(**kwargs) -> dict:
+    return await asyncio.to_thread(_gps_location, kwargs["device"])
+
+
+async def _async_findtag_zone_add(**kwargs) -> dict:
+    return await asyncio.to_thread(_findtag_zone_add, kwargs["name"], kwargs.get("query", ""))
+
+
+async def _async_findtag_zone_delete(**kwargs) -> dict:
+    return await asyncio.to_thread(_findtag_zone_delete, kwargs["zone_id"])
+
+
+async def _async_findtag_zone_list(**kwargs) -> dict:
+    return await asyncio.to_thread(_findtag_zone_list)
 
 
 class LoomHarborProvider(ToolProvider):
@@ -239,6 +275,59 @@ class LoomHarborProvider(ToolProvider):
                 callable=_sensor,
                 description="Read presence or battery sensor state",
             ),
+            "home.gps_location": HostFunctionDef(
+                name="home.gps_location",
+                profile="readonly_network",
+                callable=_gps_location,
+                description=(
+                    "Return the cached GPS location for a FindTag tracker. "
+                    "Returns: lat, lon, address, zones_active, moving, last_seen_ago_s, battery_level."
+                ),
+                input_schema={
+                    "type": "object",
+                    "required": ["device"],
+                    "properties": {
+                        "device": {"type": "string", "description": "Tracker alias, e.g. 'mochila'"},
+                    },
+                },
+            ),
+            "home.findtag_zone_add": HostFunctionDef(
+                name="home.findtag_zone_add",
+                profile="side_effects",
+                callable=_findtag_zone_add,
+                description=(
+                    "Add a geofence zone. Provide a human-readable name and a query string "
+                    "for Nominatim to resolve into a polygon (e.g. 'Shopping Iguatemi Campinas SP'). "
+                    "Returns the created zone with its generated ID."
+                ),
+                input_schema={
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {"type": "string", "description": "Zone display name"},
+                        "query": {"type": "string", "description": "Place name for Nominatim polygon search"},
+                    },
+                },
+            ),
+            "home.findtag_zone_delete": HostFunctionDef(
+                name="home.findtag_zone_delete",
+                profile="side_effects",
+                callable=_findtag_zone_delete,
+                description="Soft-delete a geofence zone by its ID (reversible).",
+                input_schema={
+                    "type": "object",
+                    "required": ["zone_id"],
+                    "properties": {
+                        "zone_id": {"type": "string", "description": "ID returned by findtag_zone_list or findtag_zone_add"},
+                    },
+                },
+            ),
+            "home.findtag_zone_list": HostFunctionDef(
+                name="home.findtag_zone_list",
+                profile="readonly_network",
+                callable=_findtag_zone_list,
+                description="List all geofence zones including soft-deleted ones.",
+            ),
         }
 
     def mcp_tools(self) -> list[MCPToolDef]:
@@ -295,5 +384,56 @@ class LoomHarborProvider(ToolProvider):
                 description="List all available home automation capabilities by adapter.",
                 input_schema={"type": "object", "properties": {}},
                 fn=_async_capabilities,
+            ),
+            MCPToolDef(
+                name="home_gps_location",
+                description=(
+                    "Get the current GPS location of a FindTag tracker. "
+                    "Returns lat, lon, address, active geofence zones, movement status, "
+                    "and seconds since last update."
+                ),
+                input_schema={
+                    "type": "object",
+                    "required": ["device"],
+                    "properties": {
+                        "device": {"type": "string", "description": "Tracker alias, e.g. 'mochila'"},
+                    },
+                },
+                fn=_async_gps_location,
+            ),
+            MCPToolDef(
+                name="home_findtag_zone_add",
+                description=(
+                    "Add a geofence zone for GPS tracking. "
+                    "Nominatim resolves the query into a real polygon (neighborhood, building, etc.). "
+                    "Examples: query='Parque Taquaral Campinas', query='Shopping Iguatemi Campinas SP'."
+                ),
+                input_schema={
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                        "name": {"type": "string", "description": "Display name for the zone"},
+                        "query": {"type": "string", "description": "Place name to resolve via Nominatim"},
+                    },
+                },
+                fn=_async_findtag_zone_add,
+            ),
+            MCPToolDef(
+                name="home_findtag_zone_delete",
+                description="Soft-delete a geofence zone by ID. Use home_findtag_zone_list to find the ID first.",
+                input_schema={
+                    "type": "object",
+                    "required": ["zone_id"],
+                    "properties": {
+                        "zone_id": {"type": "string"},
+                    },
+                },
+                fn=_async_findtag_zone_delete,
+            ),
+            MCPToolDef(
+                name="home_findtag_zone_list",
+                description="List all geofence zones, including soft-deleted ones (deleted_at is set when inactive).",
+                input_schema={"type": "object", "properties": {}},
+                fn=_async_findtag_zone_list,
             ),
         ]

@@ -35,6 +35,7 @@ from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, V
 from ritesmith.schemas.generation import GenerateScriptRequest, GenerateWorkflowRequest, ScriptConstraints
 from ritesmith.schemas.plan import (
     ApprovePlanRequest,
+    CompletePlanRequest,
     CreatePlanRequest,
     GenerationMode,
     Plan,
@@ -49,10 +50,26 @@ from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationReques
 
 _REUSE_SCORE_THRESHOLD = 0.05
 
+
+async def _fire_callback(callback_url: str, plan_id: str, status: str, summary: str | None) -> None:
+    import httpx
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            await client.post(callback_url, json={
+                "plan_id": plan_id,
+                "status": status,
+                "summary": summary or "",
+            })
+        log.info("plan.callback fired plan=%s status=%s", plan_id, status)
+    except Exception as exc:
+        log.warning("plan.callback failed plan=%s: %s", plan_id, exc)
+
 _ALLOWED_TRANSITIONS: dict[PlanStatus, set[PlanStatus]] = {
     PlanStatus.draft:     {PlanStatus.proposed, PlanStatus.blocked},
     PlanStatus.proposed:  {PlanStatus.approved, PlanStatus.rejected, PlanStatus.blocked},
-    PlanStatus.approved:  {PlanStatus.persisted, PlanStatus.executing, PlanStatus.failed},
+    PlanStatus.approved:  {PlanStatus.persisted, PlanStatus.executing, PlanStatus.completed, PlanStatus.failed},
     PlanStatus.persisted: {PlanStatus.executing, PlanStatus.completed, PlanStatus.failed},
     PlanStatus.executing: {PlanStatus.completed, PlanStatus.failed},
     PlanStatus.failed:    {PlanStatus.superseded},
@@ -211,6 +228,7 @@ class PlanBuilder:
             steps=[s.model_dump() for s in steps],
             artifact_ids=artifact_ids if artifact_ids else None,
             policy_decision=aggregate_policy.model_dump() if aggregate_policy else None,
+            callback_url=req.callback_url,
             created_at=now,
             updated_at=now,
         )
@@ -363,6 +381,27 @@ class PlanBuilder:
         if self.audit:
             await self.audit.log_event("plan.rejected", "plan", plan_id, payload={"reason": req.reason})
         await self.db.commit()
+        return await self._orm_to_schema(plan_orm)
+
+    async def complete_plan(self, plan_id: str, req: CompletePlanRequest) -> Plan:
+        import asyncio
+        plan_orm = await self._get_orm(plan_id)
+        target = PlanStatus.completed if req.status == "completed" else PlanStatus.failed
+        self._assert_transition(plan_orm, target)
+        plan_orm.status = target
+        plan_orm.updated_at = datetime.now(UTC)
+        if req.summary:
+            plan_orm.summary = req.summary
+        await self.db.flush()
+        if self.audit:
+            await self.audit.log_event(f"plan.{req.status}", "plan", plan_id)
+        await self.db.commit()
+
+        if plan_orm.callback_url:
+            asyncio.create_task(_fire_callback(
+                plan_orm.callback_url, plan_id, req.status, plan_orm.summary
+            ))
+
         return await self._orm_to_schema(plan_orm)
 
     async def replan(self, failed_plan_id: str, failure_reason: str) -> Plan | None:

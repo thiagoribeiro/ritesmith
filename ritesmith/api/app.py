@@ -11,7 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ritesmith.api.limiter import limiter
-from ritesmith.api.routes import admin, artifacts, capabilities, executions, generations, health, memory, plans, policies, providers, trama, validation
+from ritesmith.api.routes import admin, artifacts, capabilities, executions, generations, health, memory, plans, policies, providers, search, trama, validation
 from ritesmith.core.exceptions import RiteSmithError
 from ritesmith.observability.metrics import http_request_duration, http_requests_total
 from ritesmith.storage.postgres import get_db
@@ -114,6 +114,7 @@ def create_app() -> FastAPI:
     app.include_router(executions.router)
     app.include_router(policies.router)
     app.include_router(providers.router)
+    app.include_router(search.router)
     app.include_router(trama.router)
     app.include_router(admin.router)
 

@@ -265,6 +265,7 @@ class ExecutionService:
             content = content.replace("__TRAMA_TOKEN__", self.settings.trama_token)
         if self.settings.public_url:
             content = content.replace("__RS_BASE_URL__", self.settings.public_url)
+        content = content.replace("__RS_PLAN_ID__", exec_orm.plan_id or "")
         try:
             definition = json.loads(content)
         except Exception:

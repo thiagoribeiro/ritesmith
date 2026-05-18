@@ -30,6 +30,49 @@ from ritesmith.workflows.validator import WorkflowValidator
 
 log = logging.getLogger(__name__)
 
+_COMPLETION_NODE_ID = "rs_complete"
+
+
+def _inject_completion_step(definition: dict) -> dict:
+    """Append an rs_complete task node and rewire terminal nodes ('next': 'end') to it."""
+    nodes = definition.get("nodes")
+    if not isinstance(nodes, list):
+        return definition
+
+    # Already injected
+    if any(n.get("id") == _COMPLETION_NODE_ID for n in nodes):
+        return definition
+
+    # Rewire all nodes whose next is "end" to rs_complete
+    for node in nodes:
+        if node.get("next") == "end":
+            node["next"] = _COMPLETION_NODE_ID
+        # Switch nodes: rewire default and case targets that point to "end"
+        if node.get("kind") == "switch":
+            if node.get("default") == "end":
+                node["default"] = _COMPLETION_NODE_ID
+            for case in node.get("cases", []):
+                if case.get("target") == "end":
+                    case["target"] = _COMPLETION_NODE_ID
+
+    completion_node = {
+        "id": _COMPLETION_NODE_ID,
+        "kind": "task",
+        "action": {
+            "mode": "sync",
+            "request": {
+                "verb": "POST",
+                "url": "__RS_BASE_URL__/plans/__RS_PLAN_ID__/complete",
+                "headers": {"Content-Type": "application/json"},
+                "body": {"status": "completed"},
+            },
+            "successStatusCodes": [200],
+        },
+        "next": "end",
+    }
+    nodes.append(completion_node)
+    return definition
+
 
 class WorkflowGenerationService:
     def __init__(
@@ -181,6 +224,10 @@ class WorkflowGenerationService:
         else:
             if not req.save:
                 await self.db.rollback()
+
+        # Inject completion step so RiteSmith is notified when the workflow finishes
+        if last_definition and plan_id:
+            last_definition = _inject_completion_step(last_definition)
 
         # 7. Build response
         if artifact_orm and artifact_version_orm:

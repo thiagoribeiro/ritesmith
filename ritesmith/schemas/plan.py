@@ -91,6 +91,12 @@ class CreatePlanRequest(BaseModel):
     constraints: PlanConstraints | None = None
     context: dict | None = None
     replan_budget: int = Field(default=2, ge=0, le=5)
+    callback_url: str | None = None
+
+
+class CompletePlanRequest(BaseModel):
+    status: str = "completed"  # "completed" or "failed"
+    summary: str | None = None
 
 
 class ApprovePlanRequest(BaseModel):

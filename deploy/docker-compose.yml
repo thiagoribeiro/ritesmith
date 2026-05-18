@@ -21,6 +21,7 @@ services:
       RITESMITH_LUA_TIMEOUT_MS: "15000"
     volumes:
       - /home/thiago/reports:/reports
+      - /home/thiago/findtag:/findtag:ro
     networks:
       - deploy_default
     depends_on:
