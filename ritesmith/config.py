@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     artifact_ttl_days: int = 30                   # RITESMITH_ARTIFACT_TTL_DAYS (0 = no TTL)
 
     # Reports
-    reports_path: str | None = None               # RITESMITH_REPORTS_PATH (e.g. /home/thiago/reports)
+    reports_path: str | None = None               # RITESMITH_REPORTS_PATH (e.g. /path/to/reports)
 
     # Trama integration
     public_url: str | None = None                 # RITESMITH_PUBLIC_URL (e.g. http://ritesmith:8081)
@@ -91,6 +91,11 @@ class Settings(BaseSettings):
 
     # CASP re-planning
     casp_max_replan_attempts: int = 2
+
+    # Grafana + Prometheus
+    grafana_url: str = "http://localhost:3000"    # RITESMITH_GRAFANA_URL
+    grafana_token: str | None = None              # RITESMITH_GRAFANA_TOKEN (service account token)
+    prometheus_url: str = "http://localhost:9090" # RITESMITH_PROMETHEUS_URL
 
 
 @lru_cache
