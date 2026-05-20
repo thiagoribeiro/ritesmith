@@ -19,6 +19,7 @@ env/
 
 # Environment / secrets
 .env
+deploy/.env
 *.env.local
 
 # Pytest / coverage

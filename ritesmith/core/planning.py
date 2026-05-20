@@ -50,11 +50,30 @@ from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationReques
 
 _REUSE_SCORE_THRESHOLD = 0.05
 
+_PRIVATE_URL_PREFIXES = (
+    "http://localhost", "https://localhost",
+    "http://127.", "https://127.",
+    "http://10.", "https://10.",
+    "http://172.16.", "https://172.16.",
+    "http://192.168.", "https://192.168.",
+    "http://0.0.0.0", "https://0.0.0.0",
+    "http://[::1]", "https://[::1]",
+)
+
+
+def _is_safe_callback_url(url: str) -> bool:
+    return url.startswith(("http://", "https://")) and not any(
+        url.startswith(p) for p in _PRIVATE_URL_PREFIXES
+    )
+
 
 async def _fire_callback(callback_url: str, plan_id: str, status: str, summary: str | None) -> None:
     import httpx
     import logging
     log = logging.getLogger(__name__)
+    if not _is_safe_callback_url(callback_url):
+        log.warning("plan.callback blocked unsafe url plan=%s url=%r", plan_id, callback_url)
+        return
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             await client.post(callback_url, json={
@@ -363,9 +382,6 @@ class PlanBuilder:
         plan_orm.approved_at = datetime.now(UTC)
         plan_orm.updated_at = datetime.now(UTC)
 
-        # Persist any draft artifacts that belong to this plan
-        await self._persist_draft_artifacts(plan_orm)
-
         await self.db.flush()
         if self.audit:
             await self.audit.log_event("plan.approved", "plan", plan_id, payload={"comment": req.comment})
@@ -444,7 +460,6 @@ class PlanBuilder:
 
     async def persist_artifacts(self, plan_id: str) -> Plan:
         plan_orm = await self._get_orm(plan_id)
-        await self._persist_draft_artifacts(plan_orm)
         plan_orm.status = PlanStatus.persisted
         plan_orm.updated_at = datetime.now(UTC)
         await self.db.flush()
@@ -469,10 +484,6 @@ class PlanBuilder:
             raise InvalidTransitionError(
                 f"Cannot transition plan from '{current}' to '{target}'"
             )
-
-    async def _persist_draft_artifacts(self, plan_orm: PlanORM) -> None:
-        """Persists draft artifacts referenced in plan steps that were not yet saved."""
-        pass
 
     async def _orm_to_schema(self, plan_orm: PlanORM) -> Plan:
         steps = [PlanStep(**s) for s in (plan_orm.steps or [])]

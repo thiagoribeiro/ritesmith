@@ -20,6 +20,11 @@ router = APIRouter(prefix="/plans", tags=["plans"])
 log = logging.getLogger(__name__)
 
 
+def _log_task_error(task: asyncio.Task) -> None:
+    if not task.cancelled() and (exc := task.exception()):
+        log.error("background_task_failed task=%s: %s", task.get_name(), exc, exc_info=exc)
+
+
 async def _auto_execute(artifact_id: str, plan_id: str) -> None:
     """Fire-and-forget: run artifact via ExecutionService with a fresh DB session."""
     try:
@@ -65,7 +70,8 @@ async def create_plan(
     if req.mode == GenerationMode.execute and plan.status == PlanStatus.approved:
         for artifact in plan.artifacts:
             if artifact.artifact_id:
-                asyncio.create_task(_auto_execute(artifact.artifact_id, plan.plan_id))
+                t = asyncio.create_task(_auto_execute(artifact.artifact_id, plan.plan_id))
+                t.add_done_callback(_log_task_error)
     return plan
 
 

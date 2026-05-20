@@ -226,7 +226,11 @@ class ExecutionService:
             log.warning("artifact deprecated after runtime crash: %s", artifact_id)
         except Exception:
             log.warning("could not deprecate crashed artifact %s", artifact_id, exc_info=True)
-        asyncio.create_task(self._background_regen(artifact_id, version_orm))
+        t = asyncio.create_task(self._background_regen(artifact_id, version_orm))
+        t.add_done_callback(lambda task: (
+            log.error("background_regen failed artifact=%s: %s", artifact_id, task.exception(), exc_info=task.exception())
+            if not task.cancelled() and task.exception() else None
+        ))
 
     async def _background_regen(self, artifact_id: str, version_orm) -> None:
         from ritesmith.core.generation import GenerationService

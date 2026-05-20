@@ -16,12 +16,10 @@ services:
       - "8081:8081"
     env_file: .env
     environment:
-      RITESMITH_LOOMHARBOR_URL: "http://loomharbor:8000"
-      RITESMITH_WORKFLOW_DELEGATION_ENABLED: "true"
       RITESMITH_LUA_TIMEOUT_MS: "15000"
     volumes:
-      - /home/thiago/reports:/reports
-      - /home/thiago/findtag:/findtag:ro
+      - ${RITESMITH_REPORTS_PATH:-./data/reports}:/reports
+      - ${RITESMITH_FINDTAG_PATH:-./data/findtag}:/findtag:ro
     networks:
       - deploy_default
     depends_on:

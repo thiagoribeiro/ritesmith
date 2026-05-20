@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -8,7 +10,10 @@ from ritesmith.api.app import create_app
 from ritesmith.registry.models import Base
 from ritesmith.storage.postgres import get_db
 
-TEST_DB_URL = "postgresql+asyncpg://nanochat:nanochat@localhost:5432/ritesmith_test"
+TEST_DB_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://ritesmith:ritesmith@localhost:5432/ritesmith_test",
+)
 
 _TRIGGER_FN = text("""
     CREATE OR REPLACE FUNCTION artifacts_search_vector_update()

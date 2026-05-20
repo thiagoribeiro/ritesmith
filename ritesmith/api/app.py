@@ -11,6 +11,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ritesmith.api.limiter import limiter
+from ritesmith.api.mcp_handler import mcp_app
 from ritesmith.api.routes import admin, artifacts, capabilities, executions, generations, health, memory, plans, policies, providers, search, trama, validation
 from ritesmith.core.exceptions import RiteSmithError
 from ritesmith.observability.metrics import http_request_duration, http_requests_total
@@ -20,8 +21,19 @@ from ritesmith.storage.postgres import get_db
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     from ritesmith.core.provider_registration import register_all_providers
+    from ritesmith.config import get_settings
+    from ritesmith.schemas.policy import PolicyDecisionValue
     import logging
     log = logging.getLogger(__name__)
+
+    # Validate policy_default at startup to catch misconfiguration early
+    try:
+        PolicyDecisionValue(get_settings().policy_default)
+    except ValueError:
+        raise RuntimeError(
+            f"Invalid RITESMITH_POLICY_DEFAULT={get_settings().policy_default!r}. "
+            f"Must be one of: {[v.value for v in PolicyDecisionValue]}"
+        )
     try:
         async for db in get_db():
             await register_all_providers(db)
@@ -117,6 +129,10 @@ def create_app() -> FastAPI:
     app.include_router(search.router)
     app.include_router(trama.router)
     app.include_router(admin.router)
+
+    # MCP sub-app mounted outside the middleware stack to avoid BaseHTTPMiddleware
+    # conflicts with SSE streaming (which uses raw ASGI send).
+    app.mount("/mcp", mcp_app)
 
     app.mount("/metrics", make_asgi_app())
 

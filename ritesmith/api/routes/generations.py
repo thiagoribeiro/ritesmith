@@ -1,10 +1,7 @@
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
 
 from ritesmith.api.limiter import limiter
 from ritesmith.api.deps import get_generation_dispatcher, get_generation_service, get_workflow_generation_service
-from ritesmith.config import Settings, get_settings
-from ritesmith.core.exceptions import PolicyDeniedError
 from ritesmith.core.generation import GenerationService
 from ritesmith.core.generation_dispatcher import GenerationDispatcher
 from ritesmith.core.workflow_generation import WorkflowGenerationService
@@ -41,19 +38,6 @@ async def generate_lua(
     service: GenerationService = Depends(get_generation_service),
 ) -> GeneratedArtifactResponse:
     return await service.generate_lua(req)
-
-
-@router.post("/shell", include_in_schema=False)
-async def generate_shell(
-    req: GenerateScriptRequest,
-    settings: Settings = Depends(get_settings),
-) -> JSONResponse:
-    if not settings.shell_generation_enabled:
-        raise PolicyDeniedError("Shell script generation is disabled")
-    return JSONResponse(
-        status_code=501,
-        content={"error": "not_implemented", "message": "Shell generation not yet implemented"},
-    )
 
 
 @router.post("/trama-workflow", response_model=GeneratedArtifactResponse, include_in_schema=False)

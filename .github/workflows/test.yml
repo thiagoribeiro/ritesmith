@@ -1,0 +1,53 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ritesmith_test
+          POSTGRES_USER: ritesmith
+          POSTGRES_PASSWORD: ritesmith
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://ritesmith:ritesmith@localhost:5432/ritesmith_test
+      RITESMITH_DATABASE_URL: postgresql+asyncpg://ritesmith:ritesmith@localhost:5432/ritesmith_test
+      RITESMITH_OPENAI_API_KEY: placeholder
+      RITESMITH_POLICY_DEFAULT: deny
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]" pytest-cov
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Run migrations
+        run: alembic upgrade head
+
+      - name: Test
+        run: pytest -m "not e2e" --cov=ritesmith --cov-report=term-missing

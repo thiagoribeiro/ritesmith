@@ -1,12 +1,24 @@
-name: Deploy to r2d2
+name: Deploy (self-hosted)
+
+# This workflow deploys to a self-hosted runner. It is intentionally
+# triggered manually so contributors without access to the target host
+# are not blocked by a failing deploy step.
+#
+# To use: configure a self-hosted runner on your target machine and set
+# DEPLOY_HOST in your GitHub Actions environment, then run this workflow
+# manually from the Actions tab.
 
 on:
-  push:
-    branches: [r2d2]
+  workflow_dispatch:
+    inputs:
+      host_deploy_path:
+        description: "Absolute path to the deploy directory on the runner"
+        required: true
+        default: "/opt/ritesmith/deploy"
 
 jobs:
   deploy:
-    runs-on: [self-hosted, r2d2]
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -15,8 +27,8 @@ jobs:
 
       - name: Migrate + deploy
         run: |
-          cp deploy/docker-compose.yml /home/thiago/ritesmith/deploy/docker-compose.yml
-          cd /home/thiago/ritesmith/deploy
+          cp deploy/docker-compose.yml "${{ github.event.inputs.host_deploy_path }}/docker-compose.yml"
+          cd "${{ github.event.inputs.host_deploy_path }}"
           docker compose run --rm ritesmith-migrate
           docker compose up -d --no-deps ritesmith
 

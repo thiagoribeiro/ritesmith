@@ -2,7 +2,7 @@
 
 Tests in this package require:
   - OPENAI_API_KEY set in environment or .env file
-  - PostgreSQL accessible at the test DSN (nanochat:nanochat@localhost/ritesmith_test)
+  - PostgreSQL accessible at TEST_DATABASE_URL (default: ritesmith:ritesmith@localhost/ritesmith_test)
 
 Run only E2E tests:
   pytest -m e2e
@@ -25,7 +25,10 @@ from ritesmith.storage.postgres import get_db
 # Load .env so OPENAI_API_KEY is available even if not exported in the shell
 load_dotenv()
 
-TEST_DB_URL = "postgresql+asyncpg://nanochat:nanochat@localhost:5432/ritesmith_test"
+TEST_DB_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://ritesmith:ritesmith@localhost:5432/ritesmith_test",
+)
 
 _TRIGGER_FN = text("""
     CREATE OR REPLACE FUNCTION artifacts_search_vector_update()
