@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "MCP server exposing RiteSmith tools and generation meta-tools to the Agent Core"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp>=1.0",
+    "mcp>=1.0,<2.0",  # see root pyproject.toml — v2 migration tracked separately
     "httpx>=0.28",
     "ritesmith",          # installed from repo root (same venv)
 ]
