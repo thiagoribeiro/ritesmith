@@ -1,4 +1,5 @@
 """Workflow engine adapter interface + canonical workflow definition types."""
+
 from abc import ABC, abstractmethod
 from typing import Any
 

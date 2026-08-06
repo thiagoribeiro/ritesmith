@@ -6,7 +6,7 @@ from openai import APIConnectionError, APITimeoutError, AsyncOpenAI, RateLimitEr
 
 from ritesmith.config import Settings
 from ritesmith.core.exceptions import LLMError, LLMRateLimitError, LLMTimeoutError
-from ritesmith.observability.metrics import llm_errors_total, llm_request_duration, llm_tokens_total
+from ritesmith.llm import prompts
 from ritesmith.llm.base import (
     IntentAnalysis,
     LLMCallStats,
@@ -16,61 +16,76 @@ from ritesmith.llm.base import (
     WorkflowGenerationResponse,
     WorkflowRepairResponse,
 )
-from ritesmith.llm import prompts
+from ritesmith.observability.metrics import llm_errors_total, llm_request_duration, llm_tokens_total
 
 # JSON schemas como string para injetar nos prompts
-_LUA_RESPONSE_SCHEMA = json.dumps({
-    "script": "<lua code string>",
-    "name": "<snake_case_name>",
-    "description": "<one line description>",
-    "tags": ["<tag1>", "<tag2>"],
-    "risk_assessment": "low|medium|high",
-    "runtime_profile": "transform_only|readonly_network",
-}, indent=2)
+_LUA_RESPONSE_SCHEMA = json.dumps(
+    {
+        "script": "<lua code string>",
+        "name": "<snake_case_name>",
+        "description": "<one line description>",
+        "tags": ["<tag1>", "<tag2>"],
+        "risk_assessment": "low|medium|high",
+        "runtime_profile": "transform_only|readonly_network",
+    },
+    indent=2,
+)
 
-_REPAIR_RESPONSE_SCHEMA = json.dumps({
-    "repaired_content": "<corrected lua code>",
-    "changes_made": "<brief explanation of what was fixed>",
-}, indent=2)
+_REPAIR_RESPONSE_SCHEMA = json.dumps(
+    {
+        "repaired_content": "<corrected lua code>",
+        "changes_made": "<brief explanation of what was fixed>",
+    },
+    indent=2,
+)
 
-_INTENT_SCHEMA = json.dumps({
-    "requires_lua": True,
-    "requires_workflow": False,
-    "requires_network": False,
-    "requires_filesystem": False,
-    "domain": "text|math|crypto|network|documents|general",
-    "suggested_name": "domain.verb_noun",
-    "summary": "<one sentence summary>",
-    "artifact_types": ["lua_script"],
-}, indent=2)
+_INTENT_SCHEMA = json.dumps(
+    {
+        "requires_lua": True,
+        "requires_workflow": False,
+        "requires_network": False,
+        "requires_filesystem": False,
+        "domain": "text|math|crypto|network|documents|general",
+        "suggested_name": "domain.verb_noun",
+        "summary": "<one sentence summary>",
+        "artifact_types": ["lua_script"],
+    },
+    indent=2,
+)
 
-_WORKFLOW_RESPONSE_SCHEMA = json.dumps({
-    "definition": {"<workflow definition object>": "..."},
-    "name": "<workflow_name>",
-    "description": "<description>",
-    "required_capabilities": ["<capability_id>"],
-}, indent=2)
+_WORKFLOW_RESPONSE_SCHEMA = json.dumps(
+    {
+        "definition": {"<workflow definition object>": "..."},
+        "name": "<workflow_name>",
+        "description": "<description>",
+        "required_capabilities": ["<capability_id>"],
+    },
+    indent=2,
+)
 
-_WORKFLOW_REPAIR_SCHEMA = json.dumps({
-    "definition": {"<corrected workflow definition>": "..."},
-    "changes_made": "<brief explanation of what was fixed>",
-}, indent=2)
+_WORKFLOW_REPAIR_SCHEMA = json.dumps(
+    {
+        "definition": {"<corrected workflow definition>": "..."},
+        "changes_made": "<brief explanation of what was fixed>",
+    },
+    indent=2,
+)
 
 _MAX_RETRIES = 3
 _RETRY_BASE_S = 1.0
 
 _MAX_TOKENS: dict[str, int] = {
-    "intent":         512,
-    "lua_gen":       2048,
-    "lua_repair":    2048,
-    "workflow_gen":  4096,
+    "intent": 512,
+    "lua_gen": 2048,
+    "lua_repair": 2048,
+    "workflow_gen": 4096,
     "workflow_repair": 4096,
 }
 _TEMPERATURE: dict[str, float] = {
-    "intent":          0.0,
-    "lua_gen":         0.2,
-    "lua_repair":      0.0,
-    "workflow_gen":    0.2,
+    "intent": 0.0,
+    "lua_gen": 0.2,
+    "lua_repair": 0.0,
+    "workflow_gen": 0.2,
     "workflow_repair": 0.0,
 }
 
@@ -142,8 +157,12 @@ class OpenAIProvider(LLMProvider):
         )
         elapsed = time.perf_counter() - _start
         llm_request_duration.labels(provider="openai", method=method).observe(elapsed)
-        llm_tokens_total.labels(provider="openai", method=method, token_type="prompt").inc(stats.prompt_tokens)
-        llm_tokens_total.labels(provider="openai", method=method, token_type="completion").inc(stats.completion_tokens)
+        llm_tokens_total.labels(provider="openai", method=method, token_type="prompt").inc(
+            stats.prompt_tokens
+        )
+        llm_tokens_total.labels(provider="openai", method=method, token_type="completion").inc(
+            stats.completion_tokens
+        )
         content = response.choices[0].message.content or "{}"
         return content, stats
 

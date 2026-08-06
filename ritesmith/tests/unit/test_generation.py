@@ -1,21 +1,18 @@
 """Tests for GenerationService and /generate routes."""
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from ritesmith.api.app import create_app
-from ritesmith.api.deps import get_generation_service, get_llm_provider
-from ritesmith.config import get_settings
-from ritesmith.core.generation import GenerationService
+from ritesmith.api.deps import get_llm_provider
 from ritesmith.llm.base import LLMCallStats, LLMProvider, LuaGenerationResponse, RepairResponse
 from ritesmith.storage.postgres import get_db
-
 
 # ------------------------------------------------------------------
 # Mock LLM helpers
 # ------------------------------------------------------------------
+
 
 def _stats(model="gpt-4.1-mock") -> LLMCallStats:
     return LLMCallStats(model=model, prompt_tokens=10, completion_tokens=50, total_tokens=60)
@@ -23,7 +20,7 @@ def _stats(model="gpt-4.1-mock") -> LLMCallStats:
 
 def _valid_response(name="test_script") -> LuaGenerationResponse:
     return LuaGenerationResponse(
-        script='function run(input, context)\n  return {result = input.value * 2}\nend',
+        script="function run(input, context)\n  return {result = input.value * 2}\nend",
         name=name,
         description="Doubles the input value",
         tags=["math", "transform"],
@@ -45,7 +42,7 @@ def _invalid_response() -> LuaGenerationResponse:
 
 def _repaired_response() -> LuaGenerationResponse:
     return LuaGenerationResponse(
-        script='function run(input, context)\n  return {result = input.value}\nend',
+        script="function run(input, context)\n  return {result = input.value}\nend",
         name="repaired_script",
         description="Fixed script",
         tags=["transform"],
@@ -59,9 +56,10 @@ class MockLLMValidOnFirst(LLMProvider):
 
     async def generate_lua(self, goal: str = "", **kwargs):
         from ritesmith.llm.base import LuaGenerationResponse
+
         name = goal[:40].lower().replace(" ", "_") if goal else "test_script"
         return LuaGenerationResponse(
-            script='function run(input, context)\n  return {result = input.value * 2}\nend',
+            script="function run(input, context)\n  return {result = input.value * 2}\nend",
             name=name,
             description=goal or "Doubles the input value",
             tags=["math", "transform"],
@@ -74,13 +72,19 @@ class MockLLMValidOnFirst(LLMProvider):
 
     async def analyze_intent(self, **kwargs):
         from ritesmith.llm.base import IntentAnalysis
+
         return IntentAnalysis(
-            requires_lua=True, requires_workflow=False, artifact_types=["lua_script"],
-            summary="test", domain="general", suggested_name="test_cap",
+            requires_lua=True,
+            requires_workflow=False,
+            artifact_types=["lua_script"],
+            summary="test",
+            domain="general",
+            suggested_name="test_cap",
         ), _stats()
 
     async def generate_workflow(self, goal: str = "", **kwargs):
         from ritesmith.llm.base import WorkflowGenerationResponse
+
         return WorkflowGenerationResponse(
             definition={
                 "name": "test_workflow",
@@ -88,11 +92,20 @@ class MockLLMValidOnFirst(LLMProvider):
                 "entrypoint": "fetch",
                 "nodes": [
                     {
-                        "id": "fetch", "kind": "task",
-                        "action": {"mode": "sync", "request": {
-                            "url": "__RS_BASE_URL__/trama/execute", "verb": "POST",
-                            "body": {"capability_name": "web.fetch_json", "input": {"url": "https://example.com"}},
-                        }, "successStatusCodes": [200]},
+                        "id": "fetch",
+                        "kind": "task",
+                        "action": {
+                            "mode": "sync",
+                            "request": {
+                                "url": "__RS_BASE_URL__/trama/execute",
+                                "verb": "POST",
+                                "body": {
+                                    "capability_name": "web.fetch_json",
+                                    "input": {"url": "https://example.com"},
+                                },
+                            },
+                            "successStatusCodes": [200],
+                        },
                         "next": "end",
                     },
                 ],
@@ -117,7 +130,7 @@ class MockLLMRepairOnSecond(LLMProvider):
     async def repair_lua(self, **kwargs):
         self.repair_call_count += 1
         resp = RepairResponse(
-            repaired_content='function run(input, context)\n  return {result = input.value}\nend',
+            repaired_content="function run(input, context)\n  return {result = input.value}\nend",
             changes_made="Removed forbidden os.execute call",
         )
         return resp, _stats()
@@ -129,6 +142,7 @@ class MockLLMRepairOnSecond(LLMProvider):
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def mock_client_valid(db_session):
@@ -169,13 +183,17 @@ async def mock_client_repair(db_session, repair_llm):
 # Tests: POST /generate/lua
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_generate_lua_valid_first_attempt(mock_client_valid):
-    resp = await mock_client_valid.post("/generate/lua", json={
-        "intent": "xqz_unique_tokenize_frobulate_zlorp_77",
-        "save": False,
-        "constraints": {"reuse_policy": "force_new"},
-    })
+    resp = await mock_client_valid.post(
+        "/generate/lua",
+        json={
+            "intent": "xqz_unique_tokenize_frobulate_zlorp_77",
+            "save": False,
+            "constraints": {"reuse_policy": "force_new"},
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["reused"] is False
@@ -185,10 +203,13 @@ async def test_generate_lua_valid_first_attempt(mock_client_valid):
 
 @pytest.mark.asyncio
 async def test_generate_lua_repair_loop(mock_client_repair, repair_llm):
-    resp = await mock_client_repair.post("/generate/lua", json={
-        "intent": "return the input value",
-        "save": False,
-    })
+    resp = await mock_client_repair.post(
+        "/generate/lua",
+        json={
+            "intent": "return the input value",
+            "save": False,
+        },
+    )
     assert resp.status_code == 200
     assert repair_llm.generate_call_count >= 1
     assert repair_llm.repair_call_count >= 1
@@ -196,10 +217,13 @@ async def test_generate_lua_repair_loop(mock_client_repair, repair_llm):
 
 @pytest.mark.asyncio
 async def test_generate_lua_save_creates_artifact(mock_client_valid):
-    resp = await mock_client_valid.post("/generate/lua", json={
-        "intent": "multiply input by two and save",
-        "save": True,
-    })
+    resp = await mock_client_valid.post(
+        "/generate/lua",
+        json={
+            "intent": "multiply input by two and save",
+            "save": True,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["reused"] is False
@@ -227,11 +251,15 @@ async def test_generate_lua_reuse(mock_client_valid):
 # Tests: POST /generate/shell → 403
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_generate_shell_forbidden(mock_client_valid):
-    resp = await mock_client_valid.post("/generate/shell", json={
-        "intent": "delete all files",
-    })
+    resp = await mock_client_valid.post(
+        "/generate/shell",
+        json={
+            "intent": "delete all files",
+        },
+    )
     assert resp.status_code == 403
     assert resp.json()["error"] == "policy_denied"
 
@@ -240,11 +268,15 @@ async def test_generate_shell_forbidden(mock_client_valid):
 # Tests: POST /generate/trama-workflow → 501
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_generate_workflow_returns_artifact(mock_client_valid):
-    resp = await mock_client_valid.post("/generate/trama-workflow", json={
-        "intent": "monitor price and notify",
-    })
+    resp = await mock_client_valid.post(
+        "/generate/trama-workflow",
+        json={
+            "intent": "monitor price and notify",
+        },
+    )
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["artifact"]["artifact_type"] == "trama_workflow"

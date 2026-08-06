@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
 
 from ritesmith.config import Settings, get_settings
 from ritesmith.core.policy import PolicyEngine

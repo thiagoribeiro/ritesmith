@@ -1,9 +1,7 @@
 """Unit tests for ReportsProvider."""
-import json
+
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from ritesmith.runtime.providers.reports import (
     ReportsProvider,
@@ -14,10 +12,10 @@ from ritesmith.runtime.providers.reports import (
     _write_html,
 )
 
-
 # ---------------------------------------------------------------------------
 # _sanitize_slug
 # ---------------------------------------------------------------------------
+
 
 def test_sanitize_slug_strips_special_chars():
     assert _sanitize_slug("BTC/USD — 30 days!", 60) == "btcusd__30_days"
@@ -34,6 +32,7 @@ def test_sanitize_slug_spaces_to_underscore():
 # ---------------------------------------------------------------------------
 # _path_for
 # ---------------------------------------------------------------------------
+
 
 def test_path_for_no_reports_path():
     with patch("ritesmith.runtime.providers.reports._reports_root", return_value=None):
@@ -75,36 +74,47 @@ def test_path_for_returns_path(tmp_path):
 # _write_html
 # ---------------------------------------------------------------------------
 
+
 def test_write_html_no_reports_path():
     with patch("ritesmith.runtime.providers.reports._reports_root", return_value=None):
-        result = _write_html({"theme": "market", "description": "test", "title": "T", "body": "<v-app/>"})
+        result = _write_html(
+            {"theme": "market", "description": "test", "title": "T", "body": "<v-app/>"}
+        )
     assert result["path"] is None
     assert "not configured" in result["error"]
 
 
 def test_write_html_path_escape_rejected(tmp_path):
     # Only-special-chars theme sanitizes to empty slug → rejected before any file write
-    with patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path), \
-         patch("ritesmith.runtime.providers.reports._send_telegram"):
-        result = _write_html({
-            "theme": "!@#$%",
-            "description": "passwd",
-            "title": "Hack",
-            "body": "<v-app/>",
-        })
+    with (
+        patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path),
+        patch("ritesmith.runtime.providers.reports._send_telegram"),
+    ):
+        result = _write_html(
+            {
+                "theme": "!@#$%",
+                "description": "passwd",
+                "title": "Hack",
+                "body": "<v-app/>",
+            }
+        )
     assert result["path"] is None
     assert "invalid theme" in result["error"]
 
 
 def test_write_html_creates_file(tmp_path):
-    with patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path), \
-         patch("ritesmith.runtime.providers.reports._send_telegram") as mock_tg:
-        result = _write_html({
-            "theme": "market",
-            "description": "bitcoin_price",
-            "title": "BTC Chart",
-            "body": "<v-app><v-main>hello</v-main></v-app>",
-        })
+    with (
+        patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path),
+        patch("ritesmith.runtime.providers.reports._send_telegram") as mock_tg,
+    ):
+        result = _write_html(
+            {
+                "theme": "market",
+                "description": "bitcoin_price",
+                "title": "BTC Chart",
+                "body": "<v-app><v-main>hello</v-main></v-app>",
+            }
+        )
 
     assert result["error"] is None
     p = Path(result["path"])
@@ -121,18 +131,25 @@ def test_write_html_with_charts(tmp_path):
     charts = {
         "priceChart": {
             "type": "line",
-            "data": {"labels": ["Jan", "Feb"], "datasets": [{"label": "BTC", "data": [40000, 45000]}]},
+            "data": {
+                "labels": ["Jan", "Feb"],
+                "datasets": [{"label": "BTC", "data": [40000, 45000]}],
+            },
         }
     }
-    with patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path), \
-         patch("ritesmith.runtime.providers.reports._send_telegram"):
-        result = _write_html({
-            "theme": "market",
-            "description": "btc_line",
-            "title": "BTC",
-            "body": "<v-app><canvas id='priceChart'></canvas></v-app>",
-            "charts": charts,
-        })
+    with (
+        patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path),
+        patch("ritesmith.runtime.providers.reports._send_telegram"),
+    ):
+        result = _write_html(
+            {
+                "theme": "market",
+                "description": "btc_line",
+                "title": "BTC",
+                "body": "<v-app><canvas id='priceChart'></canvas></v-app>",
+                "charts": charts,
+            }
+        )
 
     assert result["error"] is None
     content = Path(result["path"]).read_text()
@@ -144,9 +161,13 @@ def test_write_html_with_charts(tmp_path):
 
 
 def test_write_html_sends_telegram_title_and_path(tmp_path):
-    with patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path), \
-         patch("ritesmith.runtime.providers.reports._send_telegram") as mock_tg:
-        _write_html({"theme": "test", "description": "demo", "title": "My Report", "body": "<v-app/>"})
+    with (
+        patch("ritesmith.runtime.providers.reports._reports_root", return_value=tmp_path),
+        patch("ritesmith.runtime.providers.reports._send_telegram") as mock_tg,
+    ):
+        _write_html(
+            {"theme": "test", "description": "demo", "title": "My Report", "body": "<v-app/>"}
+        )
 
     call_args = mock_tg.call_args
     assert call_args[0][0] == "My Report"
@@ -156,6 +177,7 @@ def test_write_html_sends_telegram_title_and_path(tmp_path):
 # ---------------------------------------------------------------------------
 # _build_html
 # ---------------------------------------------------------------------------
+
 
 def test_build_html_no_charts():
     html = _build_html("Title", "<v-app/>", None)
@@ -175,6 +197,7 @@ def test_build_html_chart_inits_injected():
 # ---------------------------------------------------------------------------
 # _list_reports
 # ---------------------------------------------------------------------------
+
 
 def test_list_reports_no_path():
     with patch("ritesmith.runtime.providers.reports._reports_root", return_value=None):
@@ -202,6 +225,7 @@ def test_list_reports_returns_sorted(tmp_path):
 # ---------------------------------------------------------------------------
 # ReportsProvider.is_available
 # ---------------------------------------------------------------------------
+
 
 def test_provider_unavailable_without_path():
     with patch("ritesmith.runtime.providers.reports._reports_root", return_value=None):

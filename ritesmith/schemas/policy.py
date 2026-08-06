@@ -35,7 +35,7 @@ class MemorySearchRequest(BaseModel):
 class MemorySearchResult(BaseModel):
     artifact_id: str
     score: float
-    artifact: "Artifact | None" = None  # noqa: F821
+    artifact: "Artifact | None" = None
     reason: str | None = None
 
 
@@ -44,6 +44,6 @@ class MemorySearchResponse(BaseModel):
 
 
 # resolve forward ref
-from ritesmith.schemas.artifact import Artifact  # noqa: E402
+from ritesmith.schemas.artifact import Artifact
 
 MemorySearchResult.model_rebuild()

@@ -5,15 +5,16 @@ Revises: 0002
 Create Date: 2026-05-03
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0003"
-down_revision: Union[str, None] = "0002"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "0002"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -22,9 +23,7 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("artifacts_expires_at_idx", "artifacts", ["expires_at"])
-    op.create_index(
-        "gen_jobs_final_artifact_idx", "generation_jobs", ["final_artifact_id"]
-    )
+    op.create_index("gen_jobs_final_artifact_idx", "generation_jobs", ["final_artifact_id"])
 
 
 def downgrade() -> None:

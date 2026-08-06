@@ -7,17 +7,17 @@ Profiles:
   transform_only   — json, text, time. Sem rede.
   readonly_network — tudo acima + http.request (GET/POST para domínios permitidos).
 """
+
 import json as _json
 import re
 import time as _time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Callable
 
 import httpx
 
 from ritesmith.runtime._conversion import lua_to_python
-
 
 # ------------------------------------------------------------------
 # Configuração de segurança de rede
@@ -33,8 +33,8 @@ _BLOCKED_PATTERNS = [
     re.compile(r"^https?://\[::1\]"),
 ]
 
-_HTTP_TIMEOUT = 5.0       # segundos
-_MAX_RESPONSE_BYTES = 512 * 1024   # 512KB
+_HTTP_TIMEOUT = 5.0  # segundos
+_MAX_RESPONSE_BYTES = 512 * 1024  # 512KB
 
 _HTTP_CLIENT = httpx.Client(
     timeout=_HTTP_TIMEOUT,
@@ -49,7 +49,9 @@ def _is_url_allowed(url: str) -> bool:
     return True
 
 
-def _http_request(method: str, url: str, headers: dict | None = None, body: dict | None = None) -> dict:
+def _http_request(
+    method: str, url: str, headers: dict | None = None, body: dict | None = None
+) -> dict:
     """Executa requisição HTTP síncrona (chamado de dentro do executor Lua)."""
     if not _is_url_allowed(url):
         return {"error": "blocked_url", "message": f"URL not allowed: {url}"}
@@ -81,10 +83,11 @@ def _http_request(method: str, url: str, headers: dict | None = None, body: dict
 # Registro de host functions
 # ------------------------------------------------------------------
 
+
 @dataclass
 class HostFunctionDef:
     name: str
-    profile: str          # "transform_only" | "readonly_network"
+    profile: str  # "transform_only" | "readonly_network"
     callable: Callable
 
 
@@ -103,12 +106,14 @@ def _json_encode(val) -> str:
 _register("json.encode", "transform_only", _json_encode)
 _register("json.decode", "transform_only", _json.loads)
 
+
 # text.*
 def _text_slugify(s: str) -> str:
     s = s.lower().strip()
     s = re.sub(r"[^\w\s-]", "", s)
     s = re.sub(r"[\s_-]+", "-", s)
     return re.sub(r"^-+|-+$", "", s)
+
 
 _register("text.slugify", "transform_only", _text_slugify)
 _register("text.upper", "transform_only", str.upper)
@@ -135,41 +140,63 @@ _register(
 
 # CASP host functions (casp.query, casp.resolve, casp.execute)
 # Registered under 'trusted_internal' profile — must import after _register is defined.
-from ritesmith.runtime.casp import host_bridge as _casp_bridge  # noqa: F401, E402
-
+from ritesmith.runtime.casp import host_bridge as _casp_bridge  # noqa: F401
 
 # ------------------------------------------------------------------
 # API pública
 # ------------------------------------------------------------------
 
 PROFILES: dict[str, set[str]] = {
-    "transform_only":    {"transform_only"},
-    "readonly_network":  {"transform_only", "readonly_network"},
-    "notification":      {"transform_only", "readonly_network", "notification"},
-    "sensitive_personal":{"transform_only", "readonly_network", "notification", "sensitive_personal"},
-    "analytics_local":   {"transform_only", "analytics_local"},
-    "filesystem_write":  {"transform_only", "filesystem_write"},
-    "reporting":         {"transform_only", "readonly_network", "analytics_local",
-                          "filesystem_write", "notification"},
-    "side_effects":      {"transform_only", "readonly_network", "side_effects"},
-    "trusted_internal":  {"transform_only", "readonly_network", "notification",
-                          "sensitive_personal", "analytics_local", "filesystem_write",
-                          "trusted_internal", "side_effects"},
+    "transform_only": {"transform_only"},
+    "readonly_network": {"transform_only", "readonly_network"},
+    "notification": {"transform_only", "readonly_network", "notification"},
+    "sensitive_personal": {
+        "transform_only",
+        "readonly_network",
+        "notification",
+        "sensitive_personal",
+    },
+    "analytics_local": {"transform_only", "analytics_local"},
+    "filesystem_write": {"transform_only", "filesystem_write"},
+    "reporting": {
+        "transform_only",
+        "readonly_network",
+        "analytics_local",
+        "filesystem_write",
+        "notification",
+    },
+    "side_effects": {"transform_only", "readonly_network", "side_effects"},
+    "trusted_internal": {
+        "transform_only",
+        "readonly_network",
+        "notification",
+        "sensitive_personal",
+        "analytics_local",
+        "filesystem_write",
+        "trusted_internal",
+        "side_effects",
+    },
 }
 
 
 def _load_providers() -> None:
     """Load host functions from all available tool providers into _REGISTRY."""
     import logging
+
     log = logging.getLogger(__name__)
     try:
         from ritesmith.runtime.providers import PROVIDERS
+
         for provider in PROVIDERS:
             if not provider.is_available():
                 continue
             for name, fn_def in provider.lua_functions().items():
                 _REGISTRY[name] = fn_def
-            log.debug("Loaded provider: %s (%d functions)", provider.namespace, len(provider.lua_functions()))
+            log.debug(
+                "Loaded provider: %s (%d functions)",
+                provider.namespace,
+                len(provider.lua_functions()),
+            )
     except Exception as e:
         log.warning("Provider loading failed: %s", e)
 
@@ -185,6 +212,7 @@ def get_available_provider_capabilities() -> list[dict]:
     """Return structured metadata for all available provider capabilities (namespace.* names)."""
     try:
         from ritesmith.runtime.providers import PROVIDERS
+
         available_ns = {p.namespace for p in PROVIDERS if p.is_available()}
     except Exception:
         available_ns = set()
@@ -194,12 +222,14 @@ def get_available_provider_capabilities() -> list[dict]:
             continue
         if name.split(".")[0] not in available_ns:
             continue
-        result.append({
-            "capability_name": name,
-            "description": fn.description or f"{name} capability",
-            "input_schema": fn.input_schema or {},
-            "output_schema": fn.output_schema or {},
-        })
+        result.append(
+            {
+                "capability_name": name,
+                "description": fn.description or f"{name} capability",
+                "input_schema": fn.input_schema or {},
+                "output_schema": fn.output_schema or {},
+            }
+        )
     return sorted(result, key=lambda c: c["capability_name"])
 
 

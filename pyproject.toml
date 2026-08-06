@@ -57,3 +57,27 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+# BLE001 (blind `except Exception`): this codebase's deliberate resilience
+# pattern for provider/audit/startup code paths that must degrade gracefully
+# instead of crashing — narrowing each site to a specific exception type is a
+# real, separate cleanup effort, not something to force through a lint rule.
+# G201 (log.error(..., exc_info=True) vs log.exception(...)): already the
+# established, consistently-used style throughout this codebase; functionally
+# identical to log.exception(), so there's no behavior gain from switching.
+ignore = ["BLE001", "G201"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 flags function-call-in-default-argument, which is exactly how FastAPI's
+# own dependency-injection system works (Depends(...)/Query(...) as a default
+# value) and how these three endpoints accept an optional JSON body. None of
+# them are mutated in place, so the shared-default-object risk B008 warns
+# about doesn't apply here.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "ritesmith.schemas.plan.ApprovePlanRequest",
+    "ritesmith.schemas.plan.RejectPlanRequest",
+    "ritesmith.schemas.plan.CompletePlanRequest",
+]

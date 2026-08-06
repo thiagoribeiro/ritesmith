@@ -3,6 +3,7 @@
 PROVIDERS is the single source of truth for all available tool providers.
 Import from here in host_functions.py (Lua sandbox) and in the MCP server.
 """
+
 from ritesmith.runtime.providers.base import HostFunctionDef, MCPToolDef, ToolProvider
 from ritesmith.runtime.providers.calendar import CalendarProvider
 from ritesmith.runtime.providers.casp import CASPProvider
@@ -35,8 +36,8 @@ PROVIDERS: list[ToolProvider] = [
 ]
 
 __all__ = [
-    "ToolProvider",
+    "PROVIDERS",
     "HostFunctionDef",
     "MCPToolDef",
-    "PROVIDERS",
+    "ToolProvider",
 ]

@@ -22,7 +22,9 @@ async def test_create_artifact_defaults(db_session):
     assert artifact.artifact_type == "lua_script"
     assert artifact.status == "draft"
     assert artifact.current_version == 1
-    expected_hash = hashlib.sha256(b"function run(input) return {result = input.text} end").hexdigest()
+    expected_hash = hashlib.sha256(
+        b"function run(input) return {result = input.text} end"
+    ).hexdigest()
     assert artifact.content_hash == expected_hash
 
     assert version.version == 1
@@ -56,7 +58,7 @@ async def test_get_artifact_not_found(db_session):
 @pytest.mark.asyncio
 async def test_create_new_version(db_session):
     svc = RegistryService(db_session)
-    artifact, v1 = await svc.create_artifact(
+    artifact, _v1 = await svc.create_artifact(
         name="my_script",
         artifact_type="lua_script",
         content="function run(i) return {v=1} end",
@@ -114,7 +116,9 @@ async def test_update_artifact_status_invalid_transition(db_session):
 @pytest.mark.asyncio
 async def test_list_artifacts_filter_by_type(db_session):
     svc = RegistryService(db_session)
-    await svc.create_artifact(name="a1", artifact_type="lua_script", content="function run(i) return {} end")
+    await svc.create_artifact(
+        name="a1", artifact_type="lua_script", content="function run(i) return {} end"
+    )
     await svc.create_artifact(name="a2", artifact_type="trama_workflow", content="{}")
 
     lua_arts = await svc.list_artifacts(artifact_type="lua_script")

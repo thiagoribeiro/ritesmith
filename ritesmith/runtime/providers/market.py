@@ -3,6 +3,7 @@
 Uses CoinGecko public API (no key, 30 req/min free tier).
 In-process rate limit guard (10 s minimum between requests per key).
 """
+
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 _COINGECKO = "https://api.coingecko.com/api/v3"
 _TIMEOUT = 8.0
-_MIN_INTERVAL = 10    # don't hit API more often than this per key
+_MIN_INTERVAL = 10  # don't hit API more often than this per key
 
 _last_fetch: dict[str, float] = {}  # key → unix timestamp
 
@@ -114,39 +115,67 @@ class MarketProvider(ToolProvider):
         return True  # CoinGecko free API requires no key
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _price_output = {"type": "object", "properties": {
-            "symbol": {"type": "string"}, "price": {"type": "number"},
-            "change_24h": {"type": "number"}, "currency": {"type": "string"}, "timestamp": {"type": "string"},
-        }}
+        _price_output = {
+            "type": "object",
+            "properties": {
+                "symbol": {"type": "string"},
+                "price": {"type": "number"},
+                "change_24h": {"type": "number"},
+                "currency": {"type": "string"},
+                "timestamp": {"type": "string"},
+            },
+        }
         return {
             "market.bitcoin_price": HostFunctionDef(
-                "market.bitcoin_price", "readonly_network", _bitcoin_price,
+                "market.bitcoin_price",
+                "readonly_network",
+                _bitcoin_price,
                 description="Get the current Bitcoin price and 24h change from CoinGecko.",
-                input_schema={"type": "object", "properties": {
-                    "currency": {"type": "string", "default": "usd"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "currency": {"type": "string", "default": "usd"},
+                    },
+                },
                 output_schema=_price_output,
             ),
             "market.coin_price": HostFunctionDef(
-                "market.coin_price", "readonly_network", _coin_price,
+                "market.coin_price",
+                "readonly_network",
+                _coin_price,
                 description="Get the current price of any cryptocurrency (BTC, ETH, SOL, or any CoinGecko ID).",
-                input_schema={"type": "object", "required": ["symbol"], "properties": {
-                    "symbol": {"type": "string", "description": "Coin symbol or CoinGecko ID"},
-                    "currency": {"type": "string", "default": "usd"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["symbol"],
+                    "properties": {
+                        "symbol": {"type": "string", "description": "Coin symbol or CoinGecko ID"},
+                        "currency": {"type": "string", "default": "usd"},
+                    },
+                },
                 output_schema=_price_output,
             ),
             "market.exchange_rate": HostFunctionDef(
-                "market.exchange_rate", "readonly_network", _exchange_rate,
+                "market.exchange_rate",
+                "readonly_network",
+                _exchange_rate,
                 description="Get the exchange rate between two fiat or crypto currencies via CoinGecko.",
-                input_schema={"type": "object", "required": ["from_currency", "to_currency"], "properties": {
-                    "from_currency": {"type": "string", "description": "e.g. usd, brl, btc"},
-                    "to_currency": {"type": "string", "description": "e.g. brl, eur, eth"},
-                }},
-                output_schema={"type": "object", "properties": {
-                    "from": {"type": "string"}, "to": {"type": "string"},
-                    "rate": {"type": "number"}, "timestamp": {"type": "string"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["from_currency", "to_currency"],
+                    "properties": {
+                        "from_currency": {"type": "string", "description": "e.g. usd, brl, btc"},
+                        "to_currency": {"type": "string", "description": "e.g. brl, eur, eth"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "from": {"type": "string"},
+                        "to": {"type": "string"},
+                        "rate": {"type": "number"},
+                        "timestamp": {"type": "string"},
+                    },
+                },
             ),
         }
 
@@ -168,7 +197,13 @@ class MarketProvider(ToolProvider):
                 description="Get the current Bitcoin price and 24h change from CoinGecko.",
                 input_schema={
                     "type": "object",
-                    "properties": {"currency": {"type": "string", "default": "usd", "description": "ISO 4217 currency code"}},
+                    "properties": {
+                        "currency": {
+                            "type": "string",
+                            "default": "usd",
+                            "description": "ISO 4217 currency code",
+                        }
+                    },
                 },
                 fn=_btc,
             ),

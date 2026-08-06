@@ -1,10 +1,9 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.core.exceptions import NotFoundError
-from ritesmith.registry.models import Artifact as ArtifactORM, ArtifactVersion as ArtifactVersionORM
+from ritesmith.registry.models import Artifact as ArtifactORM
+from ritesmith.registry.models import ArtifactVersion as ArtifactVersionORM
 from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.schemas.artifact import (
@@ -14,7 +13,6 @@ from ritesmith.schemas.artifact import (
     ArtifactType,
     ArtifactVersion,
     CreateArtifactRequest,
-    ValidationResult,
 )
 from ritesmith.storage.postgres import get_db
 
@@ -122,7 +120,9 @@ async def get_artifact(artifact_id: str, db: AsyncSession = Depends(get_db)) -> 
 
 
 @router.get("/{artifact_id}/versions", response_model=list[ArtifactVersion])
-async def list_versions(artifact_id: str, db: AsyncSession = Depends(get_db)) -> list[ArtifactVersion]:
+async def list_versions(
+    artifact_id: str, db: AsyncSession = Depends(get_db)
+) -> list[ArtifactVersion]:
     svc = RegistryService(db)
     artifact = await svc.get_artifact(artifact_id)
     if not artifact:

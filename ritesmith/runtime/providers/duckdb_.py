@@ -3,6 +3,7 @@
 The connection is opened read-only. Results are capped at 500 rows.
 `query_file` is only allowed for paths under RITESMITH_DUCKDB_ALLOWED_PATHS.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,7 @@ _MAX_ROWS = 500
 
 def _run_query(sql: str, db_path: str) -> list[dict]:
     import duckdb
+
     try:
         con = duckdb.connect(db_path, read_only=True)
         rel = con.execute(sql)
@@ -59,27 +61,44 @@ class DuckdbProvider(ToolProvider):
             return False
         try:
             import duckdb  # noqa: F401
+
             return True
         except ImportError:
             return False
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _query_output = {"type": "object", "properties": {"rows": {"type": "array"}, "columns": {"type": "array"}}}
+        _query_output = {
+            "type": "object",
+            "properties": {"rows": {"type": "array"}, "columns": {"type": "array"}},
+        }
         return {
             "duckdb.query": HostFunctionDef(
-                "duckdb.query", "analytics_local", _query,
+                "duckdb.query",
+                "analytics_local",
+                _query,
                 description="Run a read-only SQL query on the configured DuckDB database. Returns rows and column names.",
-                input_schema={"type": "object", "required": ["sql"], "properties": {
-                    "sql": {"type": "string", "description": "SELECT query"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["sql"],
+                    "properties": {
+                        "sql": {"type": "string", "description": "SELECT query"},
+                    },
+                },
                 output_schema=_query_output,
             ),
             "duckdb.query_file": HostFunctionDef(
-                "duckdb.query_file", "analytics_local", _query_file,
+                "duckdb.query_file",
+                "analytics_local",
+                _query_file,
                 description="Run a read-only SQL query on an alternate allowed DuckDB file.",
-                input_schema={"type": "object", "required": ["sql", "path"], "properties": {
-                    "sql": {"type": "string"}, "path": {"type": "string"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["sql", "path"],
+                    "properties": {
+                        "sql": {"type": "string"},
+                        "path": {"type": "string"},
+                    },
+                },
                 output_schema=_query_output,
             ),
         }
@@ -105,7 +124,10 @@ class DuckdbProvider(ToolProvider):
                     "required": ["sql"],
                     "properties": {
                         "sql": {"type": "string", "description": "SQL query to execute"},
-                        "file_path": {"type": "string", "description": "Path to a .duckdb file (optional)"},
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to a .duckdb file (optional)",
+                        },
                     },
                 },
                 fn=_mcp_query,

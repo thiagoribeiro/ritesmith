@@ -12,7 +12,21 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from ritesmith.api.limiter import limiter
 from ritesmith.api.mcp_handler import mcp_app
-from ritesmith.api.routes import admin, artifacts, capabilities, executions, generations, health, memory, plans, policies, providers, search, trama, validation
+from ritesmith.api.routes import (
+    admin,
+    artifacts,
+    capabilities,
+    executions,
+    generations,
+    health,
+    memory,
+    plans,
+    policies,
+    providers,
+    search,
+    trama,
+    validation,
+)
 from ritesmith.core.exceptions import RiteSmithError
 from ritesmith.observability.metrics import http_request_duration, http_requests_total
 from ritesmith.storage.postgres import get_db
@@ -20,10 +34,12 @@ from ritesmith.storage.postgres import get_db
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    from ritesmith.core.provider_registration import register_all_providers
-    from ritesmith.config import get_settings
-    from ritesmith.schemas.policy import PolicyDecisionValue
     import logging
+
+    from ritesmith.config import get_settings
+    from ritesmith.core.provider_registration import register_all_providers
+    from ritesmith.schemas.policy import PolicyDecisionValue
+
     log = logging.getLogger(__name__)
 
     # Validate policy_default at startup to catch misconfiguration early
@@ -44,10 +60,12 @@ async def _lifespan(app: FastAPI):
     # CASP migration check — warn if persisted Lua artifacts still use home.*
     try:
         from ritesmith.registry.search import fts_search
+
         async for db in get_db():
             results = await fts_search(db, "home.", artifact_types=["lua_script"], limit=10)
             home_count = sum(
-                1 for r in results
+                1
+                for r in results
                 if r.version and r.version.content and "home." in r.version.content
             )
             if home_count:
@@ -63,9 +81,11 @@ async def _lifespan(app: FastAPI):
     # Graceful shutdown: drain Lua executor and release DB pool
     log.info("shutdown: draining Lua sandbox executor")
     from ritesmith.runtime.sandbox import _EXECUTOR
+
     _EXECUTOR.shutdown(wait=True, cancel_futures=False)
     log.info("shutdown: disposing DB connection pool")
     from ritesmith.storage.postgres import engine
+
     await engine.dispose()
 
 

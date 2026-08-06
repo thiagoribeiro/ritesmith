@@ -1,4 +1,5 @@
 """HTTP adapter for Trama workflow engine."""
+
 import httpx
 
 from ritesmith.workflows.base import WorkflowEngineAdapter

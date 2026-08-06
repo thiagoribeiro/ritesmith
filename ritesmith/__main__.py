@@ -1,4 +1,5 @@
 """python -m ritesmith  →  start the API server."""
+
 import uvicorn
 
 from ritesmith.config import get_settings

@@ -1,9 +1,10 @@
 """Generic repair loop shared by Lua and workflow generation services."""
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from ritesmith.core.exceptions import LLMError, LLMRateLimitError
 from ritesmith.observability.metrics import generation_attempts_total
@@ -33,15 +34,13 @@ async def run_repair_loop(
         except LLMRateLimitError:
             log.warning("rate limited on attempt %d/%d, backing off", attempt, max_attempts)
             if attempt < max_attempts:
-                await asyncio.sleep(2 ** attempt)   # 2s, 4s, 8s, 16s
+                await asyncio.sleep(2**attempt)  # 2s, 4s, 8s, 16s
         except LLMError:
             consecutive_parse_failures += 1
-            log.warning(
-                "LLM parse failure %d/2 on attempt %d", consecutive_parse_failures, attempt
-            )
+            log.warning("LLM parse failure %d/2 on attempt %d", consecutive_parse_failures, attempt)
             if consecutive_parse_failures >= 2:
                 log.error("unrecoverable: LLM not following JSON schema after 2 parse failures")
-                break   # unrecoverable: LLM not following JSON schema
+                break  # unrecoverable: LLM not following JSON schema
 
     outcome = "success" if success else "exhausted"
     log.info("repair loop finished artifact_type=%s outcome=%s", artifact_type, outcome)

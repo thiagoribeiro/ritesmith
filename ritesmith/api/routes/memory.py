@@ -18,7 +18,10 @@ async def memory_search(
     if req.search_mode == "embeddings":
         return JSONResponse(
             status_code=501,
-            content={"error": "not_implemented", "message": "Embeddings search not available in V0"},
+            content={
+                "error": "not_implemented",
+                "message": "Embeddings search not available in V0",
+            },
         )
 
     # full_text e hybrid ambos usam FTS em V0

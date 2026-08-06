@@ -1,5 +1,10 @@
 """Shared Lua ↔ Python value conversion with depth and size guards."""
+
 from __future__ import annotations
+
+import logging
+
+log = logging.getLogger(__name__)
 
 _MAX_DEPTH = 32
 _MAX_LIST_LEN = 1000
@@ -17,8 +22,9 @@ def lua_to_python(val, *, _depth: int = 0, _max_depth: list[int] | None = None) 
     try:
         if hasattr(val, "items"):
             return {
-                lua_to_python(k, _depth=_depth + 1, _max_depth=_max_depth):
-                lua_to_python(v, _depth=_depth + 1, _max_depth=_max_depth)
+                lua_to_python(k, _depth=_depth + 1, _max_depth=_max_depth): lua_to_python(
+                    v, _depth=_depth + 1, _max_depth=_max_depth
+                )
                 for k, v in val.items()
             }
         if hasattr(val, "__iter__") and not isinstance(val, (str, bytes)):
@@ -29,7 +35,7 @@ def lua_to_python(val, *, _depth: int = 0, _max_depth: list[int] | None = None) 
                 items.append(lua_to_python(v, _depth=_depth + 1, _max_depth=_max_depth))
             return items
     except Exception:
-        pass
+        log.debug("lua_to_python: falling back to raw value for %r", val, exc_info=True)
     return val
 
 

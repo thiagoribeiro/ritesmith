@@ -1,16 +1,19 @@
 """Base types shared by all tool providers."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 
 @dataclass
 class HostFunctionDef:
     """A single host function exposed to the Lua sandbox."""
-    name: str      # fully-qualified: "web.search"
-    profile: str   # "transform_only" | "readonly_network" | "notification" | ...
+
+    name: str  # fully-qualified: "web.search"
+    profile: str  # "transform_only" | "readonly_network" | "notification" | ...
     callable: Callable
     description: str = ""
     input_schema: dict | None = None
@@ -20,10 +23,11 @@ class HostFunctionDef:
 @dataclass
 class MCPToolDef:
     """A single tool exposed via the MCP server."""
+
     name: str
     description: str
     input_schema: dict  # JSON Schema object
-    fn: Callable        # async callable(**kwargs) -> Any
+    fn: Callable  # async callable(**kwargs) -> Any
 
 
 class ToolProvider(ABC):
@@ -35,7 +39,7 @@ class ToolProvider(ABC):
     """
 
     namespace: str
-    profile: str        # lowest-privilege profile that can use this provider
+    profile: str  # lowest-privilege profile that can use this provider
     risk_level: str = "low"
     side_effects: str = "none"
 

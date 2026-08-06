@@ -16,4 +16,7 @@ async def get_provider(namespace: str) -> JSONResponse:
     for p in PROVIDERS:
         if p.namespace == namespace:
             return JSONResponse(p.manifest())
-    return JSONResponse(status_code=404, content={"error": "not_found", "message": f"Provider '{namespace}' not found"})
+    return JSONResponse(
+        status_code=404,
+        content={"error": "not_found", "message": f"Provider '{namespace}' not found"},
+    )

@@ -3,6 +3,7 @@
 Em PostgreSQL: usa ARRAY(Text), JSONB e TSVECTOR nativos.
 Em SQLite (testes): usa JSON e Text como fallback.
 """
+
 from sqlalchemy import JSON, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
@@ -21,6 +22,7 @@ class JSONB(TypeDecorator):
 
 class TextArray(TypeDecorator):
     """Lista de strings: ARRAY(Text) em PG, JSON em SQLite."""
+
     impl = JSON
     cache_ok = True
 
@@ -32,6 +34,7 @@ class TextArray(TypeDecorator):
 
 class TSVector(TypeDecorator):
     """TSVECTOR em PG (preenchido por trigger), Text em SQLite (sem FTS)."""
+
     impl = Text
     cache_ok = True
 

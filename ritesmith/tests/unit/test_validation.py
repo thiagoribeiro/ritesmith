@@ -1,4 +1,5 @@
 """Testes da ValidationPipeline e do endpoint POST /validate."""
+
 import pytest
 
 from ritesmith.config import Settings
@@ -149,12 +150,16 @@ async def test_test_cases_fail():
 # Testes da rota POST /validate
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_validate_endpoint_valid(client):
-    response = await client.post("/validate", json={
-        "content": "function run(input, ctx) return {ok = true} end",
-        "artifact_type": "lua_script",
-    })
+    response = await client.post(
+        "/validate",
+        json={
+            "content": "function run(input, ctx) return {ok = true} end",
+            "artifact_type": "lua_script",
+        },
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["valid"] is True
@@ -164,10 +169,13 @@ async def test_validate_endpoint_valid(client):
 
 @pytest.mark.asyncio
 async def test_validate_endpoint_forbidden_token(client):
-    response = await client.post("/validate", json={
-        "content": "require('os')\nfunction run(i, c) return {} end",
-        "artifact_type": "lua_script",
-    })
+    response = await client.post(
+        "/validate",
+        json={
+            "content": "require('os')\nfunction run(i, c) return {} end",
+            "artifact_type": "lua_script",
+        },
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["valid"] is False
@@ -176,9 +184,12 @@ async def test_validate_endpoint_forbidden_token(client):
 
 @pytest.mark.asyncio
 async def test_validate_endpoint_workflow(client):
-    response = await client.post("/validate", json={
-        "content": '{"name": "test_wf", "steps": []}',
-        "artifact_type": "trama_workflow",
-    })
+    response = await client.post(
+        "/validate",
+        json={
+            "content": '{"name": "test_wf", "steps": []}',
+            "artifact_type": "trama_workflow",
+        },
+    )
     assert response.status_code == 200
     assert response.json()["valid"] is True

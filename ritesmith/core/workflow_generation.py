@@ -9,6 +9,7 @@ Fluxo:
 6. Persiste se save=True e válido
 7. Retorna GeneratedArtifactResponse
 """
+
 import json
 import logging
 from datetime import UTC, datetime
@@ -97,11 +98,14 @@ class WorkflowGenerationService:
         reuse_policy = constraints.get("reuse_policy", "prefer_reuse")
 
         # 1. Reuse check
-        if reuse := await check_reuse(self.db, req.intent, ["trama_workflow"], reuse_policy, self.audit):
+        if reuse := await check_reuse(
+            self.db, req.intent, ["trama_workflow"], reuse_policy, self.audit
+        ):
             return reuse
 
         # 2. Collect available capabilities — provider caps (runtime) + registered Lua artifacts (DB)
         from ritesmith.runtime.host_functions import get_available_provider_capabilities
+
         provider_caps = get_available_provider_capabilities()
         db_caps = await self._get_capabilities()
 
@@ -159,14 +163,18 @@ class WorkflowGenerationService:
                     definition=definition,
                     name=final_response.name if final_response else req.intent[:40],
                     description=final_response.description if final_response else req.intent,
-                    required_capabilities=final_response.required_capabilities if final_response else [],
+                    required_capabilities=final_response.required_capabilities
+                    if final_response
+                    else [],
                 )
 
             final_response = llm_resp
 
             if self.audit:
                 await self.audit.log_event(
-                    "workflow_generation.llm_call", "workflow_generation", plan_id or "none",
+                    "workflow_generation.llm_call",
+                    "workflow_generation",
+                    plan_id or "none",
                     payload={"attempt": attempt, "tokens": stats.total_tokens},
                 )
 
@@ -175,7 +183,8 @@ class WorkflowGenerationService:
             last_errors = errors
             log.info(
                 "workflow generation attempt %d valid=%s",
-                attempt, not errors,
+                attempt,
+                not errors,
                 extra={"attempt": attempt, "valid": not errors, "errors": errors[:3]},
             )
             return not errors
@@ -214,7 +223,9 @@ class WorkflowGenerationService:
 
                 if self.audit:
                     await self.audit.log_event(
-                        "artifact.created", "artifact", artifact_orm.artifact_id,
+                        "artifact.created",
+                        "artifact",
+                        artifact_orm.artifact_id,
                         payload={"goal": req.intent},
                     )
         except Exception:

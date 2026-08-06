@@ -16,6 +16,7 @@ Lua usage:
     casp.execute(resolved.resource.id, "smart-switch", "turn-on", {})
   end
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,8 +27,11 @@ from ritesmith.runtime.providers.base import HostFunctionDef, MCPToolDef, ToolPr
 log = logging.getLogger(__name__)
 
 
-def _casp_query(resource_type: str, filters: dict, requires_capabilities: list | None = None) -> dict:
+def _casp_query(
+    resource_type: str, filters: dict, requires_capabilities: list | None = None
+) -> dict:
     from ritesmith.runtime.casp.client import query
+
     caps = requires_capabilities or []
     result = query(resource_type, filters, caps)
     if "error" in result:
@@ -37,25 +41,32 @@ def _casp_query(resource_type: str, filters: dict, requires_capabilities: list |
 
 def _casp_resolve(resource_type: str, capability: str, hint: str) -> dict:
     from ritesmith.runtime.casp.client import resolve
+
     result = resolve(resource_type, capability, hint)
     if result.get("status") not in ("resolved", "ambiguous"):
         log.warning("casp.resolve unexpected status: %s", result)
     return result
 
 
-def _casp_execute(resource_id: str, resource_type: str, capability: str, input_data: dict | None = None) -> dict:
+def _casp_execute(
+    resource_id: str, resource_type: str, capability: str, input_data: dict | None = None
+) -> dict:
     from ritesmith.runtime.casp.client import execute
+
     result = execute(resource_id, resource_type, capability, input_data or {})
     if result.get("status") != "succeeded":
         log.warning(
             "casp.execute failed: resource=%s cap=%s error=%s",
-            resource_id, capability, result.get("error"),
+            resource_id,
+            capability,
+            result.get("error"),
         )
     return result
 
 
 def _casp_types() -> dict:
     from ritesmith.runtime.casp.client import all_types_from_providers
+
     types = all_types_from_providers()
     return {"resourceTypes": types}
 
@@ -85,7 +96,10 @@ class CASPProvider(ToolProvider):
                     "type": "object",
                     "required": ["resource_type"],
                     "properties": {
-                        "resource_type": {"type": "string", "description": "e.g. 'smart-switch', 'ac-unit'"},
+                        "resource_type": {
+                            "type": "string",
+                            "description": "e.g. 'smart-switch', 'ac-unit'",
+                        },
                         "filters": {"type": "object", "description": "e.g. {room='cozinha'}"},
                         "requires_capabilities": {"type": "array", "items": {"type": "string"}},
                     },
@@ -107,7 +121,10 @@ class CASPProvider(ToolProvider):
                     "properties": {
                         "resource_type": {"type": "string"},
                         "capability": {"type": "string"},
-                        "hint": {"type": "string", "description": "Natural language name from user"},
+                        "hint": {
+                            "type": "string",
+                            "description": "Natural language name from user",
+                        },
                     },
                 },
             ),
@@ -124,7 +141,10 @@ class CASPProvider(ToolProvider):
                     "type": "object",
                     "required": ["resource_id", "resource_type", "capability"],
                     "properties": {
-                        "resource_id": {"type": "string", "description": "From casp.query or casp.resolve"},
+                        "resource_id": {
+                            "type": "string",
+                            "description": "From casp.query or casp.resolve",
+                        },
                         "resource_type": {"type": "string"},
                         "capability": {"type": "string"},
                         "input_data": {"type": "object"},

@@ -1,4 +1,5 @@
 """Testes do Lua runtime e sandbox."""
+
 import pytest
 
 from ritesmith.config import Settings
@@ -19,6 +20,7 @@ def make_settings(**kwargs) -> Settings:
 # ------------------------------------------------------------------
 # Testes do sandbox (síncronos — run_in_sandbox é síncrono)
 # ------------------------------------------------------------------
+
 
 def test_basic_execution():
     script = "function run(input, ctx) return {result = input.x * 2} end"
@@ -42,40 +44,40 @@ end
 
 def test_forbidden_global_os_removed():
     script = "function run(input, ctx) os.execute('id') return {} end"
-    output, error, _ = run_in_sandbox(script, {}, {})
+    _output, error, _ = run_in_sandbox(script, {}, {})
     assert error is not None
     assert "os" in error.lower() or "nil" in error.lower() or "attempt" in error.lower()
 
 
 def test_forbidden_global_io_removed():
     script = "function run(input, ctx) io.open('/etc/passwd', 'r') return {} end"
-    output, error, _ = run_in_sandbox(script, {}, {})
+    _output, error, _ = run_in_sandbox(script, {}, {})
     assert error is not None
 
 
 def test_require_blocked():
     script = "require('socket') function run(input, ctx) return {} end"
-    output, error, _ = run_in_sandbox(script, {}, {})
+    _output, error, _ = run_in_sandbox(script, {}, {})
     assert error is not None
 
 
 def test_missing_run_function():
     script = "local x = 1"
-    output, error, _ = run_in_sandbox(script, {}, {})
+    _output, error, _ = run_in_sandbox(script, {}, {})
     assert error is not None
     assert "run" in error.lower()
 
 
 def test_run_returns_nil():
     script = "function run(input, ctx) return nil end"
-    output, error, _ = run_in_sandbox(script, {}, {})
+    _output, error, _ = run_in_sandbox(script, {}, {})
     assert error is not None
     assert "nil" in error.lower()
 
 
 def test_timeout_enforced():
     script = "function run(input, ctx) while true do end end"
-    output, error, timed_out = run_in_sandbox(script, {}, {}, timeout_ms=200)
+    _output, error, timed_out = run_in_sandbox(script, {}, {}, timeout_ms=200)
     assert timed_out
     assert error is not None
 
@@ -123,7 +125,7 @@ function run(input, ctx)
     return {status = r.status}
 end
 """
-    output, error, _ = run_in_sandbox(script, {}, {}, profile="transform_only")
+    _output, error, _ = run_in_sandbox(script, {}, {}, profile="transform_only")
     # http table não existe em transform_only → LuaError
     assert error is not None
 
@@ -131,6 +133,7 @@ end
 # ------------------------------------------------------------------
 # Testes do LuaScriptRuntime (async)
 # ------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_async_execute_basic():

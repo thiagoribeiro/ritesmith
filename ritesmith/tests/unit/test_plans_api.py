@@ -1,17 +1,24 @@
 """Tests for PlanBuilder and /plans routes."""
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from ritesmith.api.app import create_app
 from ritesmith.api.deps import get_llm_provider
-from ritesmith.llm.base import IntentAnalysis, LLMCallStats, LLMProvider, LuaGenerationResponse, RepairResponse
+from ritesmith.llm.base import (
+    IntentAnalysis,
+    LLMCallStats,
+    LLMProvider,
+    LuaGenerationResponse,
+    RepairResponse,
+)
 from ritesmith.storage.postgres import get_db
-
 
 # ------------------------------------------------------------------
 # Mock LLM for plan tests
 # ------------------------------------------------------------------
+
 
 def _stats() -> LLMCallStats:
     return LLMCallStats(model="mock", prompt_tokens=5, completion_tokens=20, total_tokens=25)
@@ -31,10 +38,12 @@ class MockPlanLLM(LLMProvider):
             artifact_types=["lua_script"],
         ), _stats()
 
-    async def generate_lua(self, goal: str = "", **kwargs) -> tuple[LuaGenerationResponse, LLMCallStats]:
+    async def generate_lua(
+        self, goal: str = "", **kwargs
+    ) -> tuple[LuaGenerationResponse, LLMCallStats]:
         name = goal[:40].lower().replace(" ", "_") if goal else "plan_script"
         return LuaGenerationResponse(
-            script='function run(input, context)\n  return {ok = true}\nend',
+            script="function run(input, context)\n  return {ok = true}\nend",
             name=name,
             description=goal or "Plan capability",
             tags=["plan"],
@@ -49,9 +58,11 @@ class MockPlanLLM(LLMProvider):
 class MockHighRiskLLM(MockPlanLLM):
     """Returns high-risk artifact to trigger require_approval policy."""
 
-    async def generate_lua(self, goal: str = "", **kwargs) -> tuple[LuaGenerationResponse, LLMCallStats]:
+    async def generate_lua(
+        self, goal: str = "", **kwargs
+    ) -> tuple[LuaGenerationResponse, LLMCallStats]:
         return LuaGenerationResponse(
-            script='function run(input, context)\n  return {ok = true}\nend',
+            script="function run(input, context)\n  return {ok = true}\nend",
             name="high_risk_script",
             description="High risk capability",
             tags=[],
@@ -63,6 +74,7 @@ class MockHighRiskLLM(MockPlanLLM):
 # ------------------------------------------------------------------
 # Fixtures
 # ------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def plan_client(db_session):
@@ -96,6 +108,7 @@ async def high_risk_client(db_session):
 # Tests: POST /plans
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_create_plan_propose_returns_approved(plan_client):
     """Low-risk artifact → plan status should be approved automatically."""
@@ -122,10 +135,13 @@ async def test_create_plan_high_risk_requires_approval(high_risk_client):
 @pytest.mark.asyncio
 async def test_create_plan_persist_mode_saves_artifacts(plan_client):
     """mode=persist should save artifacts and return artifact_ids."""
-    resp = await plan_client.post("/plans", json={
-        "intent": "persist mode test capability",
-        "mode": "persist",
-    })
+    resp = await plan_client.post(
+        "/plans",
+        json={
+            "intent": "persist mode test capability",
+            "mode": "persist",
+        },
+    )
     assert resp.status_code == 201, resp.text
     data = resp.json()
     assert data["status"] == "approved"
@@ -151,6 +167,7 @@ async def test_create_plan_force_new_skips_reuse(plan_client):
 # Tests: GET /plans/{plan_id}
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_plan_returns_persisted_plan(plan_client):
     create_resp = await plan_client.post("/plans", json={"intent": "get plan test"})
@@ -172,6 +189,7 @@ async def test_get_plan_not_found(plan_client):
 # Tests: approve / reject transitions
 # ------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_approve_proposed_plan(high_risk_client):
     create_resp = await high_risk_client.post("/plans", json={"intent": "approve transition test"})
@@ -179,7 +197,9 @@ async def test_approve_proposed_plan(high_risk_client):
     plan_id = create_resp.json()["plan_id"]
     assert create_resp.json()["status"] == "proposed"
 
-    approve_resp = await high_risk_client.post(f"/plans/{plan_id}/approve", json={"comment": "looks good"})
+    approve_resp = await high_risk_client.post(
+        f"/plans/{plan_id}/approve", json={"comment": "looks good"}
+    )
     assert approve_resp.status_code == 200
     assert approve_resp.json()["status"] == "approved"
 
@@ -190,7 +210,9 @@ async def test_reject_proposed_plan(high_risk_client):
     assert create_resp.status_code == 201
     plan_id = create_resp.json()["plan_id"]
 
-    reject_resp = await high_risk_client.post(f"/plans/{plan_id}/reject", json={"reason": "too risky"})
+    reject_resp = await high_risk_client.post(
+        f"/plans/{plan_id}/reject", json={"reason": "too risky"}
+    )
     assert reject_resp.status_code == 200
     assert reject_resp.json()["status"] == "rejected"
 

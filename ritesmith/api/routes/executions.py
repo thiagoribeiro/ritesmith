@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from ritesmith.api.deps import get_audit, get_execution_service
+from ritesmith.api.deps import get_execution_service
 from ritesmith.core.execution import ExecutionService
 from ritesmith.schemas.execution import CreateExecutionRequest, Execution
 

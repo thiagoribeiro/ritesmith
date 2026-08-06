@@ -11,28 +11,32 @@ Fluxo principal (build_plan):
 6. Persiste Plan (sempre) + artifacts (se mode=persist ou execute)
 7. Retorna Plan schema
 """
+
 from datetime import UTC, datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.api.routes.artifacts import _build_artifact
 from ritesmith.config import Settings
 from ritesmith.core.audit import AuditLogger
-from ritesmith.core.exceptions import InvalidTransitionError, NotFoundError, PolicyDeniedError
+from ritesmith.core.exceptions import InvalidTransitionError, NotFoundError
 from ritesmith.core.generation import GenerationService
-from ritesmith.core.workflow_generation import WorkflowGenerationService
 from ritesmith.core.ids import generate_id
 from ritesmith.core.policy import PolicyEngine
+from ritesmith.core.workflow_generation import WorkflowGenerationService
 from ritesmith.llm.base import LLMProvider
 from ritesmith.registry.models import Artifact as ArtifactORM
 from ritesmith.registry.models import ArtifactVersion as ArtifactVersionORM
 from ritesmith.registry.models import Plan as PlanORM
 from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
-from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, ValidationResult
-from ritesmith.schemas.generation import GenerateScriptRequest, GenerateWorkflowRequest, ScriptConstraints
+from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ValidationResult
+from ritesmith.schemas.generation import (
+    GenerateScriptRequest,
+    GenerateWorkflowRequest,
+    ScriptConstraints,
+)
 from ritesmith.schemas.plan import (
     ApprovePlanRequest,
     CompletePlanRequest,
@@ -51,13 +55,20 @@ from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationReques
 _REUSE_SCORE_THRESHOLD = 0.05
 
 _PRIVATE_URL_PREFIXES = (
-    "http://localhost", "https://localhost",
-    "http://127.", "https://127.",
-    "http://10.", "https://10.",
-    "http://172.16.", "https://172.16.",
-    "http://192.168.", "https://192.168.",
-    "http://0.0.0.0", "https://0.0.0.0",
-    "http://[::1]", "https://[::1]",
+    "http://localhost",
+    "https://localhost",
+    "http://127.",
+    "https://127.",
+    "http://10.",
+    "https://10.",
+    "http://172.16.",
+    "https://172.16.",
+    "http://192.168.",
+    "https://192.168.",
+    "http://0.0.0.0",
+    "https://0.0.0.0",
+    "http://[::1]",
+    "https://[::1]",
 )
 
 
@@ -68,30 +79,41 @@ def _is_safe_callback_url(url: str) -> bool:
 
 
 async def _fire_callback(callback_url: str, plan_id: str, status: str, summary: str | None) -> None:
-    import httpx
     import logging
+
+    import httpx
+
     log = logging.getLogger(__name__)
     if not _is_safe_callback_url(callback_url):
         log.warning("plan.callback blocked unsafe url plan=%s url=%r", plan_id, callback_url)
         return
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(callback_url, json={
-                "plan_id": plan_id,
-                "status": status,
-                "summary": summary or "",
-            })
+            await client.post(
+                callback_url,
+                json={
+                    "plan_id": plan_id,
+                    "status": status,
+                    "summary": summary or "",
+                },
+            )
         log.info("plan.callback fired plan=%s status=%s", plan_id, status)
     except Exception as exc:
         log.warning("plan.callback failed plan=%s: %s", plan_id, exc)
 
+
 _ALLOWED_TRANSITIONS: dict[PlanStatus, set[PlanStatus]] = {
-    PlanStatus.draft:     {PlanStatus.proposed, PlanStatus.blocked},
-    PlanStatus.proposed:  {PlanStatus.approved, PlanStatus.rejected, PlanStatus.blocked},
-    PlanStatus.approved:  {PlanStatus.persisted, PlanStatus.executing, PlanStatus.completed, PlanStatus.failed},
+    PlanStatus.draft: {PlanStatus.proposed, PlanStatus.blocked},
+    PlanStatus.proposed: {PlanStatus.approved, PlanStatus.rejected, PlanStatus.blocked},
+    PlanStatus.approved: {
+        PlanStatus.persisted,
+        PlanStatus.executing,
+        PlanStatus.completed,
+        PlanStatus.failed,
+    },
     PlanStatus.persisted: {PlanStatus.executing, PlanStatus.completed, PlanStatus.failed},
     PlanStatus.executing: {PlanStatus.completed, PlanStatus.failed},
-    PlanStatus.failed:    {PlanStatus.superseded},
+    PlanStatus.failed: {PlanStatus.superseded},
 }
 
 
@@ -110,7 +132,9 @@ class PlanBuilder:
         self.registry = RegistryService(db)
         self.policy = PolicyEngine(settings)
         self._generation_service = GenerationService(db=db, llm=llm, settings=settings, audit=audit)
-        self._workflow_service = WorkflowGenerationService(db=db, llm=llm, settings=settings, audit=audit)
+        self._workflow_service = WorkflowGenerationService(
+            db=db, llm=llm, settings=settings, audit=audit
+        )
 
     async def build_plan(self, req: CreatePlanRequest) -> Plan:
         constraints = req.constraints or PlanConstraints()
@@ -123,7 +147,9 @@ class PlanBuilder:
         )
 
         # 2. Determine which artifact types to generate
-        artifact_types = req.requested_artifact_types or intent_analysis.artifact_types or ["lua_script"]
+        artifact_types = (
+            req.requested_artifact_types or intent_analysis.artifact_types or ["lua_script"]
+        )
 
         # 3. Search for reusable artifacts and generate
         steps: list[PlanStep] = []
@@ -190,7 +216,11 @@ class PlanBuilder:
         # 5. Determine plan status
         if any_blocked:
             plan_status = PlanStatus.blocked
-        elif any_requires_approval or req.constraints and req.constraints.require_approval_for_execution:
+        elif (
+            any_requires_approval
+            or req.constraints
+            and req.constraints.require_approval_for_execution
+        ):
             plan_status = PlanStatus.proposed
         else:
             plan_status = PlanStatus.approved
@@ -200,11 +230,19 @@ class PlanBuilder:
         if policy_decisions:
             decisions = [d.decision for d in policy_decisions]
             if PolicyDecisionValue.deny in decisions:
-                aggregate_policy = PolicyDecision(decision=PolicyDecisionValue.deny, reason="One or more artifacts were denied by policy")
+                aggregate_policy = PolicyDecision(
+                    decision=PolicyDecisionValue.deny,
+                    reason="One or more artifacts were denied by policy",
+                )
             elif PolicyDecisionValue.require_approval in decisions:
-                aggregate_policy = PolicyDecision(decision=PolicyDecisionValue.require_approval, reason="One or more artifacts require approval")
+                aggregate_policy = PolicyDecision(
+                    decision=PolicyDecisionValue.require_approval,
+                    reason="One or more artifacts require approval",
+                )
             else:
-                aggregate_policy = PolicyDecision(decision=PolicyDecisionValue.allow, reason="All artifacts approved by policy")
+                aggregate_policy = PolicyDecision(
+                    decision=PolicyDecisionValue.allow, reason="All artifacts approved by policy"
+                )
 
         # 6. Persist plan
         save_artifacts = req.mode in (GenerationMode.persist, GenerationMode.execute)
@@ -256,7 +294,9 @@ class PlanBuilder:
 
         if self.audit:
             await self.audit.log_event(
-                "plan.created", "plan", plan_id,
+                "plan.created",
+                "plan",
+                plan_id,
                 payload={"intent": req.intent, "status": plan_status, "mode": req.mode},
             )
 
@@ -295,7 +335,9 @@ class PlanBuilder:
 
         # Try reuse first
         if req.reuse_policy != ReusePolicy.force_new:
-            search_results = await fts_search(self.db, req.intent, artifact_types=[artifact_type], limit=3)
+            search_results = await fts_search(
+                self.db, req.intent, artifact_types=[artifact_type], limit=3
+            )
             if search_results and search_results[0].score >= _REUSE_SCORE_THRESHOLD:
                 best = search_results[0]
                 artifact = _build_artifact(best.artifact, best.version)
@@ -384,7 +426,9 @@ class PlanBuilder:
 
         await self.db.flush()
         if self.audit:
-            await self.audit.log_event("plan.approved", "plan", plan_id, payload={"comment": req.comment})
+            await self.audit.log_event(
+                "plan.approved", "plan", plan_id, payload={"comment": req.comment}
+            )
         await self.db.commit()
         return await self._orm_to_schema(plan_orm)
 
@@ -395,12 +439,15 @@ class PlanBuilder:
         plan_orm.updated_at = datetime.now(UTC)
         await self.db.flush()
         if self.audit:
-            await self.audit.log_event("plan.rejected", "plan", plan_id, payload={"reason": req.reason})
+            await self.audit.log_event(
+                "plan.rejected", "plan", plan_id, payload={"reason": req.reason}
+            )
         await self.db.commit()
         return await self._orm_to_schema(plan_orm)
 
     async def complete_plan(self, plan_id: str, req: CompletePlanRequest) -> Plan:
         import asyncio
+
         plan_orm = await self._get_orm(plan_id)
         target = PlanStatus.completed if req.status == "completed" else PlanStatus.failed
         self._assert_transition(plan_orm, target)
@@ -414,9 +461,9 @@ class PlanBuilder:
         await self.db.commit()
 
         if plan_orm.callback_url:
-            asyncio.create_task(_fire_callback(
-                plan_orm.callback_url, plan_id, req.status, plan_orm.summary
-            ))
+            asyncio.create_task(
+                _fire_callback(plan_orm.callback_url, plan_id, req.status, plan_orm.summary)
+            )
 
         return await self._orm_to_schema(plan_orm)
 
@@ -440,7 +487,9 @@ class PlanBuilder:
 
         if self.audit:
             await self.audit.log_event(
-                "plan.superseded", "plan", failed_plan_id,
+                "plan.superseded",
+                "plan",
+                failed_plan_id,
                 payload={"reason": failure_reason, "replan_count": replan_count},
             )
 
@@ -450,11 +499,13 @@ class PlanBuilder:
             "replan_count": replan_count + 1,
             "previous_failure": failure_reason,
         }
-        new_plan = await self.build_plan(CreatePlanRequest(
-            intent=failed_orm.intent,
-            context=new_context,
-            reuse_policy=ReusePolicy.force_new,
-        ))
+        new_plan = await self.build_plan(
+            CreatePlanRequest(
+                intent=failed_orm.intent,
+                context=new_context,
+                reuse_policy=ReusePolicy.force_new,
+            )
+        )
         await self.db.commit()
         return new_plan
 
@@ -481,9 +532,7 @@ class PlanBuilder:
         current = PlanStatus(plan_orm.status)
         allowed = _ALLOWED_TRANSITIONS.get(current, set())
         if target not in allowed:
-            raise InvalidTransitionError(
-                f"Cannot transition plan from '{current}' to '{target}'"
-            )
+            raise InvalidTransitionError(f"Cannot transition plan from '{current}' to '{target}'")
 
     async def _orm_to_schema(self, plan_orm: PlanORM) -> Plan:
         steps = [PlanStep(**s) for s in (plan_orm.steps or [])]

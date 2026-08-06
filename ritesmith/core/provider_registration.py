@@ -1,4 +1,5 @@
 """Startup hook: upsert provider manifests and capabilities into the database."""
+
 from __future__ import annotations
 
 import logging
@@ -12,9 +13,11 @@ logger = logging.getLogger(__name__)
 
 async def register_all_providers(db: AsyncSession) -> None:
     """Called from the FastAPI lifespan on startup."""
-    from ritesmith.registry.models import Capability, ProviderManifest
-    from sqlalchemy.dialects.postgresql import insert as pg_insert
     from datetime import UTC, datetime
+
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    from ritesmith.registry.models import Capability, ProviderManifest
 
     now = datetime.now(UTC)
 
@@ -43,7 +46,11 @@ async def register_all_providers(db: AsyncSession) -> None:
 
             if provider.is_available():
                 for cap in provider.capabilities():
-                    cap_id = f"{provider.namespace}.{cap['name']}" if "." not in cap["name"] else cap["name"]
+                    cap_id = (
+                        f"{provider.namespace}.{cap['name']}"
+                        if "." not in cap["name"]
+                        else cap["name"]
+                    )
                     cap_stmt = (
                         pg_insert(Capability)
                         .values(

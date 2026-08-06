@@ -2,6 +2,7 @@
 
 Kept as plain f-strings — no Jinja2 dependency.
 """
+
 import json
 
 _MAX_GOAL_LEN = 500
@@ -15,9 +16,11 @@ def _sanitize_goal(goal: str) -> str:
         goal = goal.replace(pat, "")
     return goal.strip()
 
+
 # ---------------------------------------------------------------------------
 # Lua generation
 # ---------------------------------------------------------------------------
+
 
 def lua_generation_system() -> str:
     return """\
@@ -101,7 +104,9 @@ def lua_generation_user(
     if input_schema:
         parts.append(f"INPUT SCHEMA:\n{json.dumps(input_schema, indent=2)}")
     if output_schema:
-        parts.append(f"OUTPUT SCHEMA (return value must conform exactly):\n{json.dumps(output_schema, indent=2)}")
+        parts.append(
+            f"OUTPUT SCHEMA (return value must conform exactly):\n{json.dumps(output_schema, indent=2)}"
+        )
 
     if allowed_host_functions:
         fn_list = "\n".join(f"  - {fn}" for fn in allowed_host_functions)
@@ -109,8 +114,9 @@ def lua_generation_user(
     else:
         parts.append("AVAILABLE HOST FUNCTIONS: none — pure Lua only (no I/O, no HTTP)")
 
-    relevant = {k: v for k, v in constraints.items()
-                if k not in ("reuse_policy",) and v is not None}
+    relevant = {
+        k: v for k, v in constraints.items() if k not in ("reuse_policy",) and v is not None
+    }
     if relevant:
         parts.append(f"CONSTRAINTS:\n{json.dumps(relevant, indent=2)}")
 
@@ -129,6 +135,7 @@ def lua_generation_user(
 # ---------------------------------------------------------------------------
 # Lua repair
 # ---------------------------------------------------------------------------
+
 
 def lua_repair_system() -> str:
     return """\
@@ -154,7 +161,7 @@ def lua_repair_user(
     attempt_number: int,
     response_schema: str,
 ) -> str:
-    errors_text = "\n".join(f"  [{i+1}] {e}" for i, e in enumerate(validation_errors))
+    errors_text = "\n".join(f"  [{i + 1}] {e}" for i, e in enumerate(validation_errors))
     return f"""\
 ORIGINAL GOAL: {_sanitize_goal(original_goal)}
 REPAIR ATTEMPT: {attempt_number}
@@ -174,6 +181,7 @@ Fix the script and respond with JSON matching this schema:
 # ---------------------------------------------------------------------------
 # Intent analysis
 # ---------------------------------------------------------------------------
+
 
 def intent_analysis_system() -> str:
     return """\
@@ -606,10 +614,10 @@ def _provider_capabilities_list() -> str:
     try:
         from ritesmith.runtime.host_functions import _REGISTRY
         from ritesmith.runtime.providers import PROVIDERS
+
         provider_namespaces = {p.namespace for p in PROVIDERS if p.is_available()}
         caps = sorted(
-            name for name in _REGISTRY
-            if "." in name and name.split(".")[0] in provider_namespaces
+            name for name in _REGISTRY if "." in name and name.split(".")[0] in provider_namespaces
         )
         if not caps:
             return "  (no provider capabilities available)"
@@ -721,6 +729,7 @@ def workflow_generation_user(
 # Workflow repair
 # ---------------------------------------------------------------------------
 
+
 def workflow_repair_system() -> str:
     return f"""\
 You are a Trama workflow repair specialist for RiteSmith.
@@ -746,7 +755,7 @@ def workflow_repair_user(
     response_schema: str,
     available_capability_names: list[str] | None = None,
 ) -> str:
-    errors_text = "\n".join(f"  [{i+1}] {e}" for i, e in enumerate(validation_errors))
+    errors_text = "\n".join(f"  [{i + 1}] {e}" for i, e in enumerate(validation_errors))
     parts = [
         f"ORIGINAL GOAL: {_sanitize_goal(original_goal)}",
         f"REPAIR ATTEMPT: {attempt_number}",
@@ -755,6 +764,8 @@ def workflow_repair_user(
     ]
     if available_capability_names:
         caps_list = "\n".join(f"  - {n}" for n in sorted(available_capability_names))
-        parts.append(f"VALID CAPABILITY NAMES (use only these in capability_name field):\n{caps_list}")
+        parts.append(
+            f"VALID CAPABILITY NAMES (use only these in capability_name field):\n{caps_list}"
+        )
     parts.append(f"Fix the workflow and respond with JSON matching this schema:\n{response_schema}")
     return "\n\n".join(parts)

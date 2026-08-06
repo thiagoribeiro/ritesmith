@@ -9,6 +9,7 @@ Requires:
 
 The resulting token covers both Calendar and Gmail scopes.
 """
+
 import os
 import sys
 
@@ -20,6 +21,7 @@ _SCOPES = [
 
 def main() -> None:
     from ritesmith.config import get_settings
+
     s = get_settings()
 
     secrets = s.google_client_secrets_json

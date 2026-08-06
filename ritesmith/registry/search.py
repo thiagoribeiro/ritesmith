@@ -55,11 +55,11 @@ async def fts_search(
         stmt = stmt.where(Artifact.status.not_in(_EXCLUDED_STATUSES))
 
     # Exclude expired artifacts
-    stmt = stmt.where(
-        or_(Artifact.expires_at.is_(None), Artifact.expires_at > func.now())
-    )
+    stmt = stmt.where(or_(Artifact.expires_at.is_(None), Artifact.expires_at > func.now()))
 
-    artifact_type_label = (artifact_types[0] if artifact_types and len(artifact_types) == 1 else "mixed")
+    artifact_type_label = (
+        artifact_types[0] if artifact_types and len(artifact_types) == 1 else "mixed"
+    )
     t0 = time.perf_counter()
     rows = await db.execute(stmt)
     elapsed = time.perf_counter() - t0

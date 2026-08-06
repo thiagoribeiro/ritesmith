@@ -14,6 +14,7 @@ Layer 2 — Contracts (only when capability_registry is provided):
   - capability_name in action.request.body must exist in registry
   - {{ nodes.X.* }} template references must point to real node ids
 """
+
 from __future__ import annotations
 
 import json
@@ -89,7 +90,9 @@ class WorkflowValidator:
         kind = node.get("kind")
 
         if kind not in _V2_NODE_KINDS:
-            errors.append(f"Node '{nid}': invalid kind '{kind}' (must be one of {sorted(_V2_NODE_KINDS)})")
+            errors.append(
+                f"Node '{nid}': invalid kind '{kind}' (must be one of {sorted(_V2_NODE_KINDS)})"
+            )
             return errors
 
         if kind == "task":
@@ -97,16 +100,22 @@ class WorkflowValidator:
                 errors.append(f"Node '{nid}': task node must have an 'action'")
             next_id = node.get("next")
             if not next_id:
-                errors.append(f"Node '{nid}': task node must have a 'next' (use 'end' to terminate)")
+                errors.append(
+                    f"Node '{nid}': task node must have a 'next' (use 'end' to terminate)"
+                )
             elif next_id != "end" and next_id not in node_ids:
                 errors.append(f"Node '{nid}': 'next' references non-existent node '{next_id}'")
             mode = (node.get("action") or {}).get("mode", "")
             if mode == "async-http-callback":
                 callback = (node.get("action") or {}).get("callback", {})
                 if not callback.get("timeoutMillis"):
-                    errors.append(f"Node '{nid}': async-http-callback action must specify callback.timeoutMillis")
+                    errors.append(
+                        f"Node '{nid}': async-http-callback action must specify callback.timeoutMillis"
+                    )
                 if not callback.get("successWhen"):
-                    errors.append(f"Node '{nid}': async-http-callback action must specify callback.successWhen")
+                    errors.append(
+                        f"Node '{nid}': async-http-callback action must specify callback.successWhen"
+                    )
 
         elif kind == "switch":
             cases = node.get("cases")
@@ -125,14 +134,18 @@ class WorkflowValidator:
             if not default:
                 errors.append(f"Node '{nid}': switch node must have a 'default'")
             elif default != "end" and default not in node_ids:
-                errors.append(f"Node '{nid}': switch 'default' references non-existent node '{default}'")
+                errors.append(
+                    f"Node '{nid}': switch 'default' references non-existent node '{default}'"
+                )
 
         elif kind == "sleep":
             duration = node.get("durationSeconds")
             if duration is None:
                 errors.append(f"Node '{nid}': sleep node must specify 'durationSeconds'")
             elif not isinstance(duration, (int, float)) or duration <= 0:
-                errors.append(f"Node '{nid}': sleep node 'durationSeconds' must be a positive number")
+                errors.append(
+                    f"Node '{nid}': sleep node 'durationSeconds' must be a positive number"
+                )
             next_id = node.get("next")
             if not next_id:
                 errors.append(f"Node '{nid}': sleep node must have a 'next'")
@@ -195,8 +208,7 @@ class WorkflowValidator:
 
             if cap_name and cap_name not in self.capability_registry:
                 errors.append(
-                    f"Node '{nid}': unknown capability_name '{cap_name}'. "
-                    f"Available: {available}"
+                    f"Node '{nid}': unknown capability_name '{cap_name}'. Available: {available}"
                 )
 
             errors.extend(self._validate_templates(nid, body, node_ids))
@@ -206,11 +218,9 @@ class WorkflowValidator:
     def _validate_templates(self, nid: str, body: dict, node_ids: set[str]) -> list[str]:
         errors = []
         body_str = json.dumps(body)
-        for ref_node in re.findall(r'\{\{\s*nodes\.([^.\s}]+)', body_str):
+        for ref_node in re.findall(r"\{\{\s*nodes\.([^.\s}]+)", body_str):
             if ref_node not in node_ids:
-                errors.append(
-                    f"Node '{nid}': template references undefined node '{ref_node}'"
-                )
+                errors.append(f"Node '{nid}': template references undefined node '{ref_node}'")
         return errors
 
     # ------------------------------------------------------------------
@@ -251,8 +261,7 @@ class WorkflowValidator:
 
     def _detect_v1_cycles(self, steps: list) -> list[str]:
         graph: dict[str, list[str]] = {
-            s["step_id"]: s.get("depends_on", [])
-            for s in steps if s.get("step_id")
+            s["step_id"]: s.get("depends_on", []) for s in steps if s.get("step_id")
         }
         visited: set[str] = set()
         in_stack: set[str] = set()
@@ -283,7 +292,9 @@ class WorkflowValidator:
         for step in steps:
             cap_id = step.get("capability_id")
             if cap_id and cap_id in self.capability_registry:
-                step_output_schemas[step["step_id"]] = self.capability_registry[cap_id].get("output_schema") or {}
+                step_output_schemas[step["step_id"]] = (
+                    self.capability_registry[cap_id].get("output_schema") or {}
+                )
 
         for step in steps:
             sid = step.get("step_id", "<unknown>")
@@ -300,7 +311,9 @@ class WorkflowValidator:
                 from_step = wiring.get("from_step")
                 from_field = wiring.get("from_field")
                 if from_step and from_step not in step_ids:
-                    errors.append(f"Step '{sid}': input '{field}' references non-existent step '{from_step}'")
+                    errors.append(
+                        f"Step '{sid}': input '{field}' references non-existent step '{from_step}'"
+                    )
                 elif from_step and from_field:
                     src_props = step_output_schemas.get(from_step, {}).get("properties", {})
                     if src_props and from_field not in src_props:

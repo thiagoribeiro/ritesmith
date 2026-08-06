@@ -6,6 +6,7 @@ Exposes:
 
 agent_core connects as a client to GET /mcp/sse.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,6 +37,7 @@ _tool_registry: dict[str, MCPToolDef] = {}
 
 # ── HTTP client for RiteSmith self-calls (meta-tools) ────────────────────────
 
+
 async def _post(path: str, body: dict) -> dict:
     async with httpx.AsyncClient(base_url=_BASE, timeout=_TIMEOUT) as c:
         r = await c.post(path, json=body)
@@ -52,6 +54,7 @@ async def _get(path: str, params: dict | None = None) -> Any:
 
 # ── Tool registry build ───────────────────────────────────────────────────────
 
+
 def _build_tools() -> list[Tool]:
     _tool_registry.clear()
     tools: list[Tool] = []
@@ -61,7 +64,9 @@ def _build_tools() -> list[Tool]:
             continue
         for td in provider.mcp_tools():
             _tool_registry[td.name] = td
-            tools.append(Tool(name=td.name, description=td.description, inputSchema=td.input_schema))
+            tools.append(
+                Tool(name=td.name, description=td.description, inputSchema=td.input_schema)
+            )
 
     _META: list[tuple[str, str, dict]] = [
         (
@@ -71,7 +76,11 @@ def _build_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {
                     "intent": {"type": "string"},
-                    "mode": {"type": "string", "enum": ["propose", "generate", "validate_only", "persist", "execute"], "default": "execute"},
+                    "mode": {
+                        "type": "string",
+                        "enum": ["propose", "generate", "validate_only", "persist", "execute"],
+                        "default": "execute",
+                    },
                     "callback_url": {"type": "string"},
                 },
                 "required": ["intent"],
@@ -146,6 +155,7 @@ def _build_tools() -> list[Tool]:
 
 # ── MCP server handlers ───────────────────────────────────────────────────────
 
+
 @_mcp_server.list_tools()
 async def _list_tools() -> list[Tool]:
     return _build_tools()
@@ -171,7 +181,9 @@ async def _call_tool(name: str, arguments: dict | None) -> list[TextContent]:
                 body["callback_url"] = cb
             result = await _post("/plans", body)
         case "ritesmith_generate":
-            result = await _post("/generate", {"intent": intent, **{k: v for k, v in args.items() if k != "intent"}})
+            result = await _post(
+                "/generate", {"intent": intent, **{k: v for k, v in args.items() if k != "intent"}}
+            )
         case "ritesmith_search_artifacts":
             params: dict = {"query": args["query"], "limit": args.get("limit", 10)}
             if at := args.get("artifact_type"):
@@ -199,6 +211,7 @@ async def _call_tool(name: str, arguments: dict | None) -> list[TextContent]:
 # Raw ASGI class avoids Starlette Route's assumption that handlers return Response objects.
 # SSE transport sends the HTTP response itself (headers + body stream); wrapping it in a
 # Starlette Route causes a TypeError when the handler returns None after the stream closes.
+
 
 class _MCPApp:
     async def __call__(self, scope, receive, send) -> None:
