@@ -2,12 +2,13 @@
 
 Import individual metrics from here — never create Counter/Histogram elsewhere.
 """
+
 from prometheus_client import Counter, Gauge, Histogram
 
 _BUCKETS_LATENCY = (0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0)
-_BUCKETS_SMALL   = (0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5)
-_BUCKETS_COUNT   = (1, 2, 5, 10, 20, 50, 100, 500)
-_BUCKETS_DEPTH   = (1, 2, 4, 8, 16, 32)
+_BUCKETS_SMALL = (0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5)
+_BUCKETS_COUNT = (1, 2, 5, 10, 20, 50, 100, 500)
+_BUCKETS_DEPTH = (1, 2, 4, 8, 16, 32)
 
 # ── HTTP ─────────────────────────────────────────────────────────────────────
 http_requests_total = Counter(
@@ -44,7 +45,7 @@ llm_errors_total = Counter(
 generation_attempts_total = Counter(
     "ritesmith_generation_attempts_total",
     "Generation loop attempts",
-    ["artifact_type", "outcome"],   # outcome: success | exhausted
+    ["artifact_type", "outcome"],  # outcome: success | exhausted
 )
 artifact_reuse_total = Counter(
     "ritesmith_artifact_reuse_total",
@@ -61,7 +62,7 @@ validation_failures_total = Counter(
 execution_duration = Histogram(
     "ritesmith_execution_duration_seconds",
     "End-to-end execution duration",
-    ["runtime"],   # lua | trama
+    ["runtime"],  # lua | trama
     buckets=_BUCKETS_LATENCY,
 )
 execution_status_total = Counter(
@@ -72,6 +73,15 @@ execution_status_total = Counter(
 lua_timeout_total = Counter(
     "ritesmith_lua_timeout_total",
     "Lua executions that hit the timeout",
+)
+contract_violations_total = Counter(
+    "ritesmith_contract_violations_total",
+    "Executions whose output violated the artifact's declared output_schema",
+)
+contract_repairs_total = Counter(
+    "ritesmith_contract_repairs_total",
+    "Background contract-violation repair loop outcomes",
+    ["outcome"],  # outcome: success | exhausted
 )
 
 # ── FTS / DB ──────────────────────────────────────────────────────────────────
