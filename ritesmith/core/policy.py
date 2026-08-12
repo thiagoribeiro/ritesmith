@@ -9,6 +9,7 @@ Regras em ordem de prioridade (primeira que bate, decide):
   6. trama_workflow delegate      → require_approval
   7. Default                      → settings.policy_default
 """
+
 from ritesmith.config import Settings
 from ritesmith.observability.metrics import policy_decisions_total
 from ritesmith.schemas.artifact import RiskLevel

@@ -8,38 +8,38 @@ version = "0.1.0"
 description = "AI-assisted capability and workflow generation control plane"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.32",
-    "pydantic>=2.9",
-    "pydantic-settings>=2.6",
-    "sqlalchemy[asyncio]>=2.0",
-    "asyncpg>=0.30",
-    "alembic>=1.14",
-    "python-ulid>=3.0",
-    "python-dotenv>=1.0",
-    "lupa>=2.2",
-    "openai>=1.55",
+    "fastapi>=0.141",
+    "uvicorn[standard]>=0.52",
+    "pydantic>=2.13",
+    "pydantic-settings>=2.14",
+    "sqlalchemy[asyncio]>=2.0.51",
+    "asyncpg>=0.31",
+    "alembic>=1.19",
+    "python-ulid>=4.0",
+    "python-dotenv>=1.2",
+    "lupa>=2.8",
+    "openai>=2.53",
     "httpx>=0.28",
-    "mcp>=1.0",
-    "jsonschema>=4.23",
-    "prometheus-client>=0.20",
-    "slowapi>=0.1.9",
+    "mcp>=1.0,<2.0",  # v2.0 rewrote the low-level Server API used in ritesmith/api/mcp_handler.py and mcp-server/server.py — migration tracked separately, do not bump without updating that code
+    "jsonschema>=4.26",
+    "prometheus-client>=0.26",
+    "slowapi>=0.1.10",
     # Tool providers
-    "html2text>=2024.2",
-    "duckdb>=1.1",
-    "google-api-python-client>=2.150",
-    "google-auth>=2.36",
-    "google-auth-oauthlib>=1.2",
+    "html2text>=2025.4",
+    "duckdb>=1.5",
+    "google-api-python-client>=2.198",
+    "google-auth>=2.56",
+    "google-auth-oauthlib>=1.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3",
-    "pytest-asyncio>=0.24",
-    "pytest-httpx>=0.33",
-    "pytest-cov>=6.0",
-    "anyio>=4.6",
-    "ruff>=0.8",
+    "pytest>=9.1",
+    "pytest-asyncio>=1.4",
+    "pytest-httpx>=0.36",
+    "pytest-cov>=7.1",
+    "anyio>=4.14",
+    "ruff>=0.16",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -57,3 +57,27 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+# BLE001 (blind `except Exception`): this codebase's deliberate resilience
+# pattern for provider/audit/startup code paths that must degrade gracefully
+# instead of crashing — narrowing each site to a specific exception type is a
+# real, separate cleanup effort, not something to force through a lint rule.
+# G201 (log.error(..., exc_info=True) vs log.exception(...)): already the
+# established, consistently-used style throughout this codebase; functionally
+# identical to log.exception(), so there's no behavior gain from switching.
+ignore = ["BLE001", "G201"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 flags function-call-in-default-argument, which is exactly how FastAPI's
+# own dependency-injection system works (Depends(...)/Query(...) as a default
+# value) and how these three endpoints accept an optional JSON body. None of
+# them are mutated in place, so the shared-default-object risk B008 warns
+# about doesn't apply here.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "ritesmith.schemas.plan.ApprovePlanRequest",
+    "ritesmith.schemas.plan.RejectPlanRequest",
+    "ritesmith.schemas.plan.CompletePlanRequest",
+]

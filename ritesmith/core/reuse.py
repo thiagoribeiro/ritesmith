@@ -1,4 +1,5 @@
 """Reuse check shared by generation services."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +35,9 @@ async def check_reuse(
 
     if audit:
         await audit.log_event(
-            "generation.reused", "artifact", best.artifact.artifact_id,
+            "generation.reused",
+            "artifact",
+            best.artifact.artifact_id,
             payload={"goal": intent, "score": best.score},
         )
 

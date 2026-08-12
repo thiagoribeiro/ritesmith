@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, Request
 
+from ritesmith.api.deps import (
+    get_generation_dispatcher,
+    get_generation_service,
+    get_workflow_generation_service,
+)
 from ritesmith.api.limiter import limiter
-from ritesmith.api.deps import get_generation_dispatcher, get_generation_service, get_workflow_generation_service
 from ritesmith.core.generation import GenerationService
 from ritesmith.core.generation_dispatcher import GenerationDispatcher
 from ritesmith.core.workflow_generation import WorkflowGenerationService

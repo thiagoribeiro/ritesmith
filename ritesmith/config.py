@@ -8,7 +8,7 @@ class CASPProviderConfig(BaseModel):
     url: str
     resource_types: list[str] = []  # empty = handles all types
     weight: int = 100
-    priority: int = 0               # lower = tried first
+    priority: int = 0  # lower = tried first
 
 
 class Settings(BaseSettings):
@@ -52,38 +52,42 @@ class Settings(BaseSettings):
     otel_enabled: bool = False
 
     # Web search
-    web_search_api_key: str | None = None         # RITESMITH_WEB_SEARCH_API_KEY (Brave)
-    exa_api_key: str | None = None                # RITESMITH_EXA_API_KEY
+    web_search_api_key: str | None = None  # RITESMITH_WEB_SEARCH_API_KEY (Brave)
+    exa_api_key: str | None = None  # RITESMITH_EXA_API_KEY
 
     # Telegram
-    telegram_bot_token: str | None = None         # RITESMITH_TELEGRAM_BOT_TOKEN
-    telegram_chat_id: str | None = None           # RITESMITH_TELEGRAM_CHAT_ID
+    telegram_bot_token: str | None = None  # RITESMITH_TELEGRAM_BOT_TOKEN
+    telegram_chat_id: str | None = None  # RITESMITH_TELEGRAM_CHAT_ID
 
     # Google (OAuth2 — one token.json covers both Calendar and Gmail)
-    google_token_json: str | None = None          # RITESMITH_GOOGLE_TOKEN_JSON (path)
-    google_client_secrets_json: str | None = None # RITESMITH_GOOGLE_CLIENT_SECRETS_JSON
-    google_calendar_ids: str | None = None        # RITESMITH_GOOGLE_CALENDAR_IDS e.g. "personal:primary,family:id@..."
+    google_token_json: str | None = None  # RITESMITH_GOOGLE_TOKEN_JSON (path)
+    google_client_secrets_json: str | None = None  # RITESMITH_GOOGLE_CLIENT_SECRETS_JSON
+    google_calendar_ids: str | None = (
+        None  # RITESMITH_GOOGLE_CALENDAR_IDS e.g. "personal:primary,family:id@..."
+    )
 
     # DuckDB
-    duckdb_path: str | None = None                # RITESMITH_DUCKDB_PATH
-    duckdb_allowed_paths: str = ""                # RITESMITH_DUCKDB_ALLOWED_PATHS (comma-separated)
+    duckdb_path: str | None = None  # RITESMITH_DUCKDB_PATH
+    duckdb_allowed_paths: str = ""  # RITESMITH_DUCKDB_ALLOWED_PATHS (comma-separated)
 
     # Obsidian vault
-    obsidian_vault_path: str | None = None        # RITESMITH_OBSIDIAN_VAULT_PATH
+    obsidian_vault_path: str | None = None  # RITESMITH_OBSIDIAN_VAULT_PATH
 
     # Artifact lifecycle
-    artifact_ttl_days: int = 30                   # RITESMITH_ARTIFACT_TTL_DAYS (0 = no TTL)
+    artifact_ttl_days: int = 30  # RITESMITH_ARTIFACT_TTL_DAYS (0 = no TTL)
 
     # Reports
-    reports_path: str | None = None               # RITESMITH_REPORTS_PATH (e.g. /path/to/reports)
+    reports_path: str | None = None  # RITESMITH_REPORTS_PATH (e.g. /path/to/reports)
 
     # Trama integration
-    public_url: str | None = None                 # RITESMITH_PUBLIC_URL (e.g. http://ritesmith:8081)
-    trama_token: str | None = None                # RITESMITH_TRAMA_TOKEN (shared secret for /trama/execute)
+    public_url: str | None = None  # RITESMITH_PUBLIC_URL (e.g. http://ritesmith:8081)
+    trama_token: str | None = None  # RITESMITH_TRAMA_TOKEN (shared secret for /trama/execute)
 
     # LoomHarbor integration (legacy home.* provider)
-    loomharbor_url: str | None = None             # RITESMITH_LOOMHARBOR_URL (e.g. http://loomharbor:8000)
-    loomharbor_secret: str | None = None          # RITESMITH_LOOMHARBOR_SECRET (Bearer token for LoomHarbor API)
+    loomharbor_url: str | None = None  # RITESMITH_LOOMHARBOR_URL (e.g. http://loomharbor:8000)
+    loomharbor_secret: str | None = (
+        None  # RITESMITH_LOOMHARBOR_SECRET (Bearer token for LoomHarbor API)
+    )
 
     # CASP providers — JSON array of CASPProviderConfig objects
     # e.g. RITESMITH_CASP_PROVIDERS='[{"url":"http://loomharbor:8000"}]'
@@ -93,9 +97,9 @@ class Settings(BaseSettings):
     casp_max_replan_attempts: int = 2
 
     # Grafana + Prometheus
-    grafana_url: str = "http://localhost:3000"    # RITESMITH_GRAFANA_URL
-    grafana_token: str | None = None              # RITESMITH_GRAFANA_TOKEN (service account token)
-    prometheus_url: str = "http://localhost:9090" # RITESMITH_PROMETHEUS_URL
+    grafana_url: str = "http://localhost:3000"  # RITESMITH_GRAFANA_URL
+    grafana_token: str | None = None  # RITESMITH_GRAFANA_TOKEN (service account token)
+    prometheus_url: str = "http://localhost:9090"  # RITESMITH_PROMETHEUS_URL
 
 
 @lru_cache

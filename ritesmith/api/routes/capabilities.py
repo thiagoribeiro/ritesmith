@@ -1,12 +1,15 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.core.exceptions import NotFoundError
 from ritesmith.registry.models import Capability as CapabilityORM
 from ritesmith.registry.service import RegistryService
-from ritesmith.schemas.capability import Capability, CapabilityKind, CapabilityListResponse, CapabilityStatus
+from ritesmith.schemas.capability import (
+    Capability,
+    CapabilityKind,
+    CapabilityListResponse,
+    CapabilityStatus,
+)
 from ritesmith.storage.postgres import get_db
 
 router = APIRouter(prefix="/capabilities", tags=["Capabilities"])
@@ -39,7 +42,9 @@ async def list_capabilities(
 ) -> CapabilityListResponse:
     svc = RegistryService(db)
     caps = await svc.list_capabilities(kind=kind, status=status, limit=limit)
-    return CapabilityListResponse(capabilities=[_build_capability(c) for c in caps], total=len(caps))
+    return CapabilityListResponse(
+        capabilities=[_build_capability(c) for c in caps], total=len(caps)
+    )
 
 
 @router.get("/{capability_id}", response_model=Capability)

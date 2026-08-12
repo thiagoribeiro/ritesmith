@@ -1,4 +1,5 @@
 """home.* host functions — LoomHarbor smart device control."""
+
 from __future__ import annotations
 
 import asyncio
@@ -63,11 +64,14 @@ def _execute(capability: str, target: str, input: dict | None = None) -> dict:
     for attempt in range(_MAX_RETRIES):
         try:
             with _client(request_id) as c:
-                r = c.post("/capabilities/execute", json={
-                    "capability": capability,
-                    "target": target,
-                    "input": input or {},
-                })
+                r = c.post(
+                    "/capabilities/execute",
+                    json={
+                        "capability": capability,
+                        "target": target,
+                        "input": input or {},
+                    },
+                )
                 r.raise_for_status()
                 return r.json()
         except (httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError) as exc:
@@ -159,6 +163,7 @@ def _findtag_zone_list() -> dict:
 # ---------------------------------------------------------------------------
 # Async wrappers for MCP tools
 # ---------------------------------------------------------------------------
+
 
 async def _async_execute(**kwargs) -> dict:
     return await asyncio.to_thread(
@@ -287,7 +292,10 @@ class LoomHarborProvider(ToolProvider):
                     "type": "object",
                     "required": ["device"],
                     "properties": {
-                        "device": {"type": "string", "description": "Tracker alias, e.g. 'mochila'"},
+                        "device": {
+                            "type": "string",
+                            "description": "Tracker alias, e.g. 'mochila'",
+                        },
                     },
                 },
             ),
@@ -305,7 +313,10 @@ class LoomHarborProvider(ToolProvider):
                     "required": ["name"],
                     "properties": {
                         "name": {"type": "string", "description": "Zone display name"},
-                        "query": {"type": "string", "description": "Place name for Nominatim polygon search"},
+                        "query": {
+                            "type": "string",
+                            "description": "Place name for Nominatim polygon search",
+                        },
                     },
                 },
             ),
@@ -318,7 +329,10 @@ class LoomHarborProvider(ToolProvider):
                     "type": "object",
                     "required": ["zone_id"],
                     "properties": {
-                        "zone_id": {"type": "string", "description": "ID returned by findtag_zone_list or findtag_zone_add"},
+                        "zone_id": {
+                            "type": "string",
+                            "description": "ID returned by findtag_zone_list or findtag_zone_add",
+                        },
                     },
                 },
             ),
@@ -396,7 +410,10 @@ class LoomHarborProvider(ToolProvider):
                     "type": "object",
                     "required": ["device"],
                     "properties": {
-                        "device": {"type": "string", "description": "Tracker alias, e.g. 'mochila'"},
+                        "device": {
+                            "type": "string",
+                            "description": "Tracker alias, e.g. 'mochila'",
+                        },
                     },
                 },
                 fn=_async_gps_location,
@@ -413,7 +430,10 @@ class LoomHarborProvider(ToolProvider):
                     "required": ["name"],
                     "properties": {
                         "name": {"type": "string", "description": "Display name for the zone"},
-                        "query": {"type": "string", "description": "Place name to resolve via Nominatim"},
+                        "query": {
+                            "type": "string",
+                            "description": "Place name to resolve via Nominatim",
+                        },
                     },
                 },
                 fn=_async_findtag_zone_add,

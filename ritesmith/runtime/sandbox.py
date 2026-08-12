@@ -10,18 +10,37 @@ terminada à força — ela continuará rodando até que o código Lua ceda
 controle ou finalize naturalmente. Em produção, o isolamento real
 exige subprocess/WASM (deferred para V1).
 """
+
 import atexit
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import logging
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 
 from ritesmith.config import get_settings
-from ritesmith.observability.metrics import lua_timeout_total, sandbox_conversion_depth, sandbox_queue_depth
+from ritesmith.observability.metrics import (
+    lua_timeout_total,
+    sandbox_conversion_depth,
+    sandbox_queue_depth,
+)
 from ritesmith.runtime._conversion import lua_to_python, python_to_lua
 from ritesmith.runtime.host_functions import get_functions_for_profile
 
+log = logging.getLogger(__name__)
+
 _FORBIDDEN_GLOBALS = [
-    "io", "os", "debug", "load", "loadfile", "dofile",
-    "require", "package", "rawget", "rawset", "rawequal",
-    "collectgarbage", "newproxy",
+    "io",
+    "os",
+    "debug",
+    "load",
+    "loadfile",
+    "dofile",
+    "require",
+    "package",
+    "rawget",
+    "rawset",
+    "rawequal",
+    "collectgarbage",
+    "newproxy",
 ]
 
 _EXECUTOR = ThreadPoolExecutor(
@@ -41,11 +60,13 @@ def _inject_host_functions(lua, profile: str) -> None:
 
     def _wrap(fn):
         """Convert dict/list return values to Lua tables so Lua operators work."""
+
         def wrapper(*args, **kwargs):
             result = fn(*args, **kwargs)
             if isinstance(result, (dict, list, tuple)):
                 return python_to_lua(lua, result)
             return result
+
         return wrapper
 
     for full_name, fn_def in fns.items():
@@ -68,7 +89,7 @@ def _remove_dangerous_globals(lua) -> None:
         try:
             g[name] = None
         except Exception:
-            pass
+            log.debug("could not remove Lua global %r", name, exc_info=True)
 
 
 def run_in_sandbox(
@@ -83,6 +104,7 @@ def run_in_sandbox(
     Returns:
         (output_dict, error_message, timed_out)
     """
+
     def _execute() -> tuple[dict | None, str | None]:
         from lupa import LuaError, LuaRuntime
 

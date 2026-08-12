@@ -1,4 +1,5 @@
 """grafana.* host functions — dashboard listing, panel metadata, and PromQL queries."""
+
 from __future__ import annotations
 
 import asyncio
@@ -79,10 +80,7 @@ def _grafana_query_prometheus(expr: str) -> list[dict]:
         r = httpx.get(url, params={"query": expr}, timeout=_TIMEOUT)
         r.raise_for_status()
         results = r.json().get("data", {}).get("result", [])
-        return [
-            {"labels": row["metric"], "value": row["value"][1]}
-            for row in results[:20]
-        ]
+        return [{"labels": row["metric"], "value": row["value"][1]} for row in results[:20]]
     except Exception as e:
         logger.warning("grafana.query_prometheus failed: %s", e)
         return [{"error": str(e)}]
@@ -111,12 +109,15 @@ class GrafanaProvider(ToolProvider):
                 },
                 output_schema={
                     "type": "array",
-                    "items": {"type": "object", "properties": {
-                        "uid": {"type": "string"},
-                        "title": {"type": "string"},
-                        "folderTitle": {"type": "string"},
-                        "url": {"type": "string"},
-                    }},
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "uid": {"type": "string"},
+                            "title": {"type": "string"},
+                            "folderTitle": {"type": "string"},
+                            "url": {"type": "string"},
+                        },
+                    },
                 },
             ),
             "grafana.get_dashboard": HostFunctionDef(
@@ -151,10 +152,13 @@ class GrafanaProvider(ToolProvider):
                 },
                 output_schema={
                     "type": "array",
-                    "items": {"type": "object", "properties": {
-                        "labels": {"type": "object"},
-                        "value": {"type": "string"},
-                    }},
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "labels": {"type": "object"},
+                            "value": {"type": "string"},
+                        },
+                    },
                 },
             ),
         }
@@ -176,7 +180,11 @@ class GrafanaProvider(ToolProvider):
                 input_schema={
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "Optional title filter.", "default": ""},
+                        "query": {
+                            "type": "string",
+                            "description": "Optional title filter.",
+                            "default": "",
+                        },
                     },
                 },
                 fn=_list,
@@ -188,7 +196,10 @@ class GrafanaProvider(ToolProvider):
                     "type": "object",
                     "required": ["uid"],
                     "properties": {
-                        "uid": {"type": "string", "description": "Dashboard UID (from grafana_list_dashboards)."},
+                        "uid": {
+                            "type": "string",
+                            "description": "Dashboard UID (from grafana_list_dashboards).",
+                        },
                     },
                 },
                 fn=_get,

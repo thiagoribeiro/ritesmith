@@ -6,6 +6,7 @@ Run `python -m ritesmith.tools.google_auth` once to obtain the token.
 Calendar targets are configured as RITESMITH_GOOGLE_CALENDAR_IDS:
   personal:primary,family:calendarid@group.calendar.google.com
 """
+
 from __future__ import annotations
 
 import logging
@@ -33,8 +34,8 @@ def _parse_calendar_ids() -> dict[str, str]:
 
 
 def _get_credentials():
-    from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
 
     token_path = get_settings().google_token_json
     if not token_path:
@@ -44,7 +45,6 @@ def _get_credentials():
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
         # persist refreshed token
-        import json
         with open(token_path, "w") as f:
             f.write(creds.to_json())
     return creds
@@ -52,6 +52,7 @@ def _get_credentials():
 
 def _service():
     from googleapiclient.discovery import build
+
     return build("calendar", "v3", credentials=_get_credentials(), cache_discovery=False)
 
 
@@ -82,14 +83,18 @@ def _get_range(target: str, start: str, end: str) -> list[dict]:
         svc = _service()
         results = []
         for cal_id in _resolve_target(target):
-            events = svc.events().list(
-                calendarId=cal_id,
-                timeMin=start,
-                timeMax=end,
-                singleEvents=True,
-                orderBy="startTime",
-                maxResults=50,
-            ).execute()
+            events = (
+                svc.events()
+                .list(
+                    calendarId=cal_id,
+                    timeMin=start,
+                    timeMax=end,
+                    singleEvents=True,
+                    orderBy="startTime",
+                    maxResults=50,
+                )
+                .execute()
+            )
             results.extend([_format_event(e) for e in events.get("items", [])])
         results.sort(key=lambda e: e.get("start") or "")
         return results
@@ -118,13 +123,17 @@ def _search_events(target: str, query: str) -> list[dict]:
         svc = _service()
         results = []
         for cal_id in _resolve_target(target):
-            events = svc.events().list(
-                calendarId=cal_id,
-                q=query,
-                singleEvents=True,
-                orderBy="startTime",
-                maxResults=20,
-            ).execute()
+            events = (
+                svc.events()
+                .list(
+                    calendarId=cal_id,
+                    q=query,
+                    singleEvents=True,
+                    orderBy="startTime",
+                    maxResults=20,
+                )
+                .execute()
+            )
             results.extend([_format_event(e) for e in events.get("items", [])])
         return results
     except Exception as e:
@@ -132,7 +141,9 @@ def _search_events(target: str, query: str) -> list[dict]:
         return [{"error": str(e)}]
 
 
-def _find_free_time(targets: list, duration_minutes: int, after: str | None = None, before: str | None = None) -> list[dict]:
+def _find_free_time(
+    targets: list, duration_minutes: int, after: str | None = None, before: str | None = None
+) -> list[dict]:
     try:
         svc = _service()
         ids = _parse_calendar_ids()
@@ -194,43 +205,126 @@ class CalendarProvider(ToolProvider):
 
     def is_available(self) -> bool:
         import os
+
         token = get_settings().google_token_json
         if not token or not os.path.exists(token):
             return False
         try:
             from google.oauth2.credentials import Credentials  # noqa: F401
             from googleapiclient.discovery import build  # noqa: F401
+
             return True
         except ImportError:
             return False
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _events_output = {"type": "object", "properties": {"events": {"type": "array", "description": "List of calendar event objects"}}}
+        _events_output = {
+            "type": "object",
+            "properties": {
+                "events": {"type": "array", "description": "List of calendar event objects"}
+            },
+        }
         return {
-            "calendar.get_today": HostFunctionDef("calendar.get_today", "sensitive_personal", _get_today,
-                description="Get today's calendar events.", input_schema={"type": "object", "properties": {"target": {"type": "string", "default": "personal"}}}, output_schema=_events_output),
-            "calendar.get_tomorrow": HostFunctionDef("calendar.get_tomorrow", "sensitive_personal", _get_tomorrow,
-                description="Get tomorrow's calendar events.", input_schema={"type": "object", "properties": {"target": {"type": "string", "default": "personal"}}}, output_schema=_events_output),
-            "calendar.get_range": HostFunctionDef("calendar.get_range", "sensitive_personal", _get_range,
+            "calendar.get_today": HostFunctionDef(
+                "calendar.get_today",
+                "sensitive_personal",
+                _get_today,
+                description="Get today's calendar events.",
+                input_schema={
+                    "type": "object",
+                    "properties": {"target": {"type": "string", "default": "personal"}},
+                },
+                output_schema=_events_output,
+            ),
+            "calendar.get_tomorrow": HostFunctionDef(
+                "calendar.get_tomorrow",
+                "sensitive_personal",
+                _get_tomorrow,
+                description="Get tomorrow's calendar events.",
+                input_schema={
+                    "type": "object",
+                    "properties": {"target": {"type": "string", "default": "personal"}},
+                },
+                output_schema=_events_output,
+            ),
+            "calendar.get_range": HostFunctionDef(
+                "calendar.get_range",
+                "sensitive_personal",
+                _get_range,
                 description="Get calendar events within a date range.",
-                input_schema={"type": "object", "required": ["start", "end"], "properties": {"start": {"type": "string"}, "end": {"type": "string"}, "target": {"type": "string"}}},
-                output_schema=_events_output),
-            "calendar.search_events": HostFunctionDef("calendar.search_events", "sensitive_personal", _search_events,
+                input_schema={
+                    "type": "object",
+                    "required": ["start", "end"],
+                    "properties": {
+                        "start": {"type": "string"},
+                        "end": {"type": "string"},
+                        "target": {"type": "string"},
+                    },
+                },
+                output_schema=_events_output,
+            ),
+            "calendar.search_events": HostFunctionDef(
+                "calendar.search_events",
+                "sensitive_personal",
+                _search_events,
                 description="Search calendar events by text query.",
-                input_schema={"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}, "max_results": {"type": "integer", "default": 10}}},
-                output_schema=_events_output),
-            "calendar.find_free_time": HostFunctionDef("calendar.find_free_time", "sensitive_personal", _find_free_time,
+                input_schema={
+                    "type": "object",
+                    "required": ["query"],
+                    "properties": {
+                        "query": {"type": "string"},
+                        "max_results": {"type": "integer", "default": 10},
+                    },
+                },
+                output_schema=_events_output,
+            ),
+            "calendar.find_free_time": HostFunctionDef(
+                "calendar.find_free_time",
+                "sensitive_personal",
+                _find_free_time,
                 description="Find free time slots in the calendar.",
-                input_schema={"type": "object", "required": ["date"], "properties": {"date": {"type": "string"}, "duration_minutes": {"type": "integer", "default": 60}}},
-                output_schema={"type": "object", "properties": {"slots": {"type": "array"}}}),
-            "calendar.create_event": HostFunctionDef("calendar.create_event", "sensitive_personal", _create_event,
+                input_schema={
+                    "type": "object",
+                    "required": ["date"],
+                    "properties": {
+                        "date": {"type": "string"},
+                        "duration_minutes": {"type": "integer", "default": 60},
+                    },
+                },
+                output_schema={"type": "object", "properties": {"slots": {"type": "array"}}},
+            ),
+            "calendar.create_event": HostFunctionDef(
+                "calendar.create_event",
+                "sensitive_personal",
+                _create_event,
                 description="Create a new calendar event.",
-                input_schema={"type": "object", "required": ["title", "start", "end"], "properties": {"title": {"type": "string"}, "start": {"type": "string"}, "end": {"type": "string"}, "description": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"event_id": {"type": "string"}, "ok": {"type": "boolean"}}}),
-            "calendar.delete_event": HostFunctionDef("calendar.delete_event", "sensitive_personal", _delete_event,
+                input_schema={
+                    "type": "object",
+                    "required": ["title", "start", "end"],
+                    "properties": {
+                        "title": {"type": "string"},
+                        "start": {"type": "string"},
+                        "end": {"type": "string"},
+                        "description": {"type": "string"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"event_id": {"type": "string"}, "ok": {"type": "boolean"}},
+                },
+            ),
+            "calendar.delete_event": HostFunctionDef(
+                "calendar.delete_event",
+                "sensitive_personal",
+                _delete_event,
                 description="Delete a calendar event by ID.",
-                input_schema={"type": "object", "required": ["event_id"], "properties": {"event_id": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"ok": {"type": "boolean"}}}),
+                input_schema={
+                    "type": "object",
+                    "required": ["event_id"],
+                    "properties": {"event_id": {"type": "string"}},
+                },
+                output_schema={"type": "object", "properties": {"ok": {"type": "boolean"}}},
+            ),
         }
 
     def mcp_tools(self) -> list[MCPToolDef]:
@@ -248,10 +342,20 @@ class CalendarProvider(ToolProvider):
         async def _mcp_search(target: str, query: str, **_) -> list[dict]:
             return await asyncio.to_thread(_search_events, target, query)
 
-        async def _mcp_free_time(targets: list, duration_minutes: int, after: str | None = None, before: str | None = None, **_) -> list[dict]:
-            return await asyncio.to_thread(_find_free_time, targets, duration_minutes, after, before)
+        async def _mcp_free_time(
+            targets: list,
+            duration_minutes: int,
+            after: str | None = None,
+            before: str | None = None,
+            **_,
+        ) -> list[dict]:
+            return await asyncio.to_thread(
+                _find_free_time, targets, duration_minutes, after, before
+            )
 
-        async def _mcp_create(target: str, title: str, start: str, end: str, description: str = "", **_) -> dict:
+        async def _mcp_create(
+            target: str, title: str, start: str, end: str, description: str = "", **_
+        ) -> dict:
             return await asyncio.to_thread(_create_event, target, title, start, end, description)
 
         async def _mcp_delete(event_id: str, target: str = "personal", **_) -> dict:
@@ -265,7 +369,13 @@ class CalendarProvider(ToolProvider):
                 description="List today's calendar events.",
                 input_schema={
                     "type": "object",
-                    "properties": {"target": {"type": "string", "default": "personal", "description": _target_desc}},
+                    "properties": {
+                        "target": {
+                            "type": "string",
+                            "default": "personal",
+                            "description": _target_desc,
+                        }
+                    },
                 },
                 fn=_mcp_get_today,
             ),
@@ -274,7 +384,13 @@ class CalendarProvider(ToolProvider):
                 description="List tomorrow's calendar events.",
                 input_schema={
                     "type": "object",
-                    "properties": {"target": {"type": "string", "default": "personal", "description": _target_desc}},
+                    "properties": {
+                        "target": {
+                            "type": "string",
+                            "default": "personal",
+                            "description": _target_desc,
+                        }
+                    },
                 },
                 fn=_mcp_get_tomorrow,
             ),

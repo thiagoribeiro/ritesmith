@@ -2,6 +2,7 @@
 
 Returns Brave Search results synchronously. Intended for agent_core web_search tool.
 """
+
 import asyncio
 
 from fastapi import APIRouter, Query

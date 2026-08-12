@@ -65,7 +65,8 @@ class LuaScriptRuntime(BaseRuntime):
     def validate_syntax(self, content: str) -> list[str]:
         """Tenta carregar o script em Lua e retorna erros de sintaxe."""
         try:
-            from lupa import LuaError, LuaRuntime
+            from lupa import LuaRuntime
+
             lua = LuaRuntime(unpack_returned_tuples=False)
             lua.execute(content)
             return []

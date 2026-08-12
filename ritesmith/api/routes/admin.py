@@ -1,4 +1,5 @@
 """Admin endpoints for CASP migration and provider status."""
+
 import logging
 
 from fastapi import APIRouter, Depends
@@ -35,20 +36,23 @@ async def casp_providers_status() -> dict:
     """Returns CASP provider configuration and discovery cache state."""
     from ritesmith.config import get_settings
     from ritesmith.runtime.casp.client import get_types
+
     settings = get_settings()
     statuses = []
     for p in settings.casp_providers:
         url = p.url.rstrip("/")
         try:
             types = get_types(url)
-            statuses.append({
-                "url": url,
-                "resource_types_configured": p.resource_types or ["all"],
-                "priority": p.priority,
-                "weight": p.weight,
-                "discovered_types": [rt["type"] for rt in types.get("resourceTypes", [])],
-                "available": True,
-            })
+            statuses.append(
+                {
+                    "url": url,
+                    "resource_types_configured": p.resource_types or ["all"],
+                    "priority": p.priority,
+                    "weight": p.weight,
+                    "discovered_types": [rt["type"] for rt in types.get("resourceTypes", [])],
+                    "available": True,
+                }
+            )
         except Exception as exc:
             statuses.append({"url": url, "available": False, "error": str(exc)})
     return {"providers": statuses}

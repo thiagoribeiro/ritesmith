@@ -3,6 +3,7 @@
 Same token.json as the calendar provider (combined scopes).
 Provides read + label/archive operations; delete is intentionally excluded.
 """
+
 from __future__ import annotations
 
 import base64
@@ -19,8 +20,8 @@ _SCOPES = [
 
 
 def _get_credentials():
-    from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
 
     token_path = get_settings().google_token_json
     if not token_path:
@@ -29,7 +30,6 @@ def _get_credentials():
     creds = Credentials.from_authorized_user_file(token_path)
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
-        import json, os
         with open(token_path, "w") as f:
             f.write(creds.to_json())
     return creds
@@ -37,6 +37,7 @@ def _get_credentials():
 
 def _service():
     from googleapiclient.discovery import build
+
     return build("gmail", "v1", credentials=_get_credentials(), cache_discovery=False)
 
 
@@ -75,12 +76,26 @@ def _format_message(msg: dict, full: bool = False) -> dict:
 def _search(query: str, max_results: int = 10) -> list[dict]:
     try:
         svc = _service()
-        resp = svc.users().messages().list(userId="me", q=query, maxResults=min(max_results, 50)).execute()
+        resp = (
+            svc.users()
+            .messages()
+            .list(userId="me", q=query, maxResults=min(max_results, 50))
+            .execute()
+        )
         messages = resp.get("messages", [])
         results = []
         for m in messages:
-            msg = svc.users().messages().get(userId="me", id=m["id"], format="metadata",
-                                              metadataHeaders=["Subject", "From", "To", "Date"]).execute()
+            msg = (
+                svc.users()
+                .messages()
+                .get(
+                    userId="me",
+                    id=m["id"],
+                    format="metadata",
+                    metadataHeaders=["Subject", "From", "To", "Date"],
+                )
+                .execute()
+            )
             results.append(_format_message(msg))
         return results
     except Exception as e:
@@ -116,7 +131,8 @@ def _apply_label(message_id: str, label: str) -> dict:
     try:
         svc = _service()
         svc.users().messages().modify(
-            userId="me", id=message_id,
+            userId="me",
+            id=message_id,
             body={"addLabelIds": [label]},
         ).execute()
         return {"ok": True}
@@ -129,7 +145,8 @@ def _archive(message_id: str) -> dict:
     try:
         svc = _service()
         svc.users().messages().modify(
-            userId="me", id=message_id,
+            userId="me",
+            id=message_id,
             body={"removeLabelIds": ["INBOX"]},
         ).execute()
         return {"ok": True}
@@ -142,7 +159,8 @@ def _mark_read(message_id: str) -> dict:
     try:
         svc = _service()
         svc.users().messages().modify(
-            userId="me", id=message_id,
+            userId="me",
+            id=message_id,
             body={"removeLabelIds": ["UNREAD"]},
         ).execute()
         return {"ok": True}
@@ -159,12 +177,14 @@ class EmailProvider(ToolProvider):
 
     def is_available(self) -> bool:
         import os
+
         token = get_settings().google_token_json
         if not token or not os.path.exists(token):
             return False
         try:
             from google.oauth2.credentials import Credentials  # noqa: F401
             from googleapiclient.discovery import build  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -173,34 +193,99 @@ class EmailProvider(ToolProvider):
         _msg_list_output = {"type": "object", "properties": {"messages": {"type": "array"}}}
         _ok_output = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
         return {
-            "email.search": HostFunctionDef("email.search", "sensitive_personal", _search,
+            "email.search": HostFunctionDef(
+                "email.search",
+                "sensitive_personal",
+                _search,
                 description="Search Gmail messages by query string. Returns matching message summaries.",
-                input_schema={"type": "object", "required": ["query"], "properties": {"query": {"type": "string"}, "max_results": {"type": "integer", "default": 10}}},
-                output_schema=_msg_list_output),
-            "email.read_message": HostFunctionDef("email.read_message", "sensitive_personal", _read_message,
+                input_schema={
+                    "type": "object",
+                    "required": ["query"],
+                    "properties": {
+                        "query": {"type": "string"},
+                        "max_results": {"type": "integer", "default": 10},
+                    },
+                },
+                output_schema=_msg_list_output,
+            ),
+            "email.read_message": HostFunctionDef(
+                "email.read_message",
+                "sensitive_personal",
+                _read_message,
                 description="Read the full content of a Gmail message by ID.",
-                input_schema={"type": "object", "required": ["message_id"], "properties": {"message_id": {"type": "string"}}},
-                output_schema={"type": "object", "properties": {"subject": {"type": "string"}, "body": {"type": "string"}, "from": {"type": "string"}}}),
-            "email.read_thread": HostFunctionDef("email.read_thread", "sensitive_personal", _read_thread,
+                input_schema={
+                    "type": "object",
+                    "required": ["message_id"],
+                    "properties": {"message_id": {"type": "string"}},
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "subject": {"type": "string"},
+                        "body": {"type": "string"},
+                        "from": {"type": "string"},
+                    },
+                },
+            ),
+            "email.read_thread": HostFunctionDef(
+                "email.read_thread",
+                "sensitive_personal",
+                _read_thread,
                 description="Read all messages in a Gmail thread.",
-                input_schema={"type": "object", "required": ["thread_id"], "properties": {"thread_id": {"type": "string"}}},
-                output_schema=_msg_list_output),
-            "email.list_recent": HostFunctionDef("email.list_recent", "sensitive_personal", _list_recent,
+                input_schema={
+                    "type": "object",
+                    "required": ["thread_id"],
+                    "properties": {"thread_id": {"type": "string"}},
+                },
+                output_schema=_msg_list_output,
+            ),
+            "email.list_recent": HostFunctionDef(
+                "email.list_recent",
+                "sensitive_personal",
+                _list_recent,
                 description="List recent inbox messages.",
-                input_schema={"type": "object", "properties": {"max_results": {"type": "integer", "default": 10}}},
-                output_schema=_msg_list_output),
-            "email.apply_label": HostFunctionDef("email.apply_label", "sensitive_personal", _apply_label,
+                input_schema={
+                    "type": "object",
+                    "properties": {"max_results": {"type": "integer", "default": 10}},
+                },
+                output_schema=_msg_list_output,
+            ),
+            "email.apply_label": HostFunctionDef(
+                "email.apply_label",
+                "sensitive_personal",
+                _apply_label,
                 description="Apply a Gmail label to a message.",
-                input_schema={"type": "object", "required": ["message_id", "label"], "properties": {"message_id": {"type": "string"}, "label": {"type": "string"}}},
-                output_schema=_ok_output),
-            "email.archive": HostFunctionDef("email.archive", "sensitive_personal", _archive,
+                input_schema={
+                    "type": "object",
+                    "required": ["message_id", "label"],
+                    "properties": {"message_id": {"type": "string"}, "label": {"type": "string"}},
+                },
+                output_schema=_ok_output,
+            ),
+            "email.archive": HostFunctionDef(
+                "email.archive",
+                "sensitive_personal",
+                _archive,
                 description="Archive a Gmail message (remove from inbox).",
-                input_schema={"type": "object", "required": ["message_id"], "properties": {"message_id": {"type": "string"}}},
-                output_schema=_ok_output),
-            "email.mark_read": HostFunctionDef("email.mark_read", "sensitive_personal", _mark_read,
+                input_schema={
+                    "type": "object",
+                    "required": ["message_id"],
+                    "properties": {"message_id": {"type": "string"}},
+                },
+                output_schema=_ok_output,
+            ),
+            "email.mark_read": HostFunctionDef(
+                "email.mark_read",
+                "sensitive_personal",
+                _mark_read,
                 description="Mark a Gmail message as read.",
-                input_schema={"type": "object", "required": ["message_id"], "properties": {"message_id": {"type": "string"}}},
-                output_schema=_ok_output),
+                input_schema={
+                    "type": "object",
+                    "required": ["message_id"],
+                    "properties": {"message_id": {"type": "string"}},
+                },
+                output_schema=_ok_output,
+            ),
         }
 
     def mcp_tools(self) -> list[MCPToolDef]:
@@ -266,7 +351,9 @@ class EmailProvider(ToolProvider):
                 description="List recent inbox messages.",
                 input_schema={
                     "type": "object",
-                    "properties": {"max_results": {"type": "integer", "default": 10, "maximum": 50}},
+                    "properties": {
+                        "max_results": {"type": "integer", "default": 10, "maximum": 50}
+                    },
                 },
                 fn=_mcp_recent,
             ),

@@ -3,6 +3,7 @@
 Search uses `rg` (ripgrep) if available, falling back to `grep -r`.
 All operations are read-only filesystem access.
 """
+
 from __future__ import annotations
 
 import logging
@@ -36,13 +37,20 @@ def _search(query: str, limit: int = 10) -> list[dict]:
         if rg:
             cmd = [rg, "--files-with-matches", "--ignore-case", "--glob=*.md", query, vault]
         elif grep:
-            cmd = ["grep", "--recursive", "--files-with-matches", "--ignore-case",
-                   "--include=*.md", query, vault]
+            cmd = [
+                "grep",
+                "--recursive",
+                "--files-with-matches",
+                "--ignore-case",
+                "--include=*.md",
+                query,
+                vault,
+            ]
         else:
             return [{"error": "Neither rg nor grep found on PATH"}]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        files = [f for f in result.stdout.strip().splitlines() if f][:min(limit, _MAX_RESULTS)]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
+        files = [f for f in result.stdout.strip().splitlines() if f][: min(limit, _MAX_RESULTS)]
     except subprocess.TimeoutExpired:
         return [{"error": "Search timed out"}]
     except Exception as e:
@@ -61,12 +69,15 @@ def _search(query: str, limit: int = 10) -> list[dict]:
                 excerpt = content[start:end].replace("\n", " ").strip()
             else:
                 excerpt = content[:300].replace("\n", " ").strip()
-            results.append({
-                "title": Path(filepath).stem,
-                "path": os.path.relpath(filepath, vault),
-                "excerpt": excerpt,
-            })
+            results.append(
+                {
+                    "title": Path(filepath).stem,
+                    "path": os.path.relpath(filepath, vault),
+                    "excerpt": excerpt,
+                }
+            )
         except Exception:
+            logger.debug("obsidian search: skipping unreadable file %s", filepath, exc_info=True)
             continue
 
     return results
@@ -96,10 +107,7 @@ def _list_notes(folder: str = "") -> list[dict]:
     try:
         base = Path(vault) / folder if folder else Path(vault)
         notes = sorted(base.rglob("*.md"))[:_MAX_RESULTS]
-        return [
-            {"title": p.stem, "path": os.path.relpath(str(p), vault)}
-            for p in notes
-        ]
+        return [{"title": p.stem, "path": os.path.relpath(str(p), vault)} for p in notes]
     except Exception as e:
         return [{"error": str(e)}]
 
@@ -117,27 +125,48 @@ class ObsidianProvider(ToolProvider):
     def lua_functions(self) -> dict[str, HostFunctionDef]:
         return {
             "obsidian.search": HostFunctionDef(
-                "obsidian.search", "analytics_local", _search,
+                "obsidian.search",
+                "analytics_local",
+                _search,
                 description="Search the Obsidian vault using ripgrep. Returns matching notes with snippets.",
-                input_schema={"type": "object", "required": ["query"], "properties": {
-                    "query": {"type": "string"}, "limit": {"type": "integer", "default": 10},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["query"],
+                    "properties": {
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "default": 10},
+                    },
+                },
                 output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
             ),
             "obsidian.read": HostFunctionDef(
-                "obsidian.read", "analytics_local", _read,
+                "obsidian.read",
+                "analytics_local",
+                _read,
                 description="Read the full content of an Obsidian note by its path.",
-                input_schema={"type": "object", "required": ["path"], "properties": {
-                    "path": {"type": "string"},
-                }},
-                output_schema={"type": "object", "properties": {"content": {"type": "string"}, "path": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "required": ["path"],
+                    "properties": {
+                        "path": {"type": "string"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"content": {"type": "string"}, "path": {"type": "string"}},
+                },
             ),
             "obsidian.list": HostFunctionDef(
-                "obsidian.list", "analytics_local", _list_notes,
+                "obsidian.list",
+                "analytics_local",
+                _list_notes,
                 description="List all notes in an Obsidian vault folder.",
-                input_schema={"type": "object", "properties": {
-                    "folder": {"type": "string", "default": ""},
-                }},
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "folder": {"type": "string", "default": ""},
+                    },
+                },
                 output_schema={"type": "object", "properties": {"notes": {"type": "array"}}},
             ),
         }
@@ -174,7 +203,12 @@ class ObsidianProvider(ToolProvider):
                 input_schema={
                     "type": "object",
                     "required": ["path"],
-                    "properties": {"path": {"type": "string", "description": "Relative path from vault root, e.g. 'Projects/Jarvis/Overview.md'"}},
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Relative path from vault root, e.g. 'Projects/Jarvis/Overview.md'",
+                        }
+                    },
                 },
                 fn=_mcp_read,
             ),
@@ -183,7 +217,13 @@ class ObsidianProvider(ToolProvider):
                 description="List notes in the Obsidian vault, optionally filtered to a subfolder.",
                 input_schema={
                     "type": "object",
-                    "properties": {"folder": {"type": "string", "default": "", "description": "Subfolder path relative to vault root"}},
+                    "properties": {
+                        "folder": {
+                            "type": "string",
+                            "default": "",
+                            "description": "Subfolder path relative to vault root",
+                        }
+                    },
                 },
                 fn=_mcp_list,
             ),

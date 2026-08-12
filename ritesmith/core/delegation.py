@@ -1,4 +1,5 @@
 """DelegationService — delegates workflow execution to an external engine (Trama)."""
+
 from ritesmith.core.exceptions import RiteSmithError
 from ritesmith.workflows.base import WorkflowEngineAdapter
 

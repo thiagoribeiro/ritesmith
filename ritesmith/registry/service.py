@@ -1,7 +1,7 @@
 import hashlib
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.config import get_settings
@@ -161,7 +161,11 @@ class RegistryService:
         if new_status not in allowed:
             raise InvalidTransitionError(
                 f"Cannot transition artifact from '{artifact.status}' to '{new_status}'",
-                details={"current": artifact.status, "requested": new_status, "allowed": list(allowed)},
+                details={
+                    "current": artifact.status,
+                    "requested": new_status,
+                    "allowed": list(allowed),
+                },
             )
         artifact.status = new_status
         artifact.updated_at = datetime.now(UTC)

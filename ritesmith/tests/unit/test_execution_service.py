@@ -1,19 +1,19 @@
 """Unit tests for ExecutionService — direct service layer, no HTTP stack."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 
 from ritesmith.config import get_settings
-from ritesmith.core.execution import ExecutionService
 from ritesmith.core.exceptions import NotFoundError
+from ritesmith.core.execution import ExecutionService
 from ritesmith.runtime.base import RuntimeResult
 from ritesmith.schemas.execution import CreateExecutionRequest, ExecutionStatus
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_artifact_pair(
     artifact_id="art-test",
@@ -50,6 +50,7 @@ def _make_service(db, registry_pair=None, registry_none=False):
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_lua_success(db_session):
     """Lua script runs successfully → status succeeded, output populated."""
@@ -77,7 +78,10 @@ async def test_policy_deny(db_session):
 
     with patch.object(svc.policy, "evaluate") as mock_eval:
         from ritesmith.schemas.policy import PolicyDecision, PolicyDecisionValue
-        mock_eval.return_value = PolicyDecision(decision=PolicyDecisionValue.deny, reason="risk too high")
+
+        mock_eval.return_value = PolicyDecision(
+            decision=PolicyDecisionValue.deny, reason="risk too high"
+        )
         result = await svc.create_execution(req)
 
     assert result.status == ExecutionStatus.rejected
@@ -95,6 +99,7 @@ async def test_require_approval_without_token(db_session):
 
     with patch.object(svc.policy, "evaluate") as mock_eval:
         from ritesmith.schemas.policy import PolicyDecision, PolicyDecisionValue
+
         mock_eval.return_value = PolicyDecision(
             decision=PolicyDecisionValue.require_approval, reason="needs approval"
         )
@@ -110,7 +115,9 @@ async def test_runtime_timeout(db_session):
     artifact, version = _make_artifact_pair()
     svc = _make_service(db_session, registry_pair=(artifact, version))
 
-    timeout_result = RuntimeResult(output={}, error="execution timed out", timed_out=True, duration_ms=5000)
+    timeout_result = RuntimeResult(
+        output={}, error="execution timed out", timed_out=True, duration_ms=5000
+    )
     svc.lua_runtime.execute = AsyncMock(return_value=timeout_result)
 
     req = CreateExecutionRequest(artifact_id="art-test")

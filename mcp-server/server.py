@@ -1,4 +1,5 @@
 """MCP server exposing domain tools and RiteSmith meta-tools to the Agent Core."""
+
 from __future__ import annotations
 
 import asyncio
@@ -17,6 +18,7 @@ if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
 import _ritesmith as rs
+
 from ritesmith.runtime.providers import PROVIDERS
 from ritesmith.runtime.providers.base import MCPToolDef
 
@@ -38,11 +40,13 @@ def _build_tool_registry() -> list[Tool]:
             continue
         for td in provider.mcp_tools():
             _tool_registry[td.name] = td
-            tools.append(Tool(
-                name=td.name,
-                description=td.description,
-                inputSchema=td.input_schema,
-            ))
+            tools.append(
+                Tool(
+                    name=td.name,
+                    description=td.description,
+                    inputSchema=td.input_schema,
+                )
+            )
 
     # RiteSmith meta-tools
     _META_TOOLS: list[tuple[str, str, dict]] = [
@@ -60,15 +64,26 @@ def _build_tool_registry() -> list[Tool]:
         ),
         (
             "ritesmith_generate",
-            "Generate a capability (Lua script or Trama workflow) from a natural-language intent. "
-            "RiteSmith automatically decides the artifact type based on the intent.",
+            (
+                "Generate a capability (Lua script or Trama workflow) from a natural-language intent. "
+                "RiteSmith automatically decides the artifact type based on the intent."
+            ),
             {
                 "type": "object",
                 "properties": {
-                    "intent": {"type": "string", "description": "What you want the capability to do"},
-                    "save": {"type": "boolean", "description": "Persist the artifact in the registry"},
+                    "intent": {
+                        "type": "string",
+                        "description": "What you want the capability to do",
+                    },
+                    "save": {
+                        "type": "boolean",
+                        "description": "Persist the artifact in the registry",
+                    },
                     "context": {"type": "object", "description": "Extra generation context"},
-                    "constraints": {"type": "object", "description": "Optional generation constraints"},
+                    "constraints": {
+                        "type": "object",
+                        "description": "Optional generation constraints",
+                    },
                 },
                 "required": ["intent"],
             },

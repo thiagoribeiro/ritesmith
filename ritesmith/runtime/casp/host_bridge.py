@@ -4,6 +4,7 @@ These are Python callables exposed to Lua scripts as casp.* functions.
 They call LoomHarbor (or any CASP provider) via the internal httpx client
 and bypass _BLOCKED_PATTERNS by design (structured internal calls only).
 """
+
 from __future__ import annotations
 
 from ritesmith.runtime.casp import client as _casp
@@ -25,6 +26,6 @@ def _casp_execute(resource_id: str, resource_type: str, capability: str, input_d
     return _casp.execute(resource_id, resource_type, capability, input_data or {})
 
 
-_register("casp.query",   "trusted_internal", _casp_query)
+_register("casp.query", "trusted_internal", _casp_query)
 _register("casp.resolve", "trusted_internal", _casp_resolve)
 _register("casp.execute", "trusted_internal", _casp_execute)

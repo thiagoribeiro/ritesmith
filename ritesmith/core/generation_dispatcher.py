@@ -1,4 +1,5 @@
 """GenerationDispatcher — routes a unified GenerateRequest to the right generation service."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +10,8 @@ from ritesmith.core.generation import GenerationService
 from ritesmith.core.workflow_generation import WorkflowGenerationService
 from ritesmith.llm.base import LLMProvider
 from ritesmith.schemas.generation import (
-    GenerateRequest,
     GeneratedArtifactResponse,
+    GenerateRequest,
     GenerateScriptRequest,
     GenerateWorkflowRequest,
     ScriptConstraints,

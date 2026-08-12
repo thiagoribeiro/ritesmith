@@ -5,11 +5,11 @@ Used by the CASPProvider host bridge functions to call CASP providers
 sandbox's _BLOCKED_PATTERNS security policy by design — they are
 structured internal calls to known, configured provider URLs.
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Any
 
 import httpx
 
@@ -29,6 +29,7 @@ _CLIENT = httpx.Client(
 def _provider_url(resource_type: str) -> str | None:
     """Return the URL of the provider that handles this resource type."""
     from ritesmith.config import get_settings
+
     providers = get_settings().casp_providers
     if not providers:
         return None
@@ -69,13 +70,19 @@ def invalidate_discovery(provider_url: str | None = None) -> None:
 def query(resource_type: str, filters: dict, requires_capabilities: list[str]) -> dict:
     url = _provider_url(resource_type)
     if not url:
-        return {"error": "no_provider", "message": f"No CASP provider configured for type '{resource_type}'"}
+        return {
+            "error": "no_provider",
+            "message": f"No CASP provider configured for type '{resource_type}'",
+        }
     try:
-        resp = _CLIENT.post(f"{url}/casp/v1/resources/query", json={
-            "resourceType": resource_type,
-            "filters": filters,
-            "requiresCapabilities": requires_capabilities,
-        })
+        resp = _CLIENT.post(
+            f"{url}/casp/v1/resources/query",
+            json={
+                "resourceType": resource_type,
+                "filters": filters,
+                "requiresCapabilities": requires_capabilities,
+            },
+        )
         return resp.json()
     except Exception as exc:
         log.warning("CASP query failed: %s", exc)
@@ -87,11 +94,14 @@ def resolve(resource_type: str, capability: str, hint: str) -> dict:
     if not url:
         return {"status": "invalid", "error": f"No CASP provider for '{resource_type}'"}
     try:
-        resp = _CLIENT.post(f"{url}/casp/v1/resources/resolve", json={
-            "resourceType": resource_type,
-            "capability": capability,
-            "hint": hint,
-        })
+        resp = _CLIENT.post(
+            f"{url}/casp/v1/resources/resolve",
+            json={
+                "resourceType": resource_type,
+                "capability": capability,
+                "hint": hint,
+            },
+        )
         return resp.json()
     except Exception as exc:
         log.warning("CASP resolve failed: %s", exc)
@@ -101,15 +111,21 @@ def resolve(resource_type: str, capability: str, hint: str) -> dict:
 def execute(resource_id: str, resource_type: str, capability: str, input_data: dict) -> dict:
     url = _provider_url(resource_type)
     if not url:
-        return {"status": "failed", "errorCode": "NO_PROVIDER",
-                "error": f"No CASP provider for '{resource_type}'"}
+        return {
+            "status": "failed",
+            "errorCode": "NO_PROVIDER",
+            "error": f"No CASP provider for '{resource_type}'",
+        }
     try:
-        resp = _CLIENT.post(f"{url}/casp/v1/capabilities/execute", json={
-            "resourceId": resource_id,
-            "resourceType": resource_type,
-            "capability": capability,
-            "input": input_data,
-        })
+        resp = _CLIENT.post(
+            f"{url}/casp/v1/capabilities/execute",
+            json={
+                "resourceId": resource_id,
+                "resourceType": resource_type,
+                "capability": capability,
+                "input": input_data,
+            },
+        )
         return resp.json()
     except Exception as exc:
         log.warning("CASP execute failed: %s", exc)
@@ -119,6 +135,7 @@ def execute(resource_id: str, resource_type: str, capability: str, input_data: d
 def all_types_from_providers() -> list[dict]:
     """Collect resource types from all configured providers (for planning context)."""
     from ritesmith.config import get_settings
+
     providers = get_settings().casp_providers
     all_types: list[dict] = []
     seen: set[str] = set()

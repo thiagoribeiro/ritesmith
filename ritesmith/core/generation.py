@@ -12,6 +12,7 @@ Fluxo principal (generate_lua):
 5. Se save=True e válido → persiste artifact
 6. Retorna GeneratedArtifactResponse
 """
+
 import logging
 from datetime import UTC, datetime
 
@@ -24,7 +25,7 @@ from ritesmith.core.ids import generate_id
 from ritesmith.core.repair import run_repair_loop
 from ritesmith.core.reuse import check_reuse
 from ritesmith.core.validation import ValidationPipeline
-from ritesmith.llm.base import LLMCallStats, LLMProvider, LuaGenerationResponse
+from ritesmith.llm.base import LLMProvider, LuaGenerationResponse
 from ritesmith.registry.models import GenerationAttempt, GenerationJob
 from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
@@ -65,15 +66,21 @@ class GenerationService:
         reuse_policy = constraints.get("reuse_policy", "prefer_reuse")
 
         # 1+2. Reuse check
-        if reuse := await check_reuse(self.db, req.intent, ["lua_script"], reuse_policy, self.audit):
+        if reuse := await check_reuse(
+            self.db, req.intent, ["lua_script"], reuse_policy, self.audit
+        ):
             return reuse
 
         # Similar artifacts for few-shot prompt context
-        search_results = await fts_search(self.db, req.intent, artifact_types=["lua_script"], limit=5)
+        search_results = await fts_search(
+            self.db, req.intent, artifact_types=["lua_script"], limit=5
+        )
 
         # 3. Registra GenerationJob
         job = await self._create_job(req, plan_id)
-        log.info("generation job created", extra={"job_id": job.generation_id, "goal": req.intent[:80]})
+        log.info(
+            "generation job created", extra={"job_id": job.generation_id, "goal": req.intent[:80]}
+        )
         allowed_fns = list_names_for_profile(profile)
         similar_dicts = [
             {"name": r.artifact.name, "content": r.version.content if r.version else ""}
@@ -118,8 +125,14 @@ class GenerationService:
 
             if self.audit:
                 await self.audit.log_event(
-                    "generation.llm_call", "generation_job", job.generation_id,
-                    payload={"attempt": attempt, "tokens": stats.total_tokens, "model": stats.model},
+                    "generation.llm_call",
+                    "generation_job",
+                    job.generation_id,
+                    payload={
+                        "attempt": attempt,
+                        "tokens": stats.total_tokens,
+                        "model": stats.model,
+                    },
                 )
 
             validation = await self.validator.run(
@@ -133,9 +146,15 @@ class GenerationService:
             await self._record_attempt(job.generation_id, attempt, script, validation)
             log.info(
                 "generation attempt %d/%d valid=%s",
-                attempt, self.settings.generation_max_attempts, validation.valid,
-                extra={"job_id": job.generation_id, "attempt": attempt, "valid": validation.valid,
-                       "errors": validation.errors[:3]},
+                attempt,
+                self.settings.generation_max_attempts,
+                validation.valid,
+                extra={
+                    "job_id": job.generation_id,
+                    "attempt": attempt,
+                    "valid": validation.valid,
+                    "errors": validation.errors[:3],
+                },
             )
 
             last_script = script
@@ -154,7 +173,8 @@ class GenerationService:
             job.finished_at = datetime.now(UTC)
             job.attempts = self.settings.generation_max_attempts
             log.info(
-                "generation job finished status=%s", job.status,
+                "generation job finished status=%s",
+                job.status,
                 extra={"job_id": job.generation_id, "status": job.status},
             )
 
@@ -177,13 +197,19 @@ class GenerationService:
 
                 if self.audit:
                     await self.audit.log_event(
-                        "artifact.created", "artifact", artifact_orm.artifact_id,
+                        "artifact.created",
+                        "artifact",
+                        artifact_orm.artifact_id,
                         payload={"goal": req.intent, "generation_id": job.generation_id},
                     )
         except Exception:
             job.status = "failed"
             job.finished_at = datetime.now(UTC)
-            log.error("generation job failed with exception", extra={"job_id": job.generation_id}, exc_info=True)
+            log.error(
+                "generation job failed with exception",
+                extra={"job_id": job.generation_id},
+                exc_info=True,
+            )
             raise
         finally:
             await self.db.commit()

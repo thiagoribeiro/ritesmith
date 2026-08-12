@@ -6,6 +6,7 @@ Reports are stored at:
 HTML shell includes Vue.js + Vuetify + Chart.js via CDN (dark theme by default).
 After writing, sends the report path via Telegram (best-effort, does not fail the write).
 """
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,6 @@ import logging
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import httpx
 
@@ -190,12 +190,14 @@ def _list_reports(theme: str = "", limit: int = 20) -> list[dict]:
             stem = f.stem
             # stem is YYYYMMDD_HHMMSS_description — extract description after second _
             description = "_".join(stem.split("_")[2:]) if stem.count("_") >= 2 else stem
-            result.append({
-                "path": str(f),
-                "theme": file_theme,
-                "description": description,
-                "created_at": datetime.fromtimestamp(f.stat().st_mtime, tz=UTC).isoformat(),
-            })
+            result.append(
+                {
+                    "path": str(f),
+                    "theme": file_theme,
+                    "description": description,
+                    "created_at": datetime.fromtimestamp(f.stat().st_mtime, tz=UTC).isoformat(),
+                }
+            )
         return result
     except Exception as e:
         return [{"error": str(e)}]
@@ -225,17 +227,29 @@ class ReportsProvider(ToolProvider):
                     "type": "object",
                     "required": ["theme", "description", "title", "body"],
                     "properties": {
-                        "theme":       {"type": "string", "description": "Topic folder, e.g. market, pokemon, email"},
-                        "description": {"type": "string", "description": "Short filename description"},
-                        "title":       {"type": "string", "description": "HTML page title"},
-                        "body":        {"type": "string", "description": "Vuetify markup for <div id=app>"},
-                        "charts":      {"type": "object", "description": "canvas_id → Chart.js config objects"},
+                        "theme": {
+                            "type": "string",
+                            "description": "Topic folder, e.g. market, pokemon, email",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Short filename description",
+                        },
+                        "title": {"type": "string", "description": "HTML page title"},
+                        "body": {
+                            "type": "string",
+                            "description": "Vuetify markup for <div id=app>",
+                        },
+                        "charts": {
+                            "type": "object",
+                            "description": "canvas_id → Chart.js config objects",
+                        },
                     },
                 },
                 output_schema={
                     "type": "object",
                     "properties": {
-                        "path":  {"type": "string"},
+                        "path": {"type": "string"},
                         "error": {"type": ["string", "null"]},
                     },
                 },
@@ -249,13 +263,16 @@ class ReportsProvider(ToolProvider):
                     "type": "object",
                     "required": ["theme", "description"],
                     "properties": {
-                        "theme":       {"type": "string"},
+                        "theme": {"type": "string"},
                         "description": {"type": "string"},
                     },
                 },
                 output_schema={
                     "type": "object",
-                    "properties": {"path": {"type": "string"}, "error": {"type": ["string", "null"]}},
+                    "properties": {
+                        "path": {"type": "string"},
+                        "error": {"type": ["string", "null"]},
+                    },
                 },
             ),
             "report.list_reports": HostFunctionDef(
@@ -301,7 +318,11 @@ class ReportsProvider(ToolProvider):
                 input_schema={
                     "type": "object",
                     "properties": {
-                        "theme": {"type": "string", "default": "", "description": "Filter by theme (e.g. market, email)"},
+                        "theme": {
+                            "type": "string",
+                            "default": "",
+                            "description": "Filter by theme (e.g. market, email)",
+                        },
                         "limit": {"type": "integer", "default": 20, "maximum": 100},
                     },
                 },
@@ -313,7 +334,12 @@ class ReportsProvider(ToolProvider):
                 input_schema={
                     "type": "object",
                     "required": ["path"],
-                    "properties": {"path": {"type": "string", "description": "Absolute path returned by report_list"}},
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Absolute path returned by report_list",
+                        }
+                    },
                 },
                 fn=_mcp_read,
             ),

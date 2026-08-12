@@ -1,4 +1,5 @@
 """telegram.* host functions — send Telegram messages via Bot API."""
+
 from __future__ import annotations
 
 import logging
@@ -51,24 +52,42 @@ class TelegramProvider(ToolProvider):
         return bool(s.telegram_bot_token and s.telegram_chat_id)
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _send_output = {"type": "object", "properties": {"ok": {"type": "boolean"}, "message_id": {"type": "integer"}}}
+        _send_output = {
+            "type": "object",
+            "properties": {"ok": {"type": "boolean"}, "message_id": {"type": "integer"}},
+        }
         return {
             "telegram.send": HostFunctionDef(
-                "telegram.send", "notification", _send,
+                "telegram.send",
+                "notification",
+                _send,
                 description="Send a plain-text message to the configured Telegram chat.",
-                input_schema={"type": "object", "required": ["text"], "properties": {
-                    "text": {"type": "string"},
-                    "chat_id": {"type": "string", "description": "Override default chat (optional)"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["text"],
+                    "properties": {
+                        "text": {"type": "string"},
+                        "chat_id": {
+                            "type": "string",
+                            "description": "Override default chat (optional)",
+                        },
+                    },
+                },
                 output_schema=_send_output,
             ),
             "telegram.send_markdown": HostFunctionDef(
-                "telegram.send_markdown", "notification", _send_markdown,
+                "telegram.send_markdown",
+                "notification",
+                _send_markdown,
                 description="Send a MarkdownV2-formatted message to the configured Telegram chat.",
-                input_schema={"type": "object", "required": ["text"], "properties": {
-                    "text": {"type": "string", "description": "MarkdownV2 formatted text"},
-                    "chat_id": {"type": "string"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["text"],
+                    "properties": {
+                        "text": {"type": "string", "description": "MarkdownV2 formatted text"},
+                        "chat_id": {"type": "string"},
+                    },
+                },
                 output_schema=_send_output,
             ),
         }
@@ -76,7 +95,9 @@ class TelegramProvider(ToolProvider):
     def mcp_tools(self) -> list[MCPToolDef]:
         import asyncio
 
-        async def _mcp_send(text: str, markdown: bool = False, chat_id: str | None = None, **_) -> dict:
+        async def _mcp_send(
+            text: str, markdown: bool = False, chat_id: str | None = None, **_
+        ) -> dict:
             fn = _send_markdown if markdown else _send
             return await asyncio.to_thread(fn, text, chat_id)
 

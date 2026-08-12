@@ -1,4 +1,5 @@
 """stat.* host functions — stateless math/statistics utilities."""
+
 from __future__ import annotations
 
 from ritesmith.runtime.providers.base import HostFunctionDef, MCPToolDef, ToolProvider
@@ -41,6 +42,7 @@ def _tick(iteration: int = 0, state: dict | None = None, initial_state: dict | N
 
 def _length(items) -> dict:
     import json as _json
+
     if isinstance(items, str):
         try:
             items = _json.loads(items)
@@ -63,76 +65,138 @@ class StatProvider(ToolProvider):
         return True
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _min_output = {"type": "object", "properties": {
-            "min_value": {"type": "number"},
-            "iteration": {"type": "integer"},
-            "last_value": {"type": "number"},
-        }}
-        _max_output = {"type": "object", "properties": {
-            "max_value": {"type": "number"},
-            "iteration": {"type": "integer"},
-            "last_value": {"type": "number"},
-        }}
+        _min_output = {
+            "type": "object",
+            "properties": {
+                "min_value": {"type": "number"},
+                "iteration": {"type": "integer"},
+                "last_value": {"type": "number"},
+            },
+        }
+        _max_output = {
+            "type": "object",
+            "properties": {
+                "max_value": {"type": "number"},
+                "iteration": {"type": "integer"},
+                "last_value": {"type": "number"},
+            },
+        }
         return {
             "stat.min_value": HostFunctionDef(
-                "stat.min_value", "transform_only", _min_value,
+                "stat.min_value",
+                "transform_only",
+                _min_value,
                 description=(
                     "Track a running minimum across loop iterations. "
                     "previous_min: self-referential output from previous iteration (null on first). "
                     "initial_min: seed value from payload.continuation.previous_min for cron chains."
                 ),
-                input_schema={"type": "object", "required": ["current"], "properties": {
-                    "current": {"type": "number", "description": "Value observed this iteration"},
-                    "previous_min": {"type": "number", "description": "min_value from self-referential previous output"},
-                    "initial_min": {"type": "number", "description": "Seed min for cron chain continuation (from payload)"},
-                    "iteration": {"type": "integer", "description": "iteration from previous output (defaults 0)"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["current"],
+                    "properties": {
+                        "current": {
+                            "type": "number",
+                            "description": "Value observed this iteration",
+                        },
+                        "previous_min": {
+                            "type": "number",
+                            "description": "min_value from self-referential previous output",
+                        },
+                        "initial_min": {
+                            "type": "number",
+                            "description": "Seed min for cron chain continuation (from payload)",
+                        },
+                        "iteration": {
+                            "type": "integer",
+                            "description": "iteration from previous output (defaults 0)",
+                        },
+                    },
+                },
                 output_schema=_min_output,
             ),
             "stat.max_value": HostFunctionDef(
-                "stat.max_value", "transform_only", _max_value,
+                "stat.max_value",
+                "transform_only",
+                _max_value,
                 description=(
                     "Track a running maximum across loop iterations. "
                     "initial_max: seed value from payload.continuation.previous_max for cron chains."
                 ),
-                input_schema={"type": "object", "required": ["current"], "properties": {
-                    "current": {"type": "number"},
-                    "previous_max": {"type": "number"},
-                    "initial_max": {"type": "number", "description": "Seed max for cron chain continuation"},
-                    "iteration": {"type": "integer"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["current"],
+                    "properties": {
+                        "current": {"type": "number"},
+                        "previous_max": {"type": "number"},
+                        "initial_max": {
+                            "type": "number",
+                            "description": "Seed max for cron chain continuation",
+                        },
+                        "iteration": {"type": "integer"},
+                    },
+                },
                 output_schema=_max_output,
             ),
             "stat.tick": HostFunctionDef(
-                "stat.tick", "transform_only", _tick,
+                "stat.tick",
+                "transform_only",
+                _tick,
                 description=(
                     "Increment an iteration counter and carry arbitrary state unchanged. "
                     "Use for cron chains: state passes through each iteration; "
                     "initial_state seeds the first iteration of a continuation chain from payload."
                 ),
-                input_schema={"type": "object", "properties": {
-                    "iteration": {"type": "integer", "description": "iteration from self-referential previous output"},
-                    "state": {"type": "object", "description": "state dict from previous tick output (null on first iteration)"},
-                    "initial_state": {"type": "object", "description": "Seed state for cron chain continuation (from payload.continuation.state)"},
-                }},
-                output_schema={"type": "object", "properties": {
-                    "iteration": {"type": "integer"},
-                    "state": {"type": "object", "description": "The state dict, passed through unchanged"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "iteration": {
+                            "type": "integer",
+                            "description": "iteration from self-referential previous output",
+                        },
+                        "state": {
+                            "type": "object",
+                            "description": "state dict from previous tick output (null on first iteration)",
+                        },
+                        "initial_state": {
+                            "type": "object",
+                            "description": "Seed state for cron chain continuation (from payload.continuation.state)",
+                        },
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "iteration": {"type": "integer"},
+                        "state": {
+                            "type": "object",
+                            "description": "The state dict, passed through unchanged",
+                        },
+                    },
+                },
             ),
             "stat.length": HostFunctionDef(
-                "stat.length", "transform_only", _length,
+                "stat.length",
+                "transform_only",
+                _length,
                 description=(
                     "Count the number of items in a list or keys in an object. "
                     "Accepts a JSON array, object, or JSON string. "
                     "Use to count results from web.fetch_json before sending a summary."
                 ),
-                input_schema={"type": "object", "required": ["items"], "properties": {
-                    "items": {"description": "Array, object, or JSON string to count"},
-                }},
-                output_schema={"type": "object", "properties": {
-                    "count": {"type": "integer", "description": "Number of items"},
-                }},
+                input_schema={
+                    "type": "object",
+                    "required": ["items"],
+                    "properties": {
+                        "items": {"description": "Array, object, or JSON string to count"},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "count": {"type": "integer", "description": "Number of items"},
+                    },
+                },
             ),
         }
 
