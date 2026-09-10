@@ -656,50 +656,32 @@ CONTENT MONITOR — NOTIFY VIA llm.evaluate (mandatory for news/feed/status watc
 --------------------------------------------------------------------------------
 Do NOT decide "something changed" by comparing result COUNT — count is almost
 always constant and the alert never fires. Use llm.evaluate against the previous
-snapshot instead. Copy this node sequence EXACTLY — only substitute <topic>,
-<interval_seconds> and <max_iterations>. Every capability input below uses ONLY
-the keys in that capability's input_schema; do not invent keys, and every node
-reference includes ".output." (e.g. nodes.fetch.response.body.output.result).
+snapshot. Build exactly these 7 nodes, in this order, entrypoint = fetch:
 
-  fetch    task  capability "web.search"
-           input { "query": "<topic>", "limit": 10 }
-           -> results at {{ nodes.fetch.response.body.output.result }}
+1. fetch (task, capability web.search) — input keys: query = "<topic>", limit = 10.
+2. evaluate (task, capability llm.evaluate) — input keys: task, previous, current.
+   task = a pt-BR instruction: novidade means a title in `current` absent from
+   `previous`; if `previous` is empty return decision "skip"; otherwise decision
+   "notify" with message = a short pt-BR summary (2-3 lines, 1-2 links). Fold the
+   USER-SPECIFIED PARAMETERS trigger into this text when present.
+   previous = nodes.remember.response.body.output.state.previous
+   current  = nodes.fetch.response.body.output.result
+3. remember (task, capability stat.tick) — input keys: iteration =
+   nodes.remember.response.body.output.iteration ; state = an object whose only
+   key `previous` = nodes.fetch.response.body.output.result. This stores THIS
+   fetch for the next pass; on pass 1 previous resolves empty so evaluate skips.
+4. decide (switch) — case when nodes.evaluate.response.body.output.decision == "notify"
+   targets avisar ; default targets check.
+5. avisar (task, capability telegram.send_markdown) — input key text =
+   nodes.evaluate.response.body.output.message ; next = check.
+6. check (switch) — case when nodes.remember.response.body.output.iteration >=
+   <max_iterations> targets rs_complete ; default targets wait.
+7. wait (sleep) — durationSeconds = <interval_seconds> ; next = fetch.
 
-  evaluate task  capability "llm.evaluate"
-           input {
-             "task": "Compare as manchetes ANTERIORES e ATUAIS sobre <topic>. Novidade
-                      = titulo presente em `current` e ausente em `previous`. Se `previous`
-                      estiver vazio, decision=skip. Se houver novidade, decision=notify e
-                      message = resumo curto pt-BR (2-3 linhas) citando 1-2 links.
-                      <insira aqui o trigger de USER-SPECIFIED PARAMETERS, se houver>",
-             "previous": "{{ nodes.remember.response.body.output.state.previous }}",
-             "current":  "{{ nodes.fetch.response.body.output.result }}"
-           }
-           -> { decision: "notify"|"skip", message: string }
-
-  remember task  capability "stat.tick"    # stores THIS fetch for the NEXT iteration
-           input {
-             "iteration": "{{ nodes.remember.response.body.output.iteration }}",
-             "state": { "previous": "{{ nodes.fetch.response.body.output.result }}" }
-           }
-           -> {{ nodes.remember.response.body.output.iteration }} (int, 1-based)
-
-  decide   switch { "==": [ {"var": "nodes.evaluate.response.body.output.decision"}, "notify" ] }
-           case notify -> avisar ; default -> check
-
-  avisar   task  capability "telegram.send_markdown"
-           input { "text": "{{ nodes.evaluate.response.body.output.message }}" }
-           next -> check
-
-  check    switch { ">=": [ {"var": "nodes.remember.response.body.output.iteration"}, <max_iterations> ] }
-           case done -> rs_complete ; default -> wait
-
-  wait     sleep  { "durationSeconds": <interval_seconds> }  next -> fetch
-
-Node order is fetch -> evaluate -> remember -> decide -> (avisar) -> check -> wait.
-`evaluate` MUST read `previous` from the `remember` (stat.tick) node, which still
-holds the PREVIOUS iteration's list because `remember` has not run yet this pass;
-on iteration 1 it resolves empty and evaluate returns skip.
+Every node reference above is written verbatim as
+"{{ nodes.<id>.response.body.output.<field> }}" — the ".output." segment is
+mandatory. A capability's input object may hold ONLY the keys named above (which
+come from its input_schema); never add keys like top_k, filter or items.
 
 
 WIRING ANTI-PATTERNS TO AVOID
