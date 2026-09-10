@@ -79,12 +79,16 @@ _WORKFLOW_REPAIR_SCHEMA = json.dumps(
 _MAX_RETRIES = 3
 _RETRY_BASE_S = 1.0
 
+# Budgets are max_completion_tokens. Reasoning models (gpt-5*) spend a large,
+# variable share of this on hidden reasoning before the JSON, so the generation
+# budgets carry roughly 2-3x headroom over the largest expected artifact —
+# otherwise the workflow JSON is silently truncated and fails to parse.
 _MAX_TOKENS: dict[str, int] = {
-    "intent": 512,
-    "lua_gen": 2048,
-    "lua_repair": 2048,
-    "workflow_gen": 4096,
-    "workflow_repair": 4096,
+    "intent": 1024,
+    "lua_gen": 6000,
+    "lua_repair": 6000,
+    "workflow_gen": 12000,
+    "workflow_repair": 12000,
 }
 _TEMPERATURE: dict[str, float] = {
     "intent": 0.0,
