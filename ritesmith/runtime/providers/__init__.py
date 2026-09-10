@@ -11,6 +11,7 @@ from ritesmith.runtime.providers.context import ContextProvider
 from ritesmith.runtime.providers.duckdb_ import DuckdbProvider
 from ritesmith.runtime.providers.email import EmailProvider
 from ritesmith.runtime.providers.grafana import GrafanaProvider
+from ritesmith.runtime.providers.llm import LlmProvider
 from ritesmith.runtime.providers.loomharbor import LoomHarborProvider
 from ritesmith.runtime.providers.market import MarketProvider
 from ritesmith.runtime.providers.obsidian import ObsidianProvider
@@ -33,6 +34,7 @@ PROVIDERS: list[ToolProvider] = [
     CASPProvider(),
     LoomHarborProvider(),
     GrafanaProvider(),
+    LlmProvider(),
 ]
 
 __all__ = [
