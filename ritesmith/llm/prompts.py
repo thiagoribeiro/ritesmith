@@ -655,26 +655,61 @@ CRITICAL for Pattern C:
 CONTENT MONITOR — NOTIFY VIA llm.evaluate (mandatory for news/feed/status watches)
 --------------------------------------------------------------------------------
 Do NOT decide "something changed" by comparing result COUNT — count is almost
-always constant and the alert never fires. Instead, after fetching + stat.tick
-(carrying the previous list in state):
-  1. evaluate  — task node, capability_name "llm.evaluate", input:
-       { "task": "Compare as manchetes/itens ANTERIORES e ATUAIS sobre <topico>.
-                  Houve novidade relevante? Se sim escreva um aviso curto (2-3 linhas,
-                  cite 1-2 links). Senao decision=skip.",
-         "previous": "{{ nodes.detectar.response.body.output.state.previous }}",
-         "current":  "{{ nodes.buscar.response.body.output.result }}" }
-     -> returns { decision: "notify"|"skip", message: string }
-  2. switch on { "==": [ {var: "nodes.evaluate.response.body.output.decision"}, "notify" ] }
-       case notify  -> avisar
-       default      -> (checar_fim / esperar)
-  3. avisar — telegram.send_markdown, body = "{{ nodes.evaluate.response.body.output.message }}"
-The stat.tick state MUST keep `previous` = the list fetched THIS iteration so the
-next run can compare. If USER-SPECIFIED PARAMETERS gave a trigger, put it in the
-llm.evaluate task text.
+always constant and the alert never fires. Use llm.evaluate against the previous
+snapshot instead. Copy this node sequence EXACTLY — only substitute <topic>,
+<interval_seconds> and <max_iterations>. Every capability input below uses ONLY
+the keys in that capability's input_schema; do not invent keys, and every node
+reference includes ".output." (e.g. nodes.fetch.response.body.output.result).
+
+  fetch    task  capability "web.search"
+           input { "query": "<topic>", "limit": 10 }
+           -> results at {{ nodes.fetch.response.body.output.result }}
+
+  evaluate task  capability "llm.evaluate"
+           input {
+             "task": "Compare as manchetes ANTERIORES e ATUAIS sobre <topic>. Novidade
+                      = titulo presente em `current` e ausente em `previous`. Se `previous`
+                      estiver vazio, decision=skip. Se houver novidade, decision=notify e
+                      message = resumo curto pt-BR (2-3 linhas) citando 1-2 links.
+                      <insira aqui o trigger de USER-SPECIFIED PARAMETERS, se houver>",
+             "previous": "{{ nodes.remember.response.body.output.state.previous }}",
+             "current":  "{{ nodes.fetch.response.body.output.result }}"
+           }
+           -> { decision: "notify"|"skip", message: string }
+
+  remember task  capability "stat.tick"    # stores THIS fetch for the NEXT iteration
+           input {
+             "iteration": "{{ nodes.remember.response.body.output.iteration }}",
+             "state": { "previous": "{{ nodes.fetch.response.body.output.result }}" }
+           }
+           -> {{ nodes.remember.response.body.output.iteration }} (int, 1-based)
+
+  decide   switch { "==": [ {"var": "nodes.evaluate.response.body.output.decision"}, "notify" ] }
+           case notify -> avisar ; default -> check
+
+  avisar   task  capability "telegram.send_markdown"
+           input { "text": "{{ nodes.evaluate.response.body.output.message }}" }
+           next -> check
+
+  check    switch { ">=": [ {"var": "nodes.remember.response.body.output.iteration"}, <max_iterations> ] }
+           case done -> rs_complete ; default -> wait
+
+  wait     sleep  { "durationSeconds": <interval_seconds> }  next -> fetch
+
+Node order is fetch -> evaluate -> remember -> decide -> (avisar) -> check -> wait.
+`evaluate` MUST read `previous` from the `remember` (stat.tick) node, which still
+holds the PREVIOUS iteration's list because `remember` has not run yet this pass;
+on iteration 1 it resolves empty and evaluate returns skip.
 
 
 WIRING ANTI-PATTERNS TO AVOID
 ------------------------------
+- A capability's "input" object may contain ONLY the keys listed in that
+  capability's input_schema (shown under AVAILABLE CAPABILITIES). Never invent
+  keys such as "top_k", "filter", "items" — if the schema does not list it, it
+  does not exist.
+- Every node reference is "nodes.<id>.response.body.output.<field>" — the
+  ".output." segment is REQUIRED; "nodes.<id>.response.body.<field>" is wrong.
 - Do NOT use "execution.input.*" — the correct variable is "payload.*"
 - Do NOT use "execution.loop_count" — this variable does not exist in Trama
 - Do NOT put HTTP calls inside switch cases — the switch chooses a target node,
