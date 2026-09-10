@@ -19,19 +19,31 @@ _HTTP_CLIENT = httpx.Client(
 )
 
 
+def _post_once(token: str, payload: dict) -> dict:
+    r = _HTTP_CLIENT.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
+    return r.json()
+
+
 def _send(text: str, chat_id: str | None = None, parse_mode: str | None = None) -> dict:
     s = get_settings()
     token = s.telegram_bot_token
     target = chat_id or s.telegram_chat_id
     if not token or not target:
         return {"ok": False, "error": "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured"}
+    payload: dict = {"chat_id": target, "text": text}
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
     try:
-        payload: dict = {"chat_id": target, "text": text}
-        if parse_mode:
-            payload["parse_mode"] = parse_mode
-        r = _HTTP_CLIENT.post(f"https://api.telegram.org/bot{token}/sendMessage", json=payload)
-        data = r.json()
-        return {"ok": data.get("ok", False), "message_id": data.get("result", {}).get("message_id")}
+        data = _post_once(token, payload)
+        # Telegram rejects the whole message when the markup fails to parse. A
+        # dropped notification is worse than an unstyled one, so retry as plain text.
+        if not data.get("ok") and parse_mode:
+            logger.warning("telegram.send %s rejected (%s); retrying as plain text",
+                           parse_mode, data.get("description"))
+            data = _post_once(token, {"chat_id": target, "text": text})
+        if not data.get("ok"):
+            return {"ok": False, "message_id": None, "error": data.get("description")}
+        return {"ok": True, "message_id": data.get("result", {}).get("message_id")}
     except Exception as e:
         logger.warning("telegram.send failed: %s", e)
         return {"ok": False, "error": str(e)}
