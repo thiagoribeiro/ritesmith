@@ -593,6 +593,27 @@ CRITICAL for Pattern C:
 - stat.min_value uses initial_min (from payload) to seed on first iteration of continuation;
   on subsequent iterations within the chain, previous_min (self-referential) takes over
 
+CONTENT MONITOR — NOTIFY VIA llm.evaluate (mandatory for news/feed/status watches)
+--------------------------------------------------------------------------------
+Do NOT decide "something changed" by comparing result COUNT — count is almost
+always constant and the alert never fires. Instead, after fetching + stat.tick
+(carrying the previous list in state):
+  1. evaluate  — task node, capability_name "llm.evaluate", input:
+       { "task": "Compare as manchetes/itens ANTERIORES e ATUAIS sobre <topico>.
+                  Houve novidade relevante? Se sim escreva um aviso curto (2-3 linhas,
+                  cite 1-2 links). Senao decision=skip.",
+         "previous": "{{ nodes.detectar.response.body.output.state.previous }}",
+         "current":  "{{ nodes.buscar.response.body.output.result }}" }
+     -> returns { decision: "notify"|"skip", message: string }
+  2. switch on { "==": [ {var: "nodes.evaluate.response.body.output.decision"}, "notify" ] }
+       case notify  -> avisar
+       default      -> (checar_fim / esperar)
+  3. avisar — telegram.send_markdown, body = "{{ nodes.evaluate.response.body.output.message }}"
+The stat.tick state MUST keep `previous` = the list fetched THIS iteration so the
+next run can compare. If USER-SPECIFIED PARAMETERS gave a trigger, put it in the
+llm.evaluate task text.
+
+
 WIRING ANTI-PATTERNS TO AVOID
 ------------------------------
 - Do NOT use "execution.input.*" — the correct variable is "payload.*"
@@ -702,6 +723,34 @@ def workflow_generation_user(
             f"{caps_json}"
         ),
     ]
+
+    _mon_keys = ("schedule_hours", "duration_days", "runs_per_day", "trigger", "notify_style")
+    _mon = {k: (context or {}).get(k) for k in _mon_keys if (context or {}).get(k) is not None}
+    if _mon:
+        _lines = ["USER-SPECIFIED PARAMETERS (use these EXACTLY — do NOT re-infer):"]
+        if _mon.get("schedule_hours"):
+            _lines.append(
+                f"- run every {_mon['schedule_hours']}h -> sleep node durationSeconds = "
+                f"{int(_mon['schedule_hours']) * 3600}"
+            )
+        if _mon.get("duration_days") and _mon.get("runs_per_day"):
+            _iters = int(_mon["duration_days"]) * int(_mon["runs_per_day"])
+            _lines.append(
+                f"- run for {_mon['duration_days']} days x {_mon['runs_per_day']}/day -> "
+                f"max_iterations = {_iters} (cap 20; use Pattern C cron-chain if it would exceed 20)"
+            )
+        elif _mon.get("duration_days"):
+            _lines.append(
+                f"- run for {_mon['duration_days']} days -> size max_iterations to match the sleep interval"
+            )
+        if _mon.get("trigger"):
+            _lines.append(f"- a notification is warranted ONLY when: {_mon['trigger']}")
+        if _mon.get("notify_style"):
+            _lines.append(
+                f"- notification style: {_mon['notify_style']} "
+                "(resumo = short summary of what changed; aviso = one-line heads-up)"
+            )
+        parts.append("\n".join(_lines))
 
     lua_artifacts = (context or {}).get("available_lua_artifacts", [])
     if lua_artifacts:
