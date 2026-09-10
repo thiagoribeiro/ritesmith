@@ -22,9 +22,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://ritesmith:ritesmith@localhost:5432/ritesmith"
 
     # LLM
+    # Two tiers: llm_model does the hard generation (workflow/lua, repairs);
+    # llm_model_fast does classification and short reviews (analyze_intent,
+    # llm.evaluate). Keep llm_model_fast non-reasoning — reasoning models spend
+    # their whole token budget before emitting the JSON these call sites parse.
     llm_provider: str = "openai"
-    llm_model: str = "gpt-4.1"
-    llm_model_fast: str = "gpt-4o-mini"
+    llm_model: str = "gpt-5-mini"
+    llm_model_fast: str = "gpt-4.1-nano"
     llm_timeout_seconds: int = 60
 
     # Embeddings (deferred to V1)
