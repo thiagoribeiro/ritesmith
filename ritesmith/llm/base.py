@@ -74,6 +74,7 @@ class LLMProvider(ABC):
         self,
         goal: str,
         constraints: dict,
+        context: dict | None = None,
     ) -> tuple[IntentAnalysis, LLMCallStats]: ...
 
     async def generate_workflow(

@@ -144,6 +144,7 @@ class PlanBuilder:
         intent_analysis, _ = await self.llm.analyze_intent(
             goal=req.intent,
             constraints=constraints.model_dump(),
+            context=req.context,
         )
 
         # 2. Determine which artifact types to generate

@@ -35,7 +35,7 @@ class GenerationDispatcher:
         req: GenerateRequest,
         plan_id: str | None = None,
     ) -> GeneratedArtifactResponse:
-        intent, _ = await self._llm.analyze_intent(req.intent, req.constraints or {})
+        intent, _ = await self._llm.analyze_intent(req.intent, req.constraints or {}, context=req.context)
 
         if intent.requires_workflow:
             wf_req = GenerateWorkflowRequest(

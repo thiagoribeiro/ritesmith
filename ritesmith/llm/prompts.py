@@ -186,29 +186,88 @@ Fix the script and respond with JSON matching this schema:
 def intent_analysis_system() -> str:
     return """\
 You are an intent analyser for RiteSmith.
-Given a natural-language goal, determine what artifacts must be generated.
+Given a natural-language goal, decide which artifact must be generated:
+a single-pass `lua_script` or an orchestrated `trama_workflow`.
 
-ARTIFACT TYPES
-  lua_script      — pure data transformation, computation, or lightweight HTTP calls
-  trama_workflow  — multi-step orchestration: service calls, branching, async waits,
-                    polling loops, notifications, scheduled / recurrent flows
+DECISION PROCEDURE — evaluate A-F in order. If ANY is true, the answer is
+trama_workflow (requires_workflow=true, requires_lua=false,
+artifact_types=["trama_workflow"]):
 
-RULES
-  - Prefer lua_script for single-step logic with no external orchestration
-  - Use trama_workflow whenever the goal requires: sequential service calls,
-    conditional branching, async callbacks, polling, or human approvals
-  - requires_network = true if any HTTP call is needed
-  - requires_side_effects = true if the script controls physical devices, sends messages, or mutates external state
-  - Set suggested_name in snake_case domain.verb format (e.g. "payments.process_refund")
+  A. Recurrence / scheduling — the goal runs more than once or on a clock:
+     "a cada N horas/minutos", "diariamente", "toda manha", "por N dias",
+     "durante uma semana", "sempre que", "monitore", "fique de olho",
+     "acompanhe", "every X", "keep watching".
+  B. Wait / delay / poll — "em 30 minutos", "depois de", "aguarde",
+     "quando ficar pronto", or polling an external status until it changes.
+  C. Conditional action — the goal is "se <condicao> entao <acao>" and the
+     action has an effect (notify, call a service, write a file). E.g.
+     "se o preco subir 2%, me avise".
+  D. Two or more distinct external effects — e.g. send a Telegram message AND
+     write a file; call service X then call service Y with its result.
+  E. Notification / report IS the deliverable — the point is to tell the user
+     something ("me avise", "me manda no telegram", "manda um resumo"), not to
+     return a value to a caller.
+  F. Async callback, human approval, or any multi-step saga.
+
+Otherwise it is a lua_script (requires_lua=true, requires_workflow=false,
+artifact_types=["lua_script"]): ONE synchronous pass that takes input and
+RETURNS a value — pure computation, data transformation, or at most a single
+helper HTTP GET whose result is returned.
+
+Do NOT pick lua_script merely because the body would be short. Scheduling,
+waiting, and notifying are orchestration even when the logic is tiny.
+
+OTHER FIELDS
+  requires_network      = true if any HTTP call is needed
+  requires_filesystem   = true if it reads or writes files
+  requires_side_effects = true if it controls devices, sends messages, or
+                          mutates external state
+  domain                = text|math|crypto|network|documents|general
+  suggested_name        = snake_case "domain.verb_noun"
+  summary               = one sentence
+
+EXAMPLES
+  "calcule 15% de gorjeta sobre 240 e some ao total"
+     -> lua_script (single pass, returns a number)
+  "extraia os emails desse texto e retorne a lista"
+     -> lua_script
+  "busque a cotacao do dolar; se subir mais de 2%, me avise no telegram e grave num arquivo"
+     -> trama_workflow (conditional action + two effects + notification)
+  "a cada 6 horas por 7 dias, verifique novidades sobre energia solar e me mande um resumo se algo mudar"
+     -> trama_workflow (recurrence + notification)
+  "apaga a luz da cozinha em 30 minutos"
+     -> trama_workflow (delay)
+  "toda manha as 7h me manda a previsao do tempo"
+     -> trama_workflow (schedule + notification)
 
 Respond with valid JSON matching the schema in the user message — nothing else."""
 
 
-def intent_analysis_user(goal: str, constraints: dict, response_schema: str) -> str:
+_SCHEDULING_HINT_KEYS = (
+    "schedule_hours", "duration_days", "runs_per_day", "cron", "interval",
+    "every", "frequency",
+)
+
+
+def intent_analysis_user(
+    goal: str,
+    constraints: dict,
+    response_schema: str,
+    context: dict | None = None,
+) -> str:
     constraints_text = json.dumps(constraints, indent=2) if constraints else "{}"
+    ctx = context or {}
+    sched = {k: ctx[k] for k in _SCHEDULING_HINT_KEYS if ctx.get(k) not in (None, "", [])}
+    hint = ""
+    if sched:
+        hint = (
+            "\nSCHEDULING CONTEXT (the caller already resolved these; a recurrent "
+            "goal like this is a trama_workflow, never a lua_script): "
+            f"{json.dumps(sched, ensure_ascii=False)}\n"
+        )
     return f"""\
 USER GOAL: {_sanitize_goal(goal)}
-
+{hint}
 APPLIED CONSTRAINTS:
 {constraints_text}
 

@@ -45,10 +45,11 @@ _INTENT_SCHEMA = json.dumps(
         "requires_workflow": False,
         "requires_network": False,
         "requires_filesystem": False,
+        "requires_side_effects": False,
         "domain": "text|math|crypto|network|documents|general",
         "suggested_name": "domain.verb_noun",
         "summary": "<one sentence summary>",
-        "artifact_types": ["lua_script"],
+        "artifact_types": ["lua_script OR trama_workflow"],
     },
     indent=2,
 )
@@ -228,11 +229,13 @@ class OpenAIProvider(LLMProvider):
         self,
         goal: str,
         constraints: dict,
+        context: dict | None = None,
     ) -> tuple[IntentAnalysis, LLMCallStats]:
         user_msg = prompts.intent_analysis_user(
             goal=goal,
             constraints=constraints,
             response_schema=_INTENT_SCHEMA,
+            context=context,
         )
         raw, stats = await self._chat_with_retry(
             model=self.model_fast,
