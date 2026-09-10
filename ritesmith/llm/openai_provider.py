@@ -87,8 +87,8 @@ _MAX_TOKENS: dict[str, int] = {
     "intent": 1024,
     "lua_gen": 6000,
     "lua_repair": 6000,
-    "workflow_gen": 12000,
-    "workflow_repair": 12000,
+    "workflow_gen": 8000,
+    "workflow_repair": 8000,
 }
 _TEMPERATURE: dict[str, float] = {
     "intent": 0.0,

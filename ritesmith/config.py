@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"
     llm_model: str = "gpt-5-mini"
     llm_model_fast: str = "gpt-4.1-nano"
-    llm_timeout_seconds: int = 60
+    llm_timeout_seconds: int = 180  # gpt-5* reasoning + workflow JSON regularly exceeds 60s
 
     # Embeddings (deferred to V1)
     embeddings_enabled: bool = False
