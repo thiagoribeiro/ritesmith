@@ -18,6 +18,10 @@ from ritesmith.llm.base import (
 )
 from ritesmith.observability.metrics import llm_errors_total, llm_request_duration, llm_tokens_total
 
+# gpt-5*/o* reasoning models reject `temperature` on Chat Completions and want
+# `max_completion_tokens` in place of `max_tokens`.
+_REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
 # JSON schemas como string para injetar nos prompts
 _LUA_RESPONSE_SCHEMA = json.dumps(
     {
@@ -129,16 +133,20 @@ class OpenAIProvider(LLMProvider):
     ) -> tuple[str, LLMCallStats]:
         _start = time.perf_counter()
         try:
-            response = await self.client.chat.completions.create(
+            create_kwargs: dict = dict(
                 model=model,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
                 response_format={"type": "json_object"},
-                temperature=temperature,
-                max_tokens=max_tokens,
             )
+            if model.startswith(_REASONING_PREFIXES):
+                create_kwargs["max_completion_tokens"] = max_tokens
+            else:
+                create_kwargs["temperature"] = temperature
+                create_kwargs["max_tokens"] = max_tokens
+            response = await self.client.chat.completions.create(**create_kwargs)
         except APITimeoutError as e:
             llm_errors_total.labels(provider="openai", error_type="LLMTimeoutError").inc()
             raise LLMTimeoutError(f"OpenAI request timed out: {e}") from e
