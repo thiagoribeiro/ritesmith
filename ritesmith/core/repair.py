@@ -23,6 +23,10 @@ async def run_repair_loop(
     False to continue. The caller manages all state (content, validation, meta) via
     closure/nonlocal.
     """
+    # Reasoning models occasionally break JSON mode on large prompts; each attempt
+    # is an independent roll, so tolerate a run of them before giving up rather
+    # than burning just two of the max_attempts budget.
+    max_consecutive_parse_failures = max(4, max_attempts)
     success = False
     consecutive_parse_failures = 0
     for attempt in range(1, max_attempts + 1):
@@ -37,10 +41,15 @@ async def run_repair_loop(
                 await asyncio.sleep(2**attempt)  # 2s, 4s, 8s, 16s
         except LLMError:
             consecutive_parse_failures += 1
-            log.warning("LLM parse failure %d/2 on attempt %d", consecutive_parse_failures, attempt)
-            if consecutive_parse_failures >= 2:
-                log.error("unrecoverable: LLM not following JSON schema after 2 parse failures")
-                break  # unrecoverable: LLM not following JSON schema
+            log.warning(
+                "LLM parse failure %d/%d on attempt %d",
+                consecutive_parse_failures,
+                max_consecutive_parse_failures,
+                attempt,
+            )
+            if consecutive_parse_failures >= max_consecutive_parse_failures:
+                log.error("unrecoverable: LLM not following JSON schema")
+                break
 
     outcome = "success" if success else "exhausted"
     log.info("repair loop finished artifact_type=%s outcome=%s", artifact_type, outcome)
