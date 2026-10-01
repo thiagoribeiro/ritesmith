@@ -29,6 +29,21 @@ def _builder(db, **settings_overrides) -> PlanBuilder:
 # ---------------------------------------------------------------------------
 
 ALL_STATES = list(PlanStatus)
+ALL_PAIRS = [(a, b) for a in PlanStatus for b in PlanStatus if a != b]
+
+
+@pytest.mark.parametrize(("current", "target"), ALL_PAIRS, ids=[f"{a}->{b}" for a, b in ALL_PAIRS])
+def test_full_transition_matrix(db_session, current, target):
+    """Every (state, state) pair: _assert_transition allows exactly the table's edges."""
+    from unittest.mock import MagicMock
+
+    builder = _builder(db_session)
+    plan = MagicMock(status=current.value)
+    if target in _ALLOWED_TRANSITIONS.get(current, set()):
+        builder._assert_transition(plan, target)  # no raise
+    else:
+        with pytest.raises(InvalidTransitionError):
+            builder._assert_transition(plan, target)
 
 
 def test_terminal_states_have_no_outgoing_transitions():
