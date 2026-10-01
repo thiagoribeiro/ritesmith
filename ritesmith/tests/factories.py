@@ -69,3 +69,32 @@ async def make_generation_job(
     db.add(job)
     await db.flush()
     return job
+
+
+async def make_plan(
+    db: AsyncSession,
+    *,
+    status: str = "proposed",
+    intent: str | None = None,
+    context: dict | None = None,
+    callback_url: str | None = None,
+    summary: str | None = None,
+):
+    """Seed a Plan row directly in a chosen status (bypasses the builder)."""
+    from ritesmith.registry.models import Plan as PlanORM
+
+    plan = PlanORM(
+        plan_id=f"plan_{uuid.uuid4().hex[:20]}",
+        status=status,
+        intent=intent or unique("plan intent"),
+        summary=summary,
+        mode="propose",
+        reuse_policy="prefer_reuse",
+        context=context,
+        steps=[],
+        artifact_ids=[],
+        callback_url=callback_url,
+    )
+    db.add(plan)
+    await db.flush()
+    return plan
