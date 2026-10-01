@@ -40,6 +40,8 @@ dev = [
     "pytest-asyncio>=1.4",
     "pytest-httpx>=0.36",
     "pytest-cov>=7.1",
+    "pytest-timeout>=2.3",
+    "hypothesis>=6.100",
     "anyio>=4.14",
     "ruff>=0.16",
 ]
@@ -54,7 +56,20 @@ asyncio_default_test_loop_scope = "session"
 testpaths = ["ritesmith/tests"]
 markers = [
     "e2e: end-to-end tests that require a real OpenAI API key and live database",
+    "security: regression tests for security-relevant behaviour (policy, approvals, auth)",
+    "slow: tests that take more than a few seconds",
 ]
+# A hung test (e.g. a runaway Lua thread) fails instead of blocking the whole run.
+timeout = 60
+
+[tool.coverage.run]
+source = ["ritesmith"]
+branch = true
+omit = ["ritesmith/tests/*", "ritesmith/storage/migrations/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
 
 [tool.ruff]
 line-length = 100

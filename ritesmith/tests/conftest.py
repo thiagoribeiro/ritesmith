@@ -1,11 +1,25 @@
-import os
+"""Shared test fixtures.
 
+Isolation: every test runs inside an outer transaction on a dedicated
+connection, and the session joins it with SAVEPOINTs, so the explicit
+`commit()` calls in the code under test are rolled back when the test ends.
+Module-level caches, the rate limiter and the settings cache are reset
+around every test.
+"""
+
+import os
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
+
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from ritesmith.api.app import create_app
+from ritesmith.api.deps import get_llm_provider
+from ritesmith.config import Settings, get_settings
 from ritesmith.registry.models import Base
 from ritesmith.storage.postgres import get_db
 
@@ -38,6 +52,42 @@ _CREATE_TRIGGER = text("""
 """)
 
 
+# ---------------------------------------------------------------------------
+# Global state reset
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _reset_global_state():
+    """Rate limiter off, module caches and the settings cache cleared."""
+    from ritesmith.api.limiter import limiter
+    from ritesmith.core import execution
+    from ritesmith.runtime.casp import client as casp_client
+    from ritesmith.runtime.providers import loomharbor, market
+
+    caches = [
+        casp_client._discovery_cache,
+        market._last_fetch,
+        loomharbor._ready_cache,
+        execution._repair_in_flight,
+    ]
+    limiter.enabled = False
+    limiter.reset()
+    for cache in caches:
+        cache.clear()
+    get_settings.cache_clear()
+    yield
+    limiter.enabled = True
+    for cache in caches:
+        cache.clear()
+    get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+
+
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def db_engine():
     engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -54,21 +104,76 @@ async def db_engine():
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def db_session(db_engine):
-    """Sessão por teste — rollback ao final para isolamento."""
-    session_factory = async_sessionmaker(db_engine, expire_on_commit=False)
-    async with session_factory() as session:
-        yield session
-        await session.rollback()
+async def db_connection(db_engine):
+    """A connection holding the test's outer transaction (always rolled back)."""
+    async with db_engine.connect() as conn:
+        outer = await conn.begin()
+        yield conn
+        if outer.is_active:
+            await outer.rollback()
 
 
 @pytest_asyncio.fixture(loop_scope="session")
-async def client(db_session: AsyncSession):
-    app = create_app()
+async def db_session(db_connection) -> AsyncIterator[AsyncSession]:
+    """Per-test session; commits become savepoints of the outer transaction."""
+    session = AsyncSession(
+        bind=db_connection, expire_on_commit=False, join_transaction_mode="create_savepoint"
+    )
+    try:
+        yield session
+    finally:
+        await session.close()
 
-    async def override_get_db():
-        yield db_session
 
-    app.dependency_overrides[get_db] = override_get_db
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+@pytest.fixture
+def session_factory(db_connection, monkeypatch) -> Callable[[], AsyncSession]:
+    """Routes `storage.postgres.AsyncSessionLocal` (used by background tasks) into the test transaction.
+
+    Background sessions share the test connection, so only use it where those
+    tasks are awaited sequentially (not concurrently with other DB work).
+    """
+
+    def factory() -> AsyncSession:
+        return AsyncSession(
+            bind=db_connection, expire_on_commit=False, join_transaction_mode="create_savepoint"
+        )
+
+    monkeypatch.setattr("ritesmith.storage.postgres.AsyncSessionLocal", factory)
+    return factory
+
+
+# ---------------------------------------------------------------------------
+# HTTP clients
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def make_client(db_session):
+    """Factory for API clients: `async with make_client(llm=..., settings=...) as c:`.
+
+    `settings` overrides the get_settings dependency; `llm` overrides get_llm_provider.
+    """
+
+    @asynccontextmanager
+    async def factory(llm=None, settings: Settings | None = None) -> AsyncIterator[AsyncClient]:
+        app = create_app()
+
+        async def override_get_db():
+            yield db_session
+
+        app.dependency_overrides[get_db] = override_get_db
+        if llm is not None:
+            app.dependency_overrides[get_llm_provider] = lambda: llm
+        if settings is not None:
+            app.dependency_overrides[get_settings] = lambda: settings
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            c.app = app  # type: ignore[attr-defined]
+            yield c
+
+    return factory
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def client(make_client):
+    async with make_client() as c:
         yield c
