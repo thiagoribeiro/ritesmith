@@ -8,6 +8,9 @@ Layer 1 — Structural:
   - Required fields present and typed correctly
   - All node references (next, target, default, entrypoint) resolve to real ids
   - switch nodes have a "default"
+  - split/join follow Trama's rules: a split fans out into >= 2 branches and owns
+    exactly one join; nothing else may route into a join; branch nodes' outputs are
+    only visible after the join through nodes.<join>.response.body.branches
   - No reachability cycles from entrypoint
 
 Layer 2 — Contracts (only when capability_registry is provided):
@@ -21,7 +24,64 @@ import json
 import re
 
 _V1_STEP_TYPES = {"capability", "sleep", "condition", "notification", "callback"}
-_V2_NODE_KINDS = {"task", "switch", "sleep"}
+_V2_NODE_KINDS = {"task", "switch", "sleep", "split", "join"}
+_NODE_REF = re.compile(r"\bnodes\.([A-Za-z0-9_\-]+)")
+
+
+def _v2_successors(node: dict | None) -> list[str]:
+    """Outgoing edges of a v2 node, excluding the "end" terminal."""
+    if not node:
+        return []
+    kind = node.get("kind")
+    if kind in ("task", "sleep", "join"):
+        targets = [node.get("next") or "end"]
+    elif kind == "switch":
+        targets = [c.get("target", "end") for c in node.get("cases", [])] + [
+            node.get("default", "end")
+        ]
+    elif kind == "split":
+        targets = list(node.get("branches") or []) + [node.get("join") or "end"]
+    else:
+        targets = []
+    return [t for t in targets if t and t != "end"]
+
+
+def _branch_sets(nodes: list) -> dict[str, set[str]]:
+    """Node ids of each split branch, keyed by the branch's entry node id.
+
+    A branch starts at one of the split's `branches` entries and runs until a
+    terminal ("next": "end") — it never flows into the join; Trama resumes the
+    parent at the join once every branch has finished.
+    """
+    node_map = {n.get("id"): n for n in nodes if isinstance(n, dict) and n.get("id")}
+    sets: dict[str, set[str]] = {}
+    for node in node_map.values():
+        if node.get("kind") != "split":
+            continue
+        for entry in node.get("branches") or []:
+            if entry not in node_map:
+                continue
+            members: set[str] = set()
+            stack = [entry]
+            while stack:
+                nid = stack.pop()
+                if nid in members:
+                    continue
+                members.add(nid)
+                current = node_map[nid]
+                nexts = (
+                    list(current.get("branches") or [])  # nested split: its branches stay inside
+                    if current.get("kind") == "split"
+                    else _v2_successors(current)
+                )
+                stack.extend(t for t in nexts if t in node_map)
+            sets[entry] = members
+    return sets
+
+
+def branch_node_ids(nodes: list) -> set[str]:
+    """Ids of nodes that run inside a split branch (a child execution)."""
+    return set().union(*_branch_sets(nodes).values()) if nodes else set()
 
 
 class WorkflowValidator:
@@ -72,6 +132,9 @@ class WorkflowValidator:
 
         for node in nodes_list:
             errors.extend(self._validate_v2_node(node, node_ids))
+
+        if not errors:
+            errors.extend(self._validate_split_join(nodes_list))
 
         if not errors:
             max_iterations = definition.get("max_iterations")
@@ -138,6 +201,25 @@ class WorkflowValidator:
                     f"Node '{nid}': switch 'default' references non-existent node '{default}'"
                 )
 
+        elif kind == "split":
+            branches = node.get("branches")
+            if not isinstance(branches, list) or len(branches) < 2:
+                errors.append(f"Node '{nid}': split node must have at least 2 'branches'")
+            else:
+                for branch in branches:
+                    if branch not in node_ids:
+                        errors.append(f"Node '{nid}': split branch '{branch}' does not exist")
+            join = node.get("join")
+            if not join:
+                errors.append(f"Node '{nid}': split node must name its 'join' node")
+            elif join not in node_ids:
+                errors.append(f"Node '{nid}': split 'join' references non-existent node '{join}'")
+
+        elif kind == "join":
+            next_id = node.get("next")
+            if next_id and next_id != "end" and next_id not in node_ids:
+                errors.append(f"Node '{nid}': 'next' references non-existent node '{next_id}'")
+
         elif kind == "sleep":
             duration = node.get("durationSeconds")
             if duration is None:
@@ -154,22 +236,65 @@ class WorkflowValidator:
 
         return errors
 
+    def _validate_split_join(self, nodes: list) -> list[str]:
+        """Trama's split/join rules, plus the data-visibility rule for branch outputs."""
+        errors: list[str] = []
+        node_map = {n["id"]: n for n in nodes if n.get("id")}
+        splits = [n for n in nodes if n.get("kind") == "split"]
+        joins = {n["id"] for n in nodes if n.get("kind") == "join"}
+
+        owners: dict[str, list[str]] = {}
+        for split in splits:
+            join = split.get("join")
+            if join in node_map and join not in joins:
+                errors.append(f"Node '{split['id']}': split 'join' must reference a join node")
+            owners.setdefault(join, []).append(split["id"])
+        for join in sorted(joins):
+            owned_by = owners.get(join, [])
+            if len(owned_by) != 1:
+                errors.append(
+                    f"Join '{join}' must be owned by exactly one split (owned by {owned_by or 'none'})"
+                )
+
+        # Only the owning split's `join` field may point at a join; branches never flow into it.
+        for node in nodes:
+            for target in _v2_successors(node):
+                is_own_join = node.get("kind") == "split" and node.get("join") == target
+                if target in joins and not is_own_join:
+                    errors.append(
+                        f"Node '{node['id']}': must not route into join '{target}' — end the "
+                        f'branch with "next": "end"; Trama resumes at the join automatically'
+                    )
+
+        # Each branch runs as a child execution that starts with only the payload: it sees
+        # its own nodes, not the parent's; the parent sees branch results only via the join.
+        branch_sets = _branch_sets(nodes)
+        inside = set().union(*branch_sets.values()) if branch_sets else set()
+        for node in nodes:
+            refs = set(_NODE_REF.findall(json.dumps(node))) & set(node_map)
+            if node["id"] not in inside:
+                for ref in sorted(refs & inside):
+                    errors.append(
+                        f"Node '{node['id']}': references branch node '{ref}', whose output is "
+                        f"not visible outside its branch — read it from "
+                        f"nodes.<join>.response.body.branches[].result instead"
+                    )
+                continue
+            same_branch = set().union(
+                *(members for members in branch_sets.values() if node["id"] in members)
+            )
+            for ref in sorted(refs - same_branch):
+                errors.append(
+                    f"Node '{node['id']}': runs inside a split branch and cannot see node "
+                    f"'{ref}' — a branch only has the payload and its own nodes"
+                )
+        return errors
+
     def _detect_v2_cycles(self, nodes: list, entrypoint: str, node_ids: set[str]) -> list[str]:
         node_map: dict[str, dict] = {n["id"]: n for n in nodes if n.get("id")}
 
         def successors(nid: str) -> list[str]:
-            node = node_map.get(nid)
-            if not node:
-                return []
-            kind = node.get("kind")
-            if kind in ("task", "sleep"):
-                nxt = node.get("next", "end")
-                return [nxt] if nxt != "end" else []
-            elif kind == "switch":
-                targets = [c.get("target", "end") for c in node.get("cases", [])]
-                default = node.get("default", "end")
-                return [t for t in targets + [default] if t != "end"]
-            return []
+            return _v2_successors(node_map.get(nid))
 
         visited: set[str] = set()
         in_stack: set[str] = set()

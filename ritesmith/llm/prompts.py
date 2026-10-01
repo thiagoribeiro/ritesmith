@@ -283,9 +283,9 @@ _TRAMA_SPEC = """\
 TRAMA WORKFLOW SPECIFICATION v2
 ================================
 
-A Trama workflow is a lightweight directed graph of nodes executed in sequence
-or following conditional branches. It is NOT a general-purpose workflow engine:
-no parallelism, no fork-join. Keep definitions small and focused.
+A Trama workflow is a lightweight directed graph of nodes executed in sequence,
+following conditional branches, or fanned out in parallel with split/join. It is
+NOT a general-purpose workflow engine. Keep definitions small and focused.
 
 TOP-LEVEL STRUCTURE
 -------------------
@@ -306,7 +306,8 @@ TOP-LEVEL STRUCTURE
 
 NODE KINDS
 ----------
-Two node kinds are supported: "task" and "switch".
+Five node kinds: "task" and "switch" (below), "sleep" (see LOOPS), and "split" +
+"join" for parallel fan-out/fan-in (see PARALLEL FAN-OUT).
 
 1. TASK NODE  (performs a single HTTP call)
 {
@@ -403,6 +404,98 @@ OWN previous iteration's output via nodes.itself.response.body.* — this resolv
 the result stored from the PREVIOUS iteration (null on first run). This is the
 "self-referential state" pattern for carrying aggregate state across iterations.
 
+PARALLEL FAN-OUT — SPLIT + JOIN
+-------------------------------
+Use when the goal needs SEVERAL INDEPENDENT actions that can run at the same time
+(fetch 3 prices, query 2 sources, notify 2 channels) and then continue with all
+results. Do NOT use it for steps that depend on each other's output — chain those.
+
+  {"id": "<split_id>", "kind": "split", "branches": ["<entry_a>", "<entry_b>"], "join": "<join_id>"}
+  {"id": "<join_id>",  "kind": "join",  "next": "<node_after_join>"}     // or "next": "end"
+
+Semantics:
+- Each branch runs as an independent child execution starting at its entry node,
+  with its own retries/compensation. A branch is a normal chain of nodes and ENDS
+  with "next": "end" — that ends the BRANCH, not the workflow.
+- The join waits until EVERY branch has finished, then the workflow continues at
+  join.next. A failed branch does NOT fail the workflow: the join reports it.
+- A branch sees ONLY {{ payload.* }} and the nodes of its OWN branch. It cannot read
+  nodes that ran before the split, nor other branches.
+- After the join, branch nodes are NOT visible as nodes.<branch_node>.*. Read the
+  aggregated result instead:
+    nodes.<join_id>.response.body.allSucceeded   — true if every branch succeeded
+    nodes.<join_id>.response.body.branches       — one entry per branch, in the same
+        order as split.branches: { branchId (= entry node id), status ("SUCCEEDED" |
+        "FAILED" | ...), result (response body of the branch's LAST node, e.g.
+        { "output": {...} } for a capability call), failureDescription? }
+  Pass the whole branches array to a capability (e.g. llm.evaluate "data"), or use
+  a switch on allSucceeded when failures need a different path.
+
+Rules (the validator enforces them):
+- A split has at least 2 branches and names exactly one join; each join belongs to
+  exactly one split.
+- NOTHING may route into a join ("next", switch targets, other splits) — only its
+  split's "join" field references it.
+- Keep branches short and loop-free (no sleep back-edges inside a branch).
+
+EXAMPLE — compare three coin prices in parallel, then send one summary:
+{
+  "name": "coin_prices_parallel_summary",
+  "version": "2.0.0",
+  "entrypoint": "fan_out",
+  "nodes": [
+    { "id": "fan_out", "kind": "split", "branches": ["price_btc", "price_eth", "price_sol"], "join": "prices" },
+    {
+      "id": "price_btc", "kind": "task",
+      "action": { "mode": "sync",
+        "request": { "url": "__RS_BASE_URL__/trama/execute", "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": { "capability_name": "market.coin_price", "input": { "symbol": "BTC" } } },
+        "successStatusCodes": [200] },
+      "next": "end"
+    },
+    {
+      "id": "price_eth", "kind": "task",
+      "action": { "mode": "sync",
+        "request": { "url": "__RS_BASE_URL__/trama/execute", "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": { "capability_name": "market.coin_price", "input": { "symbol": "ETH" } } },
+        "successStatusCodes": [200] },
+      "next": "end"
+    },
+    {
+      "id": "price_sol", "kind": "task",
+      "action": { "mode": "sync",
+        "request": { "url": "__RS_BASE_URL__/trama/execute", "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": { "capability_name": "market.coin_price", "input": { "symbol": "SOL" } } },
+        "successStatusCodes": [200] },
+      "next": "end"
+    },
+    { "id": "prices", "kind": "join", "next": "summarize" },
+    {
+      "id": "summarize", "kind": "task",
+      "action": { "mode": "sync",
+        "request": { "url": "__RS_BASE_URL__/trama/execute", "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": { "capability_name": "llm.evaluate", "input": {
+            "task": "Resuma em pt-BR, em 3 linhas, o preço de cada moeda em data (cada item tem branchId e result.output). Decisão: notify.",
+            "data": "{{ nodes.prices.response.body.branches }}" } } },
+        "successStatusCodes": [200] },
+      "next": "notify"
+    },
+    {
+      "id": "notify", "kind": "task",
+      "action": { "mode": "sync",
+        "request": { "url": "__RS_BASE_URL__/trama/execute", "verb": "POST",
+          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
+          "body": { "capability_name": "telegram.send_markdown",
+                    "input": { "text": "{{ nodes.summarize.response.body.output.message }}" } } },
+        "successStatusCodes": [200] },
+      "next": "end"
+    }
+  ]
+}
 PATTERN A — SELF-REFERENTIAL LOOP  (aggregate tracking, condition-based termination)
 -------------------------------------------------------------------------------------
 Use when: "monitor every N minutes", "poll until condition", "track running min/max",
@@ -703,7 +796,12 @@ WIRING ANTI-PATTERNS TO AVOID
 - Every switch MUST have a "default" — never rely on all cases being exhaustive.
 - The last task node in every non-looping path MUST have "next": "end".
 - For polling loops (Pattern A), the sleep node MUST point back to the fetch node.
-- Do NOT use a task node to simulate sleep — use kind: "sleep" with durationSeconds."""
+- Do NOT use a task node to simulate sleep — use kind: "sleep" with durationSeconds.
+- Do NOT point a branch's last node at the join — end the branch with "next": "end".
+- Do NOT read a branch node (nodes.<branch_node>.*) after the join — use
+  nodes.<join_id>.response.body.branches; and do NOT read pre-split nodes inside a
+  branch — a branch only has payload.* and its own nodes.
+- Do NOT use split/join for steps that depend on each other's output."""
 
 
 def _provider_capabilities_list() -> str:
@@ -762,6 +860,8 @@ GENERATION RULES
   (linear multi-fetch); add "max_iterations" at root for Pattern A to allow the back-edge
 - For unbounded/indefinite/forever intents: ALWAYS use Pattern C (cron chain); max_iterations
   MUST be exactly 20; spawn_next intent must match original for reuse
+- For several INDEPENDENT actions that can run at the same time, use split/join
+  (PARALLEL FAN-OUT) instead of chaining them one after another
 
 Respond with valid JSON matching the schema in the user message — nothing else."""
 

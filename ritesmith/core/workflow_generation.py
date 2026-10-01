@@ -27,7 +27,7 @@ from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, ValidationResult
 from ritesmith.schemas.generation import GeneratedArtifactResponse, GenerateWorkflowRequest
-from ritesmith.workflows.validator import WorkflowValidator
+from ritesmith.workflows.validator import WorkflowValidator, branch_node_ids
 
 log = logging.getLogger(__name__)
 
@@ -44,8 +44,13 @@ def _inject_completion_step(definition: dict) -> dict:
     if any(n.get("id") == _COMPLETION_NODE_ID for n in nodes):
         return definition
 
-    # Rewire all nodes whose next is "end" to rs_complete
+    # Rewire all nodes whose next is "end" to rs_complete — except inside split branches,
+    # where "end" finishes the branch (a child execution) and Trama resumes the parent
+    # at the join; completing the plan there would fire once per branch, before the join.
+    inside_branches = branch_node_ids(nodes)
     for node in nodes:
+        if node.get("id") in inside_branches:
+            continue
         if node.get("next") == "end":
             node["next"] = _COMPLETION_NODE_ID
         # Switch nodes: rewire default and case targets that point to "end"
