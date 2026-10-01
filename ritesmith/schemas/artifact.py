@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 class ArtifactType(StrEnum):
     lua_script = "lua_script"
+    luau_script = "luau_script"
     shell_script = "shell_script"
     trama_workflow = "trama_workflow"
     workflow_template = "workflow_template"

@@ -7,8 +7,11 @@ Fluxo:
    - deny → status=rejected, para aqui
    - require_approval sem approval_token → status=waiting, para aqui
 4. Roteia por artifact_type:
-   - lua_script → LuaScriptRuntime.execute()
+   - lua_script → LuaScriptRuntime.execute() (lupa)
+   - luau_script → LuauScriptRuntime.execute() (LunarDyson)
    - trama_workflow → DelegationService.delegate()
+   Um crash de contrato regenera o script no idioma configurado
+   (settings.script_language), então scripts Lua quebrados migram para Luau.
 5. Atualiza Execution com resultado e audit log
 """
 
@@ -35,6 +38,11 @@ from ritesmith.registry.models import Execution as ExecutionORM
 from ritesmith.registry.models import GenerationJob
 from ritesmith.registry.service import RegistryService
 from ritesmith.runtime.lua import LuaScriptRuntime
+from ritesmith.runtime.luau import (
+    LuauScriptRuntime,
+    describe_tools_for_prompt,
+    script_type_declarations,
+)
 from ritesmith.schemas.execution import CreateExecutionRequest, Execution, ExecutionStatus
 from ritesmith.schemas.generation import GenerateScriptRequest, ScriptConstraints
 from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationRequest
@@ -77,6 +85,10 @@ class ExecutionService:
         self.policy = PolicyEngine(settings)
         self.registry = RegistryService(db)
         self.lua_runtime = LuaScriptRuntime(settings)
+        self.luau_runtime = LuauScriptRuntime(settings)
+
+    def _script_runtime(self, artifact_type: str):
+        return self.luau_runtime if artifact_type == "luau_script" else self.lua_runtime
 
     async def create_execution(self, req: CreateExecutionRequest) -> Execution:
         # 1. Idempotency
@@ -112,7 +124,9 @@ class ExecutionService:
 
         # 4. Policy evaluation
         _exec_start = time.perf_counter()
-        _runtime = "trama" if artifact_orm.artifact_type == "trama_workflow" else "lua"
+        _runtime = {"trama_workflow": "trama", "luau_script": "luau"}.get(
+            artifact_orm.artifact_type, "lua"
+        )
         policy_req = PolicyEvaluationRequest(
             operation="execute",
             artifact_type=artifact_orm.artifact_type,
@@ -182,7 +196,13 @@ class ExecutionService:
                 await self._run_workflow(exec_orm, version_orm.content, req.input)
             else:
                 profile = (version_orm.metadata_ or {}).get("runtime_profile", "transform_only")
-                await self._run_lua(exec_orm, version_orm, req.input, profile=profile)
+                await self._run_lua(
+                    exec_orm,
+                    version_orm,
+                    req.input,
+                    profile=profile,
+                    artifact_type=artifact_orm.artifact_type,
+                )
         except Exception as e:
             exec_orm.status = ExecutionStatus.failed
             exec_orm.error_json = {"message": str(e)}
@@ -233,6 +253,7 @@ class ExecutionService:
         version_orm,
         input_data: dict | None,
         profile: str = "transform_only",
+        artifact_type: str = "lua_script",
     ) -> None:
         if exec_orm.dry_run:
             exec_orm.status = ExecutionStatus.succeeded
@@ -240,7 +261,7 @@ class ExecutionService:
             exec_orm.finished_at = datetime.now(UTC)
             return
 
-        result = await self.lua_runtime.execute(
+        result = await self._script_runtime(artifact_type).execute(
             content=version_orm.content,
             input_data=input_data or {},
             context={},
@@ -271,6 +292,7 @@ class ExecutionService:
                     input_data or {},
                     result.output,
                     result.error,
+                    artifact_type=artifact_type,
                 )
         else:
             exec_orm.status = ExecutionStatus.succeeded
@@ -346,6 +368,7 @@ class ExecutionService:
         input_data: dict,
         bad_output: dict | None,
         schema_error: str,
+        artifact_type: str = "lua_script",
     ) -> None:
         """Fire-and-forget trigger for the contract-repair background loop.
 
@@ -360,7 +383,7 @@ class ExecutionService:
         _repair_in_flight.add(artifact_id)
         t = asyncio.create_task(
             self._background_repair_version(
-                artifact_id, version_orm, input_data, bad_output, schema_error
+                artifact_id, version_orm, input_data, bad_output, schema_error, artifact_type
             )
         )
 
@@ -383,6 +406,7 @@ class ExecutionService:
         input_data: dict,
         bad_output: dict | None,
         schema_error: str,
+        artifact_type: str = "lua_script",
     ) -> None:
         from ritesmith.core.repair import run_repair_loop
         from ritesmith.core.validation import ValidationPipeline
@@ -410,20 +434,38 @@ class ExecutionService:
 
         last_content = version_orm.content
         fixed_content: str | None = None
+        luau = artifact_type == "luau_script"
 
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_content, fixed_content
-            repair_resp, _stats = await llm.repair_lua(
-                original_goal=job.goal,
-                current_script=last_content,
-                validation_errors=[violation_message],
-                attempt_number=attempt,
-            )
+            if luau:
+                repair_resp, _stats = await llm.repair_luau(
+                    original_goal=job.goal,
+                    current_script=last_content,
+                    validation_errors=[violation_message],
+                    attempt_number=attempt,
+                    tool_descriptions=describe_tools_for_prompt(profile),
+                    type_declarations=script_type_declarations(
+                        version_orm.input_schema, version_orm.output_schema
+                    ),
+                )
+            else:
+                repair_resp, _stats = await llm.repair_lua(
+                    original_goal=job.goal,
+                    current_script=last_content,
+                    validation_errors=[violation_message],
+                    attempt_number=attempt,
+                )
             candidate = repair_resp.repaired_content
             last_content = candidate
 
             static_result = await validator.run(
-                content=candidate, artifact_type="lua_script", profile=profile
+                content=candidate,
+                artifact_type=artifact_type,
+                profile=profile,
+                input_schema=version_orm.input_schema,
+                output_schema=version_orm.output_schema,
+                strict_types=attempt < self.settings.generation_max_attempts,
             )
             if not static_result.valid:
                 return False
@@ -431,7 +473,7 @@ class ExecutionService:
             # Regression check: the repaired script must satisfy output_schema for the
             # exact input that triggered this repair — ValidationPipeline never checks
             # output_schema conformance on its own (only exact-match test_cases do).
-            regression = await self.lua_runtime.execute(
+            regression = await self._script_runtime(artifact_type).execute(
                 content=candidate,
                 input_data=input_data,
                 context={},
@@ -445,7 +487,7 @@ class ExecutionService:
             return True
 
         await run_repair_loop(
-            artifact_type="lua_script",
+            artifact_type=artifact_type,
             max_attempts=self.settings.generation_max_attempts,
             attempt_fn=attempt_fn,
         )

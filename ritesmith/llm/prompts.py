@@ -179,6 +179,156 @@ Fix the script and respond with JSON matching this schema:
 
 
 # ---------------------------------------------------------------------------
+# Luau generation (luau_script, executed by LunarDyson)
+# ---------------------------------------------------------------------------
+
+_LUAU_LANGUAGE_NOTES = """\
+LANGUAGE: Luau (the typed Lua dialect from Roblox) — NOT Lua 5.x
+  - Not available: goto, labels, <const>/<close>, `global` declarations, math.tointeger,
+    math.type, io, os, debug, require, load/loadstring, getfenv/setfenv, coroutine
+  - Available: continue, compound assignment (+=, -=, ..=), if-then-else expressions,
+    string interpolation `{x}`, generalized iteration (for k, v in t do),
+    string.split, table.find, table.clone, table.create
+  - The script is type-checked in strict mode before it is accepted:
+      * annotate the entry point exactly as: function run(input: Input, context: Context): Output
+      * annotate comparator parameters: table.sort(list, function(a: Item, b: Item) ... end)
+      * annotate locals that start empty or nil: local out: { string } = {}, local best: number? = nil
+      * check `result.error` before using other fields of a tool result
+      * the predeclared types are already in scope — do NOT redeclare them"""
+
+
+def luau_generation_system() -> str:
+    return f"""\
+You are a Luau script generator for RiteSmith, a sandboxed execution runtime (LunarDyson).
+
+MANDATORY RULES
+- Define exactly ONE global function: run(input, context) — helpers must be local functions
+- Maximum ~90 lines, maximum 6 KB
+- No recursion, no infinite loops
+- External effects happen ONLY through the tools.* functions listed in the user message —
+  nothing else exists. Every tool takes ONE table of named arguments:
+      local r = tools.market.coin_price({{ symbol = "BTC" }})
+- Always return a Luau table — never nil, never a bare primitive
+- Be deterministic unless explicitly asked otherwise
+
+ERROR HANDLING CONVENTION
+  On recoverable error, return a table with an "error" field:
+    return {{error = "not_found", message = "item does not exist"}}
+  Guard every tool call: if r.error then return {{error = r.error, message = r.message}} end
+  Never call error() or assert() — the sandbox catches panics but wastes an attempt.
+
+OUTPUT CONTRACT
+  The return value must be a plain table (no functions). If an output schema is given,
+  every required field must be present and typed correctly.
+
+{_LUAU_LANGUAGE_NOTES}
+
+STYLE GUIDE
+  - Prefer local variables
+  - One responsibility per script
+  - Comments only when the logic would not be obvious to a reader
+
+Respond with valid JSON matching the schema in the user message — nothing else."""
+
+
+def luau_generation_user(
+    goal: str,
+    input_schema: dict | None,
+    output_schema: dict | None,
+    tool_descriptions: list[str],
+    type_declarations: str,
+    similar_artifacts: list[dict],
+    constraints: dict,
+    response_schema: str,
+) -> str:
+    parts = [f"GOAL: {_sanitize_goal(goal)}"]
+    if input_schema:
+        parts.append(f"INPUT SCHEMA:\n{json.dumps(input_schema, indent=2)}")
+    if output_schema:
+        parts.append(
+            f"OUTPUT SCHEMA (return value must conform exactly):\n{json.dumps(output_schema, indent=2)}"
+        )
+    parts.append(
+        "PREDECLARED TYPES (already in scope — use them, do NOT redeclare them):\n"
+        f"{type_declarations.strip()}\n\n"
+        "Annotate the entry point exactly as: function run(input: Input, context: Context): Output"
+    )
+    if tool_descriptions:
+        tools = "\n".join(f"  - {line}" for line in tool_descriptions)
+        parts.append(f"AVAILABLE TOOLS (only these — nothing else):\n{tools}")
+    else:
+        parts.append("AVAILABLE TOOLS: none — pure computation only (no I/O)")
+
+    relevant = {
+        k: v for k, v in constraints.items() if k not in ("reuse_policy",) and v is not None
+    }
+    if relevant:
+        parts.append(f"CONSTRAINTS:\n{json.dumps(relevant, indent=2)}")
+
+    if similar_artifacts:
+        parts.append("SIMILAR SCRIPTS FOR STYLE REFERENCE (do not copy logic blindly):")
+        for i, art in enumerate(similar_artifacts[:2]):
+            parts.append(f"--- Example {i + 1}: {art.get('name', 'unknown')} ---")
+            content = art.get("content", "")
+            if content:
+                parts.append(content[:800])
+
+    parts.append(f"\nRespond with JSON matching this schema exactly:\n{response_schema}")
+    return "\n\n".join(parts)
+
+
+def luau_repair_system() -> str:
+    return f"""\
+You are a Luau script repair specialist for RiteSmith.
+Your sole job: fix the listed validation errors while preserving the original logic.
+
+REPAIR RULES
+- Keep the entry point: function run(input: Input, context: Context): Output
+- Do NOT add new features or change the script's purpose
+- Fix ONLY the problems listed — do not refactor unrelated code
+- Tools take ONE table of named arguments: tools.ns.fn({{ name = value }})
+- Do NOT call error() or assert()
+- Return a table — never nil, never a bare primitive
+
+{_LUAU_LANGUAGE_NOTES}
+
+Respond with valid JSON matching the schema in the user message — nothing else."""
+
+
+def luau_repair_user(
+    original_goal: str,
+    current_script: str,
+    validation_errors: list[str],
+    attempt_number: int,
+    tool_descriptions: list[str],
+    type_declarations: str,
+    response_schema: str,
+) -> str:
+    errors_text = "\n".join(f"  [{i + 1}] {e}" for i, e in enumerate(validation_errors))
+    tools = "\n".join(f"  - {line}" for line in tool_descriptions) or "  (none)"
+    return f"""\
+ORIGINAL GOAL: {_sanitize_goal(original_goal)}
+REPAIR ATTEMPT: {attempt_number}
+
+PREDECLARED TYPES (already in scope):
+{type_declarations.strip()}
+
+AVAILABLE TOOLS:
+{tools}
+
+SCRIPT WITH ERRORS:
+```luau
+{current_script}
+```
+
+VALIDATION ERRORS TO FIX:
+{errors_text}
+
+Fix the script and respond with JSON matching this schema:
+{response_schema}"""
+
+
+# ---------------------------------------------------------------------------
 # Intent analysis
 # ---------------------------------------------------------------------------
 
@@ -244,8 +394,13 @@ Respond with valid JSON matching the schema in the user message — nothing else
 
 
 _SCHEDULING_HINT_KEYS = (
-    "schedule_hours", "duration_days", "runs_per_day", "cron", "interval",
-    "every", "frequency",
+    "schedule_hours",
+    "duration_days",
+    "runs_per_day",
+    "cron",
+    "interval",
+    "every",
+    "frequency",
 )
 
 

@@ -33,6 +33,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# luau_script runtime; installed from a prebuilt wheel (deploy/wheels/README.md)
+luau = ["lunardyson>=0.1"]
 dev = [
     "pytest>=9.1",
     "pytest-asyncio>=1.4",

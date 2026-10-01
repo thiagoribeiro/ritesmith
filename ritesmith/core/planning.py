@@ -31,6 +31,7 @@ from ritesmith.registry.models import ArtifactVersion as ArtifactVersionORM
 from ritesmith.registry.models import Plan as PlanORM
 from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
+from ritesmith.runtime.luau import effective_script_language, script_artifact_type
 from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ValidationResult
 from ritesmith.schemas.generation import (
     GenerateScriptRequest,
@@ -53,6 +54,7 @@ from ritesmith.schemas.plan import (
 from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationRequest
 
 _REUSE_SCORE_THRESHOLD = 0.05
+_SCRIPT_TYPES = ("lua_script", "luau_script")
 
 _PRIVATE_URL_PREFIXES = (
     "http://localhost",
@@ -147,10 +149,14 @@ class PlanBuilder:
             context=req.context,
         )
 
-        # 2. Determine which artifact types to generate
+        # 2. Determine which artifact types to generate. "lua_script" from the intent
+        # analysis means "a script": it is generated in the configured language.
         artifact_types = (
             req.requested_artifact_types or intent_analysis.artifact_types or ["lua_script"]
         )
+        if not req.requested_artifact_types:
+            script_type = script_artifact_type(effective_script_language(self.settings))
+            artifact_types = [script_type if t in _SCRIPT_TYPES else t for t in artifact_types]
 
         # 3. Search for reusable artifacts and generate
         steps: list[PlanStep] = []
@@ -163,7 +169,7 @@ class PlanBuilder:
         for i, artifact_type in enumerate(artifact_types):
             step_id = f"step_{i + 1}"
 
-            if artifact_type == "lua_script":
+            if artifact_type in _SCRIPT_TYPES:
                 step, artifact, validation = await self._handle_lua_artifact(
                     req=req,
                     constraints=constraints,
@@ -337,7 +343,7 @@ class PlanBuilder:
         # Try reuse first
         if req.reuse_policy != ReusePolicy.force_new:
             search_results = await fts_search(
-                self.db, req.intent, artifact_types=[artifact_type], limit=3
+                self.db, req.intent, artifact_types=list(_SCRIPT_TYPES), limit=3
             )
             if search_results and search_results[0].score >= _REUSE_SCORE_THRESHOLD:
                 best = search_results[0]
@@ -355,7 +361,7 @@ class PlanBuilder:
         # Generate
         gen_req = GenerateScriptRequest(
             intent=req.intent,
-            language="lua",
+            language="luau" if artifact_type == "luau_script" else "lua",
             constraints=ScriptConstraints(
                 allow_network=constraints.allow_network,
                 allow_filesystem=constraints.allow_filesystem,

@@ -100,6 +100,8 @@ _TEMPERATURE: dict[str, float] = {
 
 
 class OpenAIProvider(LLMProvider):
+    supports_luau = True
+
     def __init__(self, settings: Settings):
         self.client = AsyncOpenAI(timeout=settings.llm_timeout_seconds)
         self.model = settings.llm_model
@@ -227,6 +229,70 @@ class OpenAIProvider(LLMProvider):
         raw, stats = await self._chat_with_retry(
             model=self.model,
             system=prompts.lua_repair_system(),
+            user=user_msg,
+            max_tokens=_MAX_TOKENS["lua_repair"],
+            temperature=_TEMPERATURE["lua_repair"],
+        )
+        try:
+            data = json.loads(raw)
+            return RepairResponse(**data), stats
+        except Exception as e:
+            raise LLMError(f"Failed to parse repair response: {e}") from e
+
+    async def generate_luau(
+        self,
+        goal: str,
+        input_schema: dict | None,
+        output_schema: dict | None,
+        tool_descriptions: list[str],
+        type_declarations: str,
+        similar_artifacts: list[dict],
+        constraints: dict,
+    ) -> tuple[LuaGenerationResponse, LLMCallStats]:
+        user_msg = prompts.luau_generation_user(
+            goal=goal,
+            input_schema=input_schema,
+            output_schema=output_schema,
+            tool_descriptions=tool_descriptions,
+            type_declarations=type_declarations,
+            similar_artifacts=similar_artifacts,
+            constraints=constraints,
+            response_schema=_LUA_RESPONSE_SCHEMA,
+        )
+        raw, stats = await self._chat_with_retry(
+            model=self.model,
+            system=prompts.luau_generation_system(),
+            user=user_msg,
+            max_tokens=_MAX_TOKENS["lua_gen"],
+            temperature=_TEMPERATURE["lua_gen"],
+        )
+        try:
+            data = json.loads(raw)
+            return LuaGenerationResponse(**data), stats
+        except Exception as e:
+            raise LLMError(f"Failed to parse LLM response: {e}\nRaw: {raw[:200]}") from e
+
+    async def repair_luau(
+        self,
+        original_goal: str,
+        current_script: str,
+        validation_errors: list[str],
+        attempt_number: int,
+        tool_descriptions: list[str],
+        type_declarations: str,
+    ) -> tuple[RepairResponse, LLMCallStats]:
+        user_msg = prompts.luau_repair_user(
+            original_goal=original_goal,
+            current_script=current_script,
+            validation_errors=validation_errors,
+            attempt_number=attempt_number,
+            tool_descriptions=tool_descriptions,
+            type_declarations=type_declarations,
+            response_schema=_REPAIR_RESPONSE_SCHEMA,
+        )
+        raw, stats = await self._chat_with_retry(
+            model=self.model,
+            system=prompts.luau_repair_system(),
             user=user_msg,
             max_tokens=_MAX_TOKENS["lua_repair"],
             temperature=_TEMPERATURE["lua_repair"],

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -34,7 +35,12 @@ class Settings(BaseSettings):
     # Embeddings (deferred to V1)
     embeddings_enabled: bool = False
 
-    # Lua runtime
+    # Script language for newly generated scripts: "luau" (LunarDyson) or "lua" (lupa).
+    # Existing artifacts always run on the runtime of their own artifact_type. "luau"
+    # falls back to "lua" when the lunardyson package is not installed.
+    script_language: Literal["lua", "luau"] = "luau"
+
+    # Lua runtime (lua_timeout_ms / lua_memory_limit_mb also bound Luau executions)
     lua_enabled: bool = True
     lua_timeout_ms: int = 1000
     lua_memory_limit_mb: int = 32

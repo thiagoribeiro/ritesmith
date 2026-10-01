@@ -107,7 +107,10 @@ def _build_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {
                     "query": {"type": "string"},
-                    "artifact_type": {"type": "string", "enum": ["lua_script", "trama_workflow"]},
+                    "artifact_type": {
+                        "type": "string",
+                        "enum": ["luau_script", "lua_script", "trama_workflow"],
+                    },
                     "limit": {"type": "integer", "default": 10},
                 },
                 "required": ["query"],

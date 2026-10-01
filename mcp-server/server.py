@@ -97,7 +97,7 @@ def _build_tool_registry() -> list[Tool]:
                     "query": {"type": "string"},
                     "artifact_type": {
                         "type": "string",
-                        "enum": ["lua_script", "trama_workflow"],
+                        "enum": ["luau_script", "lua_script", "trama_workflow"],
                         "description": "Filter by type (optional)",
                     },
                     "limit": {"type": "integer", "default": 10},

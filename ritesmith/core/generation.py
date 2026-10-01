@@ -1,5 +1,10 @@
 """GenerationService — orquestra o loop: busca → reuso → gera → valida → repara.
 
+O idioma do script vem de req.language ou settings.script_language ("luau" por
+padrão, gerando luau_script executado pelo LunarDyson; cai para "lua" se a lib ou
+o provider de LLM não suportarem Luau). Em Luau, o type check strict é bloqueante
+em todas as tentativas menos a última, onde erros só-strict viram warnings.
+
 Fluxo principal (generate_lua):
 1. Busca FTS por artifacts similares
 2. Se match suficientemente bom e reuse_policy != force_new → retorna existente
@@ -30,6 +35,13 @@ from ritesmith.registry.models import GenerationAttempt, GenerationJob
 from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.runtime.host_functions import list_names_for_profile
+from ritesmith.runtime.luau import (
+    describe_tools_for_prompt,
+    effective_script_language,
+    luau_available,
+    script_artifact_type,
+    script_type_declarations,
+)
 from ritesmith.schemas.artifact import (
     Artifact,
     ArtifactStatus,
@@ -64,24 +76,31 @@ class GenerationService:
         constraints = req.constraints.model_dump() if req.constraints else {}
         profile = constraints.get("runtime_profile", "transform_only")
         reuse_policy = constraints.get("reuse_policy", "prefer_reuse")
+        language = self._resolve_language(req)
+        artifact_type = script_artifact_type(language)
+        max_attempts = self.settings.generation_max_attempts
 
-        # 1+2. Reuse check
+        # 1+2. Reuse check — a working script is reusable whatever its language
         if reuse := await check_reuse(
-            self.db, req.intent, ["lua_script"], reuse_policy, self.audit
+            self.db, req.intent, ["luau_script", "lua_script"], reuse_policy, self.audit
         ):
             return reuse
 
-        # Similar artifacts for few-shot prompt context
+        # Similar artifacts for few-shot prompt context (same language only)
         search_results = await fts_search(
-            self.db, req.intent, artifact_types=["lua_script"], limit=5
+            self.db, req.intent, artifact_types=[artifact_type], limit=5
         )
 
         # 3. Registra GenerationJob
-        job = await self._create_job(req, plan_id)
+        job = await self._create_job(req, plan_id, artifact_type)
         log.info(
-            "generation job created", extra={"job_id": job.generation_id, "goal": req.intent[:80]}
+            "generation job created",
+            extra={"job_id": job.generation_id, "goal": req.intent[:80], "language": language},
         )
         allowed_fns = list_names_for_profile(profile)
+        if language == "luau":
+            tool_descriptions = describe_tools_for_prompt(profile)
+            type_declarations = script_type_declarations(req.input_schema, req.output_schema)
         similar_dicts = [
             {"name": r.artifact.name, "content": r.version.content if r.version else ""}
             for r in search_results[:2]
@@ -94,7 +113,18 @@ class GenerationService:
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_script, last_validation, final_response
 
-            if attempt == 1 or last_script is None:
+            if language == "luau" and (attempt == 1 or last_script is None):
+                llm_response, stats = await self.llm.generate_luau(
+                    goal=req.intent,
+                    input_schema=req.input_schema,
+                    output_schema=req.output_schema,
+                    tool_descriptions=tool_descriptions,
+                    type_declarations=type_declarations,
+                    similar_artifacts=similar_dicts,
+                    constraints=constraints,
+                )
+                script = llm_response.script
+            elif attempt == 1 or last_script is None:
                 llm_response, stats = await self.llm.generate_lua(
                     goal=req.intent,
                     input_schema=req.input_schema,
@@ -105,12 +135,23 @@ class GenerationService:
                 )
                 script = llm_response.script
             else:
-                repair_resp, stats = await self.llm.repair_lua(
-                    original_goal=req.intent,
-                    current_script=last_script,
-                    validation_errors=last_validation.errors if last_validation else [],
-                    attempt_number=attempt,
-                )
+                errors = last_validation.errors if last_validation else []
+                if language == "luau":
+                    repair_resp, stats = await self.llm.repair_luau(
+                        original_goal=req.intent,
+                        current_script=last_script,
+                        validation_errors=errors,
+                        attempt_number=attempt,
+                        tool_descriptions=tool_descriptions,
+                        type_declarations=type_declarations,
+                    )
+                else:
+                    repair_resp, stats = await self.llm.repair_lua(
+                        original_goal=req.intent,
+                        current_script=last_script,
+                        validation_errors=errors,
+                        attempt_number=attempt,
+                    )
                 script = repair_resp.repaired_content
                 llm_response = LuaGenerationResponse(
                     script=script,
@@ -137,10 +178,14 @@ class GenerationService:
 
             validation = await self.validator.run(
                 content=script,
-                artifact_type="lua_script",
+                artifact_type=artifact_type,
                 constraints=constraints,
                 test_cases=(req.context or {}).get("test_cases"),
                 profile=profile,
+                input_schema=req.input_schema,
+                output_schema=req.output_schema,
+                # Last attempt: accept strict-only type errors as warnings.
+                strict_types=attempt < max_attempts,
             )
 
             await self._record_attempt(job.generation_id, attempt, script, validation)
@@ -163,8 +208,8 @@ class GenerationService:
 
         try:
             await run_repair_loop(
-                artifact_type="lua_script",
-                max_attempts=self.settings.generation_max_attempts,
+                artifact_type=artifact_type,
+                max_attempts=max_attempts,
                 attempt_fn=attempt_fn,
             )
 
@@ -184,7 +229,7 @@ class GenerationService:
             if req.save and last_validation and last_validation.valid and final_response:
                 artifact_orm, artifact_version_orm = await self.registry.create_artifact(
                     name=final_response.name,
-                    artifact_type="lua_script",
+                    artifact_type=artifact_type,
                     content=last_script,
                     description=final_response.description,
                     tags=final_response.tags,
@@ -219,6 +264,7 @@ class GenerationService:
             artifact_schema = _build_artifact(artifact_orm, artifact_version_orm)
         else:
             artifact_schema = self._make_transient_artifact(
+                artifact_type=artifact_type,
                 script=last_script or "",
                 gen_response=final_response,
                 validation=last_validation,
@@ -235,11 +281,20 @@ class GenerationService:
     # Helpers privados
     # ------------------------------------------------------------------
 
-    async def _create_job(self, req: GenerateScriptRequest, plan_id: str | None) -> GenerationJob:
+    def _resolve_language(self, req: GenerateScriptRequest) -> str:
+        language = req.language or effective_script_language(self.settings)
+        if language == "luau" and not (luau_available() and self.llm.supports_luau):
+            log.warning("luau requested but unavailable (lib or LLM provider); generating lua")
+            return "lua"
+        return "luau" if language == "luau" else "lua"
+
+    async def _create_job(
+        self, req: GenerateScriptRequest, plan_id: str | None, artifact_type: str
+    ) -> GenerationJob:
         job = GenerationJob(
             generation_id=generate_id("gen"),
             goal=req.intent,
-            target_type="lua_script",
+            target_type=artifact_type,
             status="running",
             input_schema=req.input_schema,
             output_schema=req.output_schema,
@@ -268,6 +323,7 @@ class GenerationService:
 
     def _make_transient_artifact(
         self,
+        artifact_type: str,
         script: str,
         gen_response: LuaGenerationResponse | None,
         validation: ValidationResult | None,
@@ -276,7 +332,7 @@ class GenerationService:
         now = datetime.now(UTC)
         return Artifact(
             artifact_id=generate_id("art"),
-            artifact_type=ArtifactType.lua_script,
+            artifact_type=ArtifactType(artifact_type),
             name=gen_response.name if gen_response else "generated_script",
             version=1,
             status=ArtifactStatus.draft,

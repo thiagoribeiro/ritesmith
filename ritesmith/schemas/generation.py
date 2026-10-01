@@ -15,7 +15,7 @@ class ScriptConstraints(BaseModel):
 
 class GenerateScriptRequest(BaseModel):
     intent: str = Field(..., min_length=1)
-    language: str = "lua"
+    language: str | None = None  # "lua" | "luau"; None → settings.script_language
     required_capabilities: list[str] | None = None
     constraints: ScriptConstraints | None = None
     context: dict | None = None

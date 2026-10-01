@@ -42,6 +42,17 @@ async def _lifespan(app: FastAPI):
 
     log = logging.getLogger(__name__)
 
+    from ritesmith.runtime.luau import effective_script_language
+
+    language = effective_script_language(get_settings())
+    if language != get_settings().script_language:
+        log.warning(
+            "script_language=%s requested but lunardyson is missing; generating lua",
+            get_settings().script_language,
+        )
+    else:
+        log.info("new scripts are generated in %s", language)
+
     # Validate policy_default at startup to catch misconfiguration early
     try:
         PolicyDecisionValue(get_settings().policy_default)
@@ -83,6 +94,9 @@ async def _lifespan(app: FastAPI):
     from ritesmith.runtime.sandbox import _EXECUTOR
 
     _EXECUTOR.shutdown(wait=True, cancel_futures=False)
+    from ritesmith.runtime.luau import shutdown_executor
+
+    shutdown_executor()
     log.info("shutdown: disposing DB connection pool")
     from ritesmith.storage.postgres import engine
 

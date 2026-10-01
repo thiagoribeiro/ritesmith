@@ -8,8 +8,21 @@ Checks para lua_script (em ordem):
 5. AllowedPrimitivesCheck — host functions usadas estão no profile?
 6. PolicyCheck          — stub (always allow) — wired na Fase 6
 7. TestExecutionCheck   — executa test_cases fornecidos
+
+Checks para luau_script (LunarDyson):
+1. TypeCheck            — luau-analyze in-process contra as tools do profile e os tipos
+                          Input/Output derivados dos schemas: sintaxe + nonstrict são
+                          bloqueantes; strict é bloqueante com strict_types=True e vira
+                          warning com strict_types=False (fallback do loop de repair)
+2. ForbiddenTokenCheck  — mesma deny-list + getfenv/setfenv/loadstring
+3. SizeLimitCheck       — limites 1.5× maiores (anotações de tipo ocupam espaço)
+4. SchemaPresenceCheck  — deve ter 'function run(input'
+5. PolicyCheck / TestExecutionCheck — como no Lua, executando via LunarDyson
+(Não há AllowedPrimitivesCheck: uma tool fora do profile não existe no tipo `tools`
+e é rejeitada pelo type check.)
 """
 
+import asyncio
 import re
 
 from ritesmith.config import Settings, get_settings
@@ -38,6 +51,13 @@ _HOST_FN_CALL = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(")
 _MAX_LINES = 60
 _MAX_BYTES = 4 * 1024  # 4KB
 
+_LUAU_EXTRA_FORBIDDEN = [
+    (re.compile(r"\bgetfenv\s*\("), "função 'getfenv' é proibida"),
+    (re.compile(r"\bsetfenv\s*\("), "função 'setfenv' é proibida"),
+    (re.compile(r"\bloadstring\s*\("), "função 'loadstring' é proibida"),
+]
+_LUAU_SIZE_FACTOR = 1.5
+
 
 class ValidationPipeline:
     def __init__(self, settings: Settings | None = None):
@@ -51,6 +71,9 @@ class ValidationPipeline:
         constraints: dict | None = None,
         test_cases: list[dict] | None = None,
         profile: str = "transform_only",
+        input_schema: dict | None = None,
+        output_schema: dict | None = None,
+        strict_types: bool = True,
     ) -> ValidationResult:
         checks: list[ValidationCheck] = []
         errors: list[str] = []
@@ -67,6 +90,22 @@ class ValidationPipeline:
             if test_cases:
                 exec_checks = await self._check_test_execution(content, test_cases, profile)
                 checks.extend(exec_checks)
+
+        elif artifact_type == "luau_script":
+            checks.extend(
+                await self._check_luau_types(
+                    content, profile, input_schema, output_schema, strict_types
+                )
+            )
+            checks.extend(self._check_forbidden_tokens(content, extra=_LUAU_EXTRA_FORBIDDEN))
+            checks.extend(self._check_size(content, constraints, factor=_LUAU_SIZE_FACTOR))
+            checks.extend(self._check_schema_presence(content))
+            checks.extend(self._check_policy(artifact_type, constraints))
+
+            if test_cases:
+                checks.extend(
+                    await self._check_test_execution(content, test_cases, profile, luau=True)
+                )
 
         elif artifact_type in ("trama_workflow", "workflow_template"):
             checks.extend(self._check_json_syntax(content))
@@ -117,9 +156,69 @@ class ValidationPipeline:
             ]
         return [ValidationCheck(name="syntax", status="passed")]
 
-    def _check_forbidden_tokens(self, content: str) -> list[ValidationCheck]:
+    async def _check_luau_types(
+        self,
+        content: str,
+        profile: str,
+        input_schema: dict | None,
+        output_schema: dict | None,
+        strict_types: bool,
+    ) -> list[ValidationCheck]:
+        from ritesmith.runtime.luau import LuauScriptRuntime
+
+        rt = LuauScriptRuntime(self.settings)
+        diags = await asyncio.to_thread(
+            rt.check,
+            content,
+            profile=profile,
+            input_schema=input_schema,
+            output_schema=output_schema,
+        )
+
+        def fmt(d: dict) -> str:
+            return f"line {d['line']}: {d['message']}"
+
+        syntax = [fmt(d) for d in diags["nonstrict"] if d["kind"] == "SyntaxError"]
+        if syntax:
+            return [
+                ValidationCheck(
+                    name="syntax",
+                    status="failed",
+                    message="Luau syntax error: " + "; ".join(syntax),
+                )
+            ]
+        checks = [ValidationCheck(name="syntax", status="passed")]
+
+        nonstrict = [fmt(d) for d in diags["nonstrict"]]
+        if nonstrict:
+            checks.append(
+                ValidationCheck(
+                    name="type_check",
+                    status="failed",
+                    message="Type errors: " + "; ".join(nonstrict),
+                )
+            )
+            return checks
+        checks.append(ValidationCheck(name="type_check", status="passed"))
+
+        strict = [fmt(d) for d in diags["strict"] if fmt(d) not in nonstrict]
+        if strict:
+            checks.append(
+                ValidationCheck(
+                    name="strict_type_check",
+                    status="failed" if strict_types else "warning",
+                    message="Strict-mode type errors: " + "; ".join(strict),
+                )
+            )
+        else:
+            checks.append(ValidationCheck(name="strict_type_check", status="passed"))
+        return checks
+
+    def _check_forbidden_tokens(
+        self, content: str, extra: list | None = None
+    ) -> list[ValidationCheck]:
         hits = []
-        for pattern, msg in _FORBIDDEN_PATTERNS:
+        for pattern, msg in _FORBIDDEN_PATTERNS + (extra or []):
             if pattern.search(content):
                 hits.append(msg)
         if hits:
@@ -132,15 +231,18 @@ class ValidationPipeline:
             ]
         return [ValidationCheck(name="forbidden_tokens", status="passed")]
 
-    def _check_size(self, content: str, constraints: dict | None) -> list[ValidationCheck]:
-        max_lines = (constraints or {}).get("max_lines", _MAX_LINES)
+    def _check_size(
+        self, content: str, constraints: dict | None, factor: float = 1.0
+    ) -> list[ValidationCheck]:
+        max_lines = int((constraints or {}).get("max_lines", _MAX_LINES) * factor)
+        max_bytes = int(_MAX_BYTES * factor)
         lines = content.splitlines()
         size_bytes = len(content.encode())
         issues = []
         if len(lines) > max_lines:
             issues.append(f"Script tem {len(lines)} linhas (máx {max_lines})")
-        if size_bytes > _MAX_BYTES:
-            issues.append(f"Script tem {size_bytes} bytes (máx {_MAX_BYTES})")
+        if size_bytes > max_bytes:
+            issues.append(f"Script tem {size_bytes} bytes (máx {max_bytes})")
         if issues:
             return [
                 ValidationCheck(
@@ -198,10 +300,16 @@ class ValidationPipeline:
         content: str,
         test_cases: list[dict],
         profile: str,
+        luau: bool = False,
     ) -> list[ValidationCheck]:
-        from ritesmith.runtime.lua import LuaScriptRuntime
+        if luau:
+            from ritesmith.runtime.luau import LuauScriptRuntime
 
-        rt = LuaScriptRuntime(self.settings)
+            rt = LuauScriptRuntime(self.settings)
+        else:
+            from ritesmith.runtime.lua import LuaScriptRuntime
+
+            rt = LuaScriptRuntime(self.settings)
         checks = []
         for i, tc in enumerate(test_cases):
             input_data = tc.get("input", {})

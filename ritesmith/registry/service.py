@@ -9,7 +9,7 @@ from ritesmith.core.exceptions import InvalidTransitionError, NotFoundError
 from ritesmith.core.ids import generate_id
 from ritesmith.registry.models import Artifact, ArtifactVersion, Capability
 
-_TTL_TYPES = {"lua_script", "trama_workflow"}
+_TTL_TYPES = {"lua_script", "luau_script", "trama_workflow"}
 
 # Legal status transitions
 _ALLOWED_TRANSITIONS: dict[str, set[str]] = {

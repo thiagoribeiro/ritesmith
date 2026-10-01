@@ -49,6 +49,10 @@ class LLMCallStats(BaseModel):
 
 
 class LLMProvider(ABC):
+    # Providers that implement generate_luau/repair_luau set this to True; the
+    # GenerationService falls back to Lua for providers that do not.
+    supports_luau: bool = False
+
     @abstractmethod
     async def generate_lua(
         self,
@@ -76,6 +80,29 @@ class LLMProvider(ABC):
         constraints: dict,
         context: dict | None = None,
     ) -> tuple[IntentAnalysis, LLMCallStats]: ...
+
+    async def generate_luau(
+        self,
+        goal: str,
+        input_schema: dict | None,
+        output_schema: dict | None,
+        tool_descriptions: list[str],
+        type_declarations: str,
+        similar_artifacts: list[dict],
+        constraints: dict,
+    ) -> tuple[LuaGenerationResponse, LLMCallStats]:
+        raise NotImplementedError("Luau generation not implemented in this provider")
+
+    async def repair_luau(
+        self,
+        original_goal: str,
+        current_script: str,
+        validation_errors: list[str],
+        attempt_number: int,
+        tool_descriptions: list[str],
+        type_declarations: str,
+    ) -> tuple[RepairResponse, LLMCallStats]:
+        raise NotImplementedError("Luau repair not implemented in this provider")
 
     async def generate_workflow(
         self,
