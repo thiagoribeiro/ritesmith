@@ -5,7 +5,8 @@ Fluxo:
 2. Cria Execution record com status=queued
 3. Avalia política com PolicyEngine
    - deny → status=rejected, para aqui
-   - require_approval sem approval_token → status=waiting, para aqui
+   - require_approval sem approval_token válido (emitido pelo servidor para
+     este artifact_id:version, ver core/approval.py) → status=waiting, para aqui
 4. Roteia por artifact_type:
    - lua_script → LuaScriptRuntime.execute() (lupa)
    - luau_script → LuauScriptRuntime.execute() (LunarDyson)
@@ -24,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.config import Settings
+from ritesmith.core.approval import verify_approval_token
 from ritesmith.core.audit import AuditLogger
 from ritesmith.core.exceptions import NotFoundError
 from ritesmith.core.ids import generate_id
@@ -127,10 +129,13 @@ class ExecutionService:
         _runtime = {"trama_workflow": "trama", "luau_script": "luau"}.get(
             artifact_orm.artifact_type, "lua"
         )
+        version_meta = version_orm.metadata_ if isinstance(version_orm.metadata_, dict) else {}
         policy_req = PolicyEvaluationRequest(
             operation="execute",
             artifact_type=artifact_orm.artifact_type,
             risk_level=version_orm.risk_level or "low",
+            runtime_profile=version_meta.get("runtime_profile"),
+            manual=version_meta.get("source") == "manual",
         )
         decision = self.policy.evaluate(policy_req)
 
@@ -159,7 +164,10 @@ class ExecutionService:
             await self.db.commit()
             return self._orm_to_schema(exec_orm)
 
-        if decision.decision == PolicyDecisionValue.require_approval and not req.approval_token:
+        approved = verify_approval_token(
+            self.settings, req.artifact_id, version_orm.version, req.approval_token
+        )
+        if decision.decision == PolicyDecisionValue.require_approval and not approved:
             exec_orm.status = ExecutionStatus.waiting
             exec_orm.error_json = {"reason": decision.reason, "requires_approval": True}
             await self.db.flush()

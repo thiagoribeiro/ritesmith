@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ritesmith.config import Settings, get_settings
+from ritesmith.core.approval import issue_approval_token
 from ritesmith.core.exceptions import NotFoundError
 from ritesmith.registry.models import Artifact as ArtifactORM
 from ritesmith.registry.models import ArtifactVersion as ArtifactVersionORM
@@ -103,7 +105,9 @@ async def create_artifact(
         input_schema=req.input_schema,
         output_schema=req.output_schema,
         risk_level=req.risk_level,
-        metadata=req.metadata,
+        # Hand-made artifacts never claim to come from the generation pipeline: the
+        # policy applies a risk floor from their runtime_profile.
+        metadata={**(req.metadata or {}), "source": "manual"},
     )
     await db.commit()
     return _build_artifact(artifact, version)
@@ -143,3 +147,21 @@ async def get_artifact_version(
         raise NotFoundError(f"Artifact '{artifact_id}' version {version} not found")
     artifact, av = pair
     return _build_artifact(artifact, av)
+
+
+@router.post("/{artifact_id}/versions/{version}/approve")
+async def approve_artifact_version(
+    artifact_id: str,
+    version: int,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict:
+    """Issues the approval token that lets this exact version run when policy requires approval."""
+    svc = RegistryService(db)
+    if not await svc.get_artifact_with_version(artifact_id, version):
+        raise NotFoundError(f"Artifact '{artifact_id}' version {version} not found")
+    return {
+        "artifact_id": artifact_id,
+        "version": version,
+        "approval_token": issue_approval_token(settings, artifact_id, version),
+    }

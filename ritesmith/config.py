@@ -92,6 +92,11 @@ class Settings(BaseSettings):
     # Trama integration
     public_url: str | None = None  # RITESMITH_PUBLIC_URL (e.g. http://ritesmith:8081)
     trama_token: str | None = None  # RITESMITH_TRAMA_TOKEN (shared secret for /trama/execute)
+    # Bearer token required on the API (except /health, /metrics and /trama/execute).
+    # Unset = API open (development only; a warning is logged at startup).
+    api_token: str | None = None  # RITESMITH_API_TOKEN
+    # Secret for server-issued approval tokens (falls back to api_token, then trama_token).
+    approval_secret: str | None = None  # RITESMITH_APPROVAL_SECRET
 
     # LoomHarbor integration (legacy home.* provider)
     loomharbor_url: str | None = None  # RITESMITH_LOOMHARBOR_URL (e.g. http://loomharbor:8000)

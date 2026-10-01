@@ -15,6 +15,10 @@ class PolicyEvaluationRequest(BaseModel):
     capability_ids: list[str] | None = None
     risk_level: str | None = None
     context: dict | None = None
+    # Artifacts created by hand (POST /artifacts) get a risk floor from their runtime
+    # profile, so a caller cannot declare "low" risk on a device-control script.
+    runtime_profile: str | None = None
+    manual: bool = False
 
 
 class PolicyDecision(BaseModel):
