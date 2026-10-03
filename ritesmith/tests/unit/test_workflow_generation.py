@@ -930,3 +930,103 @@ async def test_plan_with_workflow_artifact_type(wf_client_valid):
     assert data["plan_id"].startswith("plan_")
     assert len(data["steps"]) == 1
     assert "workflow" in data["steps"][0]["title"].lower()
+
+
+# ---------------------------------------------------------------------------
+# split / join
+# ---------------------------------------------------------------------------
+
+
+def _task(node_id, next_id="end", body=None):
+    return {
+        "id": node_id,
+        "kind": "task",
+        "action": {
+            "mode": "sync",
+            "request": {"url": "http://x/trama/execute", "verb": "POST", "body": body or {}},
+            "successStatusCodes": [200],
+        },
+        "next": next_id,
+    }
+
+
+def _split_join_definition():
+    return {
+        "name": "fan",
+        "version": "2.0.0",
+        "entrypoint": "fan",
+        "nodes": [
+            {"id": "fan", "kind": "split", "branches": ["a", "b"], "join": "j"},
+            _task("a", "a2"),
+            _task("a2", body={"v": "{{ nodes.a.response.body.output.x }}"}),
+            _task("b"),
+            {"id": "j", "kind": "join", "next": "after"},
+            _task("after", body={"r": "{{ nodes.j.response.body.branches }}"}),
+        ],
+    }
+
+
+def test_validator_split_join_valid():
+    from ritesmith.workflows.validator import WorkflowValidator, branch_node_ids
+
+    definition = _split_join_definition()
+    assert WorkflowValidator().validate(definition) == []
+    assert branch_node_ids(definition["nodes"]) == {"a", "a2", "b"}
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda d: d["nodes"][0].update(branches=["a"]), "at least 2 'branches'"),
+        (lambda d: d["nodes"][0].update(join="after"), "must reference a join node"),
+        (lambda d: d["nodes"][2].update(next="j"), "must not route into join"),
+        (
+            lambda d: d["nodes"][5]["action"]["request"].update(
+                body={"r": "{{ nodes.a2.response.body.output }}"}
+            ),
+            "not visible outside its branch",
+        ),
+        (
+            lambda d: d["nodes"][3]["action"]["request"].update(
+                body={"r": "{{ nodes.a.response.body.output }}"}
+            ),
+            "a branch only has the payload and its own nodes",
+        ),
+        (
+            lambda d: d["nodes"].append({"id": "j2", "kind": "join", "next": "end"}),
+            "must be owned by exactly one split",
+        ),
+    ],
+)
+def test_validator_split_join_rules(mutate, message):
+    from ritesmith.workflows.validator import WorkflowValidator
+
+    definition = _split_join_definition()
+    mutate(definition)
+    errors = WorkflowValidator().validate(definition)
+    assert any(message in e for e in errors), errors
+
+
+def test_completion_step_not_injected_into_branches():
+    from ritesmith.core.workflow_generation import _inject_completion_step
+
+    definition = _inject_completion_step(_split_join_definition())
+    by_id = {n["id"]: n for n in definition["nodes"]}
+    assert by_id["a2"]["next"] == "end"  # branch terminal stays a branch terminal
+    assert by_id["b"]["next"] == "end"
+    assert by_id["after"]["next"] == "rs_complete"  # the parent flow completes the plan
+
+
+def test_prompt_split_join_example_passes_validator():
+    import json
+    import re
+
+    from ritesmith.llm import prompts
+    from ritesmith.workflows.validator import WorkflowValidator
+
+    spec = prompts.workflow_generation_system()
+    start = spec.index("EXAMPLE — compare three coin prices in parallel")
+    raw = spec[spec.index("{", start) : spec.index("\nPATTERN A", start)]
+    raw = re.sub(r"\s+$", "", raw)
+    definition = json.loads(raw)
+    assert WorkflowValidator().validate(definition) == []
