@@ -1,6 +1,5 @@
 """POST /trama/execute: bearer auth, capability dispatch, artifact dispatch, bad requests."""
 
-
 from ritesmith.config import Settings
 from ritesmith.tests.factories import make_artifact
 from ritesmith.tests.fakes.llm import ScriptedLLM

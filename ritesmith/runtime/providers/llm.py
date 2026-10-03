@@ -7,6 +7,7 @@ Used by content-monitor workflows in place of a dumb count comparison + template
 Runs in a worker thread (via /trama/execute's asyncio.to_thread), so it drives
 the async OpenAI call with its own asyncio.run — no running loop here.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -42,23 +43,29 @@ def _evaluate(task: str, data=None, previous=None, current=None) -> dict:
     if current is not None:
         payload["current"] = current
 
-    user = f"TAREFA: {task}\n\nMATERIAL:\n{json.dumps(payload, ensure_ascii=False)[:_MAX_DATA_CHARS]}"
+    user = (
+        f"TAREFA: {task}\n\nMATERIAL:\n{json.dumps(payload, ensure_ascii=False)[:_MAX_DATA_CHARS]}"
+    )
 
     try:
         prov = OpenAIProvider(settings)
         raw, _stats = asyncio.run(
             prov._chat_with_retry(
-                settings.llm_model_fast, _SYSTEM, user,
-                max_tokens=500, temperature=0.2, method="llm.evaluate",
+                settings.llm_model_fast,
+                _SYSTEM,
+                user,
+                max_tokens=500,
+                temperature=0.2,
+                method="llm.evaluate",
             )
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.warning("llm.evaluate failed: %s", e)
         return {"decision": "skip", "message": "", "error": str(e)}
 
     try:
         out = json.loads(raw)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {"decision": "skip", "message": ""}
 
     decision = out.get("decision")
@@ -100,7 +107,9 @@ class LlmProvider(ToolProvider):
     def lua_functions(self) -> dict[str, HostFunctionDef]:
         return {
             "llm.evaluate": HostFunctionDef(
-                "llm.evaluate", "readonly_network", _evaluate,
+                "llm.evaluate",
+                "readonly_network",
+                _evaluate,
                 description=(
                     "Pergunta ao modelo rápido se dados monitorados mudaram de forma "
                     "relevante e compõe o aviso. Retorna {decision: notify|skip, message}. "

@@ -139,14 +139,14 @@ class OpenAIProvider(LLMProvider):
     ) -> tuple[str, LLMCallStats]:
         _start = time.perf_counter()
         try:
-            create_kwargs: dict = dict(
-                model=model,
-                messages=[
+            create_kwargs: dict = {
+                "model": model,
+                "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                response_format={"type": "json_object"},
-            )
+                "response_format": {"type": "json_object"},
+            }
             if model.startswith(_REASONING_PREFIXES):
                 create_kwargs["max_completion_tokens"] = max_tokens
             else:

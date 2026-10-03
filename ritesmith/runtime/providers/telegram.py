@@ -38,8 +38,11 @@ def _send(text: str, chat_id: str | None = None, parse_mode: str | None = None) 
         # Telegram rejects the whole message when the markup fails to parse. A
         # dropped notification is worse than an unstyled one, so retry as plain text.
         if not data.get("ok") and parse_mode:
-            logger.warning("telegram.send %s rejected (%s); retrying as plain text",
-                           parse_mode, data.get("description"))
+            logger.warning(
+                "telegram.send %s rejected (%s); retrying as plain text",
+                parse_mode,
+                data.get("description"),
+            )
             data = _post_once(token, {"chat_id": target, "text": text})
         if not data.get("ok"):
             return {"ok": False, "message_id": None, "error": data.get("description")}
