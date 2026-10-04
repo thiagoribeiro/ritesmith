@@ -12,7 +12,9 @@ Fluxo principal (build_plan):
 7. Retorna Plan schema
 """
 
+from collections.abc import Iterable
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +31,7 @@ from ritesmith.core.workflow_generation import WorkflowGenerationService
 from ritesmith.llm.base import LLMProvider
 from ritesmith.registry.models import Artifact as ArtifactORM
 from ritesmith.registry.models import ArtifactVersion as ArtifactVersionORM
+from ritesmith.registry.models import Execution as ExecutionORM
 from ritesmith.registry.models import Plan as PlanORM
 from ritesmith.registry.service import RegistryService
 from ritesmith.runtime.luau import effective_script_language, script_artifact_type
@@ -73,47 +76,84 @@ _PRIVATE_URL_PREFIXES = (
 )
 
 
-def _is_safe_callback_url(url: str) -> bool:
-    return url.startswith(("http://", "https://")) and not any(
-        url.startswith(p) for p in _PRIVATE_URL_PREFIXES
-    )
+def _is_safe_callback_url(url: str, allowed_hosts: Iterable[str] = ()) -> bool:
+    if not url.startswith(("http://", "https://")):
+        return False
+    if allowed_hosts and urlparse(url).hostname in set(allowed_hosts):
+        return True
+    return not any(url.startswith(p) for p in _PRIVATE_URL_PREFIXES)
 
 
-async def _fire_callback(callback_url: str, plan_id: str, status: str, summary: str | None) -> None:
+def _parse_allowed_hosts(raw: str) -> tuple[str, ...]:
+    return tuple(h.strip() for h in raw.split(",") if h.strip())
+
+
+_CALLBACK_ATTEMPTS = 3
+
+
+async def _fire_callback(
+    callback_url: str,
+    plan_id: str,
+    status: str,
+    summary: str | None,
+    allowed_hosts: Iterable[str] = (),
+    extra: dict | None = None,
+) -> None:
+    import asyncio
     import logging
 
     import httpx
 
     log = logging.getLogger(__name__)
-    if not _is_safe_callback_url(callback_url):
+    if not _is_safe_callback_url(callback_url, allowed_hosts):
         log.warning("plan.callback blocked unsafe url plan=%s url=%r", plan_id, callback_url)
         return
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            await client.post(
-                callback_url,
-                json={
-                    "plan_id": plan_id,
-                    "status": status,
-                    "summary": summary or "",
-                },
+    body = {"plan_id": plan_id, "status": status, "summary": summary or ""}
+    if extra:
+        body.update({k: v for k, v in extra.items() if k not in body})
+    for attempt in range(1, _CALLBACK_ATTEMPTS + 1):
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post(callback_url, json=body)
+            if resp.status_code < 500:
+                log.info(
+                    "plan.callback fired plan=%s status=%s http=%s",
+                    plan_id,
+                    status,
+                    resp.status_code,
+                )
+                return
+            log.warning(
+                "plan.callback http=%s plan=%s attempt=%d", resp.status_code, plan_id, attempt
             )
-        log.info("plan.callback fired plan=%s status=%s", plan_id, status)
-    except Exception as exc:
-        log.warning("plan.callback failed plan=%s: %s", plan_id, exc)
+        except Exception as exc:
+            log.warning("plan.callback failed plan=%s attempt=%d: %s", plan_id, attempt, exc)
+        if attempt < _CALLBACK_ATTEMPTS:
+            await asyncio.sleep(2**attempt)
 
 
 _ALLOWED_TRANSITIONS: dict[PlanStatus, set[PlanStatus]] = {
     PlanStatus.draft: {PlanStatus.proposed, PlanStatus.blocked},
-    PlanStatus.proposed: {PlanStatus.approved, PlanStatus.rejected, PlanStatus.blocked},
+    PlanStatus.proposed: {
+        PlanStatus.approved,
+        PlanStatus.rejected,
+        PlanStatus.blocked,
+        PlanStatus.cancelled,
+    },
     PlanStatus.approved: {
         PlanStatus.persisted,
         PlanStatus.executing,
         PlanStatus.completed,
         PlanStatus.failed,
+        PlanStatus.cancelled,
     },
-    PlanStatus.persisted: {PlanStatus.executing, PlanStatus.completed, PlanStatus.failed},
-    PlanStatus.executing: {PlanStatus.completed, PlanStatus.failed},
+    PlanStatus.persisted: {
+        PlanStatus.executing,
+        PlanStatus.completed,
+        PlanStatus.failed,
+        PlanStatus.cancelled,
+    },
+    PlanStatus.executing: {PlanStatus.completed, PlanStatus.failed, PlanStatus.cancelled},
     PlanStatus.failed: {PlanStatus.superseded},
 }
 
@@ -458,26 +498,86 @@ class PlanBuilder:
         return await self._orm_to_schema(plan_orm)
 
     async def complete_plan(self, plan_id: str, req: CompletePlanRequest) -> Plan:
-        import asyncio
-
         plan_orm = await self._get_orm(plan_id)
         target = PlanStatus.completed if req.status == "completed" else PlanStatus.failed
+        await self._finish(plan_orm, target, req.summary)
+        return await self._orm_to_schema(plan_orm)
+
+    async def cancel_plan(self, plan_id: str, reason: str | None = None) -> Plan:
+        """Stop a plan. Running workflows notice on their next /trama/execute call
+        (it refuses calls carrying a cancelled plan's X-RS-Plan header) and fail."""
+        plan_orm = await self._get_orm(plan_id)
+        await self._finish(plan_orm, PlanStatus.cancelled, reason)
+        return await self._orm_to_schema(plan_orm)
+
+    async def list_plans(self, status: list[str] | None = None, limit: int = 50) -> list[Plan]:
+        stmt = select(PlanORM).order_by(PlanORM.created_at.desc()).limit(min(limit, 200))
+        if status:
+            stmt = stmt.where(PlanORM.status.in_(status))
+        rows = (await self.db.execute(stmt)).scalars().all()
+        return [await self._orm_to_schema(p) for p in rows]
+
+    async def _finish(self, plan_orm: PlanORM, target: PlanStatus, summary: str | None) -> None:
+        """Move to a terminal status, commit, then fire the plan's callback."""
+        import asyncio
+
         self._assert_transition(plan_orm, target)
         plan_orm.status = target
         plan_orm.updated_at = datetime.now(UTC)
-        if req.summary:
-            plan_orm.summary = req.summary
+        if summary:
+            plan_orm.summary = summary
         await self.db.flush()
         if self.audit:
-            await self.audit.log_event(f"plan.{req.status}", "plan", plan_id)
+            await self.audit.log_event(f"plan.{target.value}", "plan", plan_orm.plan_id)
         await self.db.commit()
 
         if plan_orm.callback_url:
+            extra = await self._callback_extra(plan_orm.plan_id)
             asyncio.create_task(
-                _fire_callback(plan_orm.callback_url, plan_id, req.status, plan_orm.summary)
+                _fire_callback(
+                    plan_orm.callback_url,
+                    plan_orm.plan_id,
+                    target.value,
+                    plan_orm.summary,
+                    _parse_allowed_hosts(self.settings.callback_allowed_hosts),
+                    extra,
+                )
             )
 
-        return await self._orm_to_schema(plan_orm)
+    async def _executions(self, plan_id: str) -> list[dict]:
+        rows = (
+            (
+                await self.db.execute(
+                    select(ExecutionORM)
+                    .where(ExecutionORM.plan_id == plan_id)
+                    .order_by(ExecutionORM.created_at)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [
+            {
+                "execution_id": e.execution_id,
+                "artifact_id": e.artifact_id,
+                "status": e.status,
+                "delegated_execution_id": e.delegated_execution_id,
+                "error": e.error_json,
+            }
+            for e in rows
+        ]
+
+    async def _callback_extra(self, plan_id: str) -> dict:
+        execs = await self._executions(plan_id)
+        if not execs:
+            return {}
+        last = execs[-1]
+        return {
+            "execution_id": last["execution_id"],
+            "artifact_id": last["artifact_id"],
+            "delegated_execution_id": last["delegated_execution_id"],
+            "error": last["error"],
+        }
 
     async def replan(self, failed_plan_id: str, failure_reason: str) -> Plan | None:
         """Create a successor plan when execution fails.
@@ -580,4 +680,5 @@ class PlanBuilder:
             updated_at=plan_orm.updated_at,
             approved_at=plan_orm.approved_at,
             metadata=plan_orm.constraints,
+            executions=await self._executions(plan_orm.plan_id),
         )

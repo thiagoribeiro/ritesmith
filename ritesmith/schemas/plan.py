@@ -81,6 +81,8 @@ class Plan(BaseModel):
     updated_at: datetime
     approved_at: datetime | None = None
     metadata: dict | None = None
+    # {execution_id, artifact_id, status, delegated_execution_id (Trama id), error}
+    executions: list[dict] = []
 
 
 class CreatePlanRequest(BaseModel):
@@ -92,6 +94,10 @@ class CreatePlanRequest(BaseModel):
     context: dict | None = None
     replan_budget: int = Field(default=2, ge=0, le=5)
     callback_url: str | None = None
+
+
+class CancelPlanRequest(BaseModel):
+    reason: str | None = None
 
 
 class CompletePlanRequest(BaseModel):

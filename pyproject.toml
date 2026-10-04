@@ -88,7 +88,7 @@ ignore = ["BLE001", "G201"]
 [tool.ruff.lint.flake8-bugbear]
 # B008 flags function-call-in-default-argument, which is exactly how FastAPI's
 # own dependency-injection system works (Depends(...)/Query(...) as a default
-# value) and how these three endpoints accept an optional JSON body. None of
+# value) and how these endpoints accept an optional JSON body. None of
 # them are mutated in place, so the shared-default-object risk B008 warns
 # about doesn't apply here.
 extend-immutable-calls = [
@@ -97,4 +97,5 @@ extend-immutable-calls = [
     "ritesmith.schemas.plan.ApprovePlanRequest",
     "ritesmith.schemas.plan.RejectPlanRequest",
     "ritesmith.schemas.plan.CompletePlanRequest",
+    "ritesmith.schemas.plan.CancelPlanRequest",
 ]

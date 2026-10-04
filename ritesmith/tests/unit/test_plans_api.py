@@ -226,3 +226,36 @@ async def test_approve_already_approved_fails(plan_client):
     # Cannot approve an already-approved plan
     resp = await plan_client.post(f"/plans/{plan_id}/approve")
     assert resp.status_code == 409
+
+
+# ------------------------------------------------------------------
+# Tests: GET /plans (list) and POST /plans/{id}/cancel  (merged feature)
+# ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_plans_returns_created_plans(plan_client):
+    a = await plan_client.post("/plans", json={"intent": "list test alpha unique 71"})
+    b = await plan_client.post("/plans", json={"intent": "list test beta unique 72"})
+    assert a.status_code == 201 and b.status_code == 201
+    ids = {a.json()["plan_id"], b.json()["plan_id"]}
+
+    resp = await plan_client.get("/plans")
+    assert resp.status_code == 200, resp.text
+    listed = {p["plan_id"] for p in resp.json()}
+    assert ids <= listed
+
+
+@pytest.mark.asyncio
+async def test_cancel_plan_moves_to_cancelled(plan_client):
+    created = await plan_client.post("/plans", json={"intent": "cancel me unique 73"})
+    assert created.status_code == 201, created.text
+    plan_id = created.json()["plan_id"]
+
+    resp = await plan_client.post(f"/plans/{plan_id}/cancel", json={"reason": "no longer needed"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "cancelled"
+
+    # It now shows up under the cancelled filter.
+    listed = await plan_client.get("/plans", params={"status": "cancelled"})
+    assert plan_id in {p["plan_id"] for p in listed.json()}
