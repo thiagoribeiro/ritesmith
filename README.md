@@ -648,10 +648,27 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 ### Later
 
 - Subprocess / WASM sandbox isolation
-- Multi-tenant authorization
+- Multi-tenant authorization → see **Contextual authorization** below
 - Policy-as-code
 - Python and TypeScript SDKs
 - Hosted control plane
+
+#### Design note: contextual authorization
+
+Runtime **profiles** (`transform_only` … `trusted_internal`) are coarse capability
+sets — they decide *which kinds of tool* a script may call, not *which resource*
+it may touch. A `sensitive_personal` script can read "a calendar"; nothing today
+scopes it to *this* user's calendar rather than someone else's. That is adequate
+only because the deployment is single-user.
+
+The intended model, deferred until there is a real multi-user boundary: each tool
+call carries a **resource scope** (e.g. `calendar_id`, `vault_path`, `device_id`)
+that the host validates against the **caller's identity** before dispatch —
+authorization by resource, orthogonal to the profile's capability grant. The
+PolicyEngine stays the capability/approval gate; contextual authz is a second,
+per-resource check at the host boundary. Not implemented in this cycle; captured
+here and in the Obsidian design notes so the profile system is not mistaken for
+per-resource access control.
 
 ---
 
