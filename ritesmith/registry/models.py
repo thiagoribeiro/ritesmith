@@ -27,6 +27,9 @@ class Artifact(Base):
     current_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="draft")
     description: Mapped[str | None] = mapped_column(Text)
+    # "Use this when…" trigger phrasing, distinct from the prose description.
+    # Indexed into search_vector (weight B) to sharpen reuse recall.
+    usage_description: Mapped[str | None] = mapped_column(Text)
     tags: Mapped[list[str] | None] = mapped_column(ARRAY(Text))
     content_hash: Mapped[str | None] = mapped_column(Text)
     generated_by_plan_id: Mapped[str | None] = mapped_column(Text)

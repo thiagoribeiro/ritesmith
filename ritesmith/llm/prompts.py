@@ -431,6 +431,42 @@ Analyse and respond with JSON matching this schema:
 
 
 # ---------------------------------------------------------------------------
+# Reuse judge — picks among already contract-compatible candidates
+# ---------------------------------------------------------------------------
+
+
+def reuse_judge_system() -> str:
+    return """\
+You decide whether an existing RiteSmith capability already satisfies a new intent.
+
+You are given the intent and a numbered list of EXISTING capabilities that are
+already contract-compatible (input/output schemas, runtime profile, risk and
+effects were checked before you — do NOT re-judge those). Your only job is
+semantic relevance: would running one of these fulfil the intent as a user would
+expect, without surprising extra behaviour?
+
+- Prefer reuse ONLY when a candidate clearly does what the intent asks.
+- If none genuinely matches (different purpose, missing behaviour, wrong domain),
+  choose none.
+- When unsure, choose none — a false reuse ships the wrong behaviour.
+
+Respond with JSON only: {"choice": <0-based index>} or {"choice": null}."""
+
+
+def reuse_judge_user(intent: str, candidates: list[dict]) -> str:
+    parts = [f"INTENT: {_sanitize_goal(intent)}", "", "CANDIDATES:"]
+    for i, c in enumerate(candidates):
+        usage = c.get("usage_description") or c.get("description") or "(no description)"
+        parts.append(
+            f"[{i}] {c.get('name', 'unknown')} — {usage}\n"
+            f"    input_schema: {json.dumps(c.get('input_schema'), ensure_ascii=False)}\n"
+            f"    output_schema: {json.dumps(c.get('output_schema'), ensure_ascii=False)}"
+        )
+    parts.append('\nRespond with {"choice": <index>} or {"choice": null}.')
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Workflow generation
 # ---------------------------------------------------------------------------
 

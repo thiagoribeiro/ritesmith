@@ -7,6 +7,9 @@ class LuaGenerationResponse(BaseModel):
     script: str
     name: str
     description: str
+    # "Use this capability when…" — a canonical trigger phrasing, distinct from the
+    # prose description, used to sharpen reuse recall (FTS) and the reuse judge.
+    usage_description: str = ""
     tags: list[str] = []
     risk_assessment: str = "low"
     runtime_profile: str = "transform_only"
@@ -103,6 +106,20 @@ class LLMProvider(ABC):
         type_declarations: str,
     ) -> tuple[RepairResponse, LLMCallStats]:
         raise NotImplementedError("Luau repair not implemented in this provider")
+
+    async def judge_reuse(
+        self,
+        intent: str,
+        candidates: list[dict],
+    ) -> tuple[int | None, LLMCallStats]:
+        """Pick the candidate that actually satisfies the intent, or None.
+
+        `candidates` is an ordered list of already contract-compatible artifacts
+        (name, usage_description, description, schemas). Return the 0-based index
+        of the best fit, or None if none genuinely matches the intent. Relevance
+        only — permissions/risk were already enforced upstream.
+        """
+        raise NotImplementedError("reuse judge not implemented in this provider")
 
     async def generate_workflow(
         self,

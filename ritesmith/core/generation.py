@@ -96,9 +96,19 @@ class GenerationService:
         artifact_type = script_artifact_type(language)
         max_attempts = self.settings.generation_max_attempts
 
-        # 1+2. Reuse check — a working script is reusable whatever its language
+        # 1+2+3. Reuse check — a working script is reusable whatever its language,
+        # but only if it is contract-compatible with this request and relevant.
         if reuse := await check_reuse(
-            self.db, req.intent, ["luau_script", "lua_script"], reuse_policy, self.audit
+            self.db,
+            req.intent,
+            ["luau_script", "lua_script"],
+            reuse_policy,
+            self.audit,
+            input_schema=req.input_schema,
+            output_schema=req.output_schema,
+            runtime_profile=profile,
+            llm=self.llm,
+            settings=self.settings,
         ):
             return reuse
 
@@ -270,7 +280,10 @@ class GenerationService:
                     artifact_type=artifact_type,
                     content=last_script,
                     description=final_response.description,
+                    usage_description=final_response.usage_description or None,
                     tags=final_response.tags,
+                    input_schema=req.input_schema,
+                    output_schema=req.output_schema,
                     risk_level=final_response.risk_assessment,
                     generated_by_plan_id=plan_id,
                     metadata={"runtime_profile": profile, "certification": certification},
@@ -381,6 +394,7 @@ class GenerationService:
             status=ArtifactStatus.draft,
             content=script,
             description=gen_response.description if gen_response else None,
+            usage_description=(gen_response.usage_description or None) if gen_response else None,
             tags=gen_response.tags if gen_response else [],
             risk_level=gen_response.risk_assessment if gen_response else "low",
             generated_by_plan_id=plan_id,

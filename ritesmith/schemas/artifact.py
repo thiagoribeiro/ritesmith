@@ -74,6 +74,7 @@ class Artifact(BaseModel):
     content: str | None = None
     content_hash: str | None = None
     description: str | None = None
+    usage_description: str | None = None
     generated_by_plan_id: str | None = None
     source_artifact_ids: list[str] | None = None
     tags: list[str] | None = None

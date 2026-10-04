@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     # Generation
     generation_max_attempts: int = 5
 
+    # Reuse (three-stage: FTS recall → deterministic contract compat → LLM judge)
+    reuse_recall_limit: int = 10
+    # When true (default), an LLM makes the final relevance call among compatible
+    # candidates. When false, reuse runs deterministic-only (best compatible FTS hit).
+    reuse_llm_judge: bool = True
+
     # Policy
     policy_default: str = "deny"
     allow_unapproved_low_risk: bool = True

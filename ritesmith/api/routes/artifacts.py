@@ -31,6 +31,7 @@ def _build_artifact(orm: ArtifactORM, av: ArtifactVersionORM | None = None) -> A
         content=av.content if av else None,
         content_hash=orm.content_hash,
         description=orm.description,
+        usage_description=orm.usage_description,
         generated_by_plan_id=orm.generated_by_plan_id,
         tags=orm.tags,
         risk_level=av.risk_level if av else None,

@@ -34,6 +34,7 @@ _TRIGGER_FN = text("""
     BEGIN
         NEW.search_vector :=
             setweight(to_tsvector('english', coalesce(NEW.name, '')), 'A') ||
+            setweight(to_tsvector('english', coalesce(NEW.usage_description, '')), 'B') ||
             setweight(to_tsvector('english', coalesce(NEW.description, '')), 'B') ||
             setweight(to_tsvector('english', coalesce(array_to_string(NEW.tags, ' '), '')), 'C');
         RETURN NEW;
@@ -45,7 +46,7 @@ _DROP_TRIGGER = text("DROP TRIGGER IF EXISTS artifacts_search_vector_trigger ON 
 
 _CREATE_TRIGGER = text("""
     CREATE TRIGGER artifacts_search_vector_trigger
-    BEFORE INSERT OR UPDATE OF name, description, tags
+    BEFORE INSERT OR UPDATE OF name, usage_description, description, tags
     ON artifacts
     FOR EACH ROW
     EXECUTE FUNCTION artifacts_search_vector_update();
