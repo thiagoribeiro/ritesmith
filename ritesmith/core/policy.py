@@ -1,6 +1,7 @@
 """PolicyEngine — avalia se uma ação é permitida, requer aprovação ou está bloqueada.
 
 Regras em ordem de prioridade (primeira que bate, decide):
+  0. certification=nonstrict execute → require_approval (não passou no strict typecheck)
   1. shell_script execute         → deny
   2. risk_level=critical execute  → deny
   3. risk_level=high execute      → require_approval
@@ -53,18 +54,30 @@ class PolicyEngine:
             req.risk_level or RiskLevel.low, req.runtime_profile, req.manual
         )
 
-        decision = self._decide(artifact_type, operation, risk_level)
+        decision = self._decide(artifact_type, operation, risk_level, req.certification)
         policy_decisions_total.labels(
             decision=decision.decision.value,
             rule=f"{artifact_type}.{operation}.{risk_level}",
         ).inc()
         return decision
 
-    def _decide(self, artifact_type: str, operation: str, risk_level: str) -> PolicyDecision:
+    def _decide(
+        self,
+        artifact_type: str,
+        operation: str,
+        risk_level: str,
+        certification: str | None = None,
+    ) -> PolicyDecision:
         if artifact_type == "shell_script" and operation == "execute":
             return PolicyDecision(
                 decision=PolicyDecisionValue.deny,
                 reason="Shell script execution is never permitted",
+            )
+
+        if operation == "execute" and certification == "nonstrict":
+            return PolicyDecision(
+                decision=PolicyDecisionValue.require_approval,
+                reason="Artifact is not strict-type-certified; requires approval before execution",
             )
 
         if operation == "execute":

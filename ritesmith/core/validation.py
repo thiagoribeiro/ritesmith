@@ -6,20 +6,26 @@ Checks para lua_script (em ordem):
 3. SizeLimitCheck       — máx 60 linhas, máx 4KB
 4. SchemaPresenceCheck  — deve ter 'function run(input'
 5. AllowedPrimitivesCheck — host functions usadas estão no profile?
-6. PolicyCheck          — stub (always allow) — wired na Fase 6
-7. TestExecutionCheck   — executa test_cases fornecidos
+6. TestExecutionCheck   — executa test_cases fornecidos
+
+Política NÃO é verificada aqui: `valid` significa apenas "validado" (sintaxe,
+contrato, tipos, testes). A aprovação para execução é do PolicyEngine, no
+PlanBuilder e no ExecutionService (os três estados: gerado → validado → aprovado).
 
 Checks para luau_script (LunarDyson):
 1. TypeCheck            — luau-analyze in-process contra as tools do profile e os tipos
                           Input/Output derivados dos schemas: sintaxe + nonstrict são
-                          bloqueantes; strict é bloqueante com strict_types=True e vira
-                          warning com strict_types=False (fallback do loop de repair)
+                          bloqueantes (afetam `valid`); strict é sempre reportado como
+                          WARNING (não bloqueia `valid`). Quem decide a certificação
+                          strict vs nonstrict é o chamador (GenerationService).
 2. ForbiddenTokenCheck  — mesma deny-list + getfenv/setfenv/loadstring
 3. SizeLimitCheck       — limites 1.5× maiores (anotações de tipo ocupam espaço)
 4. SchemaPresenceCheck  — deve ter 'function run(input'
-5. PolicyCheck / TestExecutionCheck — como no Lua, executando via LunarDyson
-(Não há AllowedPrimitivesCheck: uma tool fora do profile não existe no tipo `tools`
-e é rejeitada pelo type check.)
+5. TestExecutionCheck   — como no Lua, executando via LunarDyson
+AllowedPrimitivesCheck (luau_tools_in_profile) é bloqueante: usar uma tool fora do
+profile só aparece no type check *strict* (que virou warning em P0.2), mas é uma
+fronteira de segurança, não refinamento de tipo — então checamos as referências
+`tools.ns.fn` deterministicamente contra o profile, independente da certificação.
 """
 
 import asyncio
@@ -47,6 +53,7 @@ _FORBIDDEN_PATTERNS = [
 
 _RUN_SIGNATURE = re.compile(r"\bfunction\s+run\s*\(")
 _HOST_FN_CALL = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(")
+_LUAU_TOOL_REF = re.compile(r"\btools\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)")
 
 _MAX_LINES = 60
 _MAX_BYTES = 4 * 1024  # 4KB
@@ -73,7 +80,6 @@ class ValidationPipeline:
         profile: str = "transform_only",
         input_schema: dict | None = None,
         output_schema: dict | None = None,
-        strict_types: bool = True,
     ) -> ValidationResult:
         checks: list[ValidationCheck] = []
         errors: list[str] = []
@@ -85,7 +91,6 @@ class ValidationPipeline:
             checks.extend(self._check_size(content, constraints))
             checks.extend(self._check_schema_presence(content))
             checks.extend(self._check_allowed_primitives(content, profile))
-            checks.extend(self._check_policy(artifact_type, constraints))
 
             if test_cases:
                 exec_checks = await self._check_test_execution(content, test_cases, profile)
@@ -93,14 +98,12 @@ class ValidationPipeline:
 
         elif artifact_type == "luau_script":
             checks.extend(
-                await self._check_luau_types(
-                    content, profile, input_schema, output_schema, strict_types
-                )
+                await self._check_luau_types(content, profile, input_schema, output_schema)
             )
+            checks.extend(self._check_luau_tools_in_profile(content, profile))
             checks.extend(self._check_forbidden_tokens(content, extra=_LUAU_EXTRA_FORBIDDEN))
             checks.extend(self._check_size(content, constraints, factor=_LUAU_SIZE_FACTOR))
             checks.extend(self._check_schema_presence(content))
-            checks.extend(self._check_policy(artifact_type, constraints))
 
             if test_cases:
                 checks.extend(
@@ -162,7 +165,6 @@ class ValidationPipeline:
         profile: str,
         input_schema: dict | None,
         output_schema: dict | None,
-        strict_types: bool,
     ) -> list[ValidationCheck]:
         from ritesmith.runtime.luau import LuauScriptRuntime
 
@@ -206,13 +208,29 @@ class ValidationPipeline:
             checks.append(
                 ValidationCheck(
                     name="strict_type_check",
-                    status="failed" if strict_types else "warning",
+                    status="warning",
                     message="Strict-mode type errors: " + "; ".join(strict),
                 )
             )
         else:
             checks.append(ValidationCheck(name="strict_type_check", status="passed"))
         return checks
+
+    def _check_luau_tools_in_profile(self, content: str, profile: str) -> list[ValidationCheck]:
+        from ritesmith.runtime.luau import luau_tools_for_profile
+
+        allowed = set(luau_tools_for_profile(profile))
+        used = {f"{m.group(1)}.{m.group(2)}" for m in _LUAU_TOOL_REF.finditer(content)}
+        unknown = used - allowed
+        if unknown:
+            return [
+                ValidationCheck(
+                    name="tools_in_profile",
+                    status="failed",
+                    message=f"Tools não disponíveis no profile '{profile}': {', '.join(sorted(unknown))}",
+                )
+            ]
+        return [ValidationCheck(name="tools_in_profile", status="passed")]
 
     def _check_forbidden_tokens(
         self, content: str, extra: list | None = None
@@ -279,12 +297,6 @@ class ValidationPipeline:
                 )
             ]
         return [ValidationCheck(name="allowed_primitives", status="passed")]
-
-    def _check_policy(self, artifact_type: str, constraints: dict | None) -> list[ValidationCheck]:
-        # Stub — PolicyEngine real é wired na Fase 6
-        return [
-            ValidationCheck(name="policy", status="passed", message="policy check stub (allow)")
-        ]
 
     def _check_json_syntax(self, content: str) -> list[ValidationCheck]:
         import json

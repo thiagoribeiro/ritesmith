@@ -431,6 +431,70 @@ Analyse and respond with JSON matching this schema:
 
 
 # ---------------------------------------------------------------------------
+# Reuse judge — picks among already contract-compatible candidates
+# ---------------------------------------------------------------------------
+
+
+def test_generation_system() -> str:
+    return """\
+You write black-box test cases for a RiteSmith capability, from its goal and
+input/output schemas ALONE — you do not see the implementation.
+
+RULES
+- Produce 2 to 4 cases. Each is an input object (matching the input schema) and
+  the expected output object (matching the output schema) a correct capability
+  must return for that input.
+- Cover a typical case and at least one boundary/edge case the goal implies.
+- Only include inputs that are valid per the input schema.
+- Expected outputs must be exact values, not placeholders or ranges.
+- If you cannot determine an exact expected output for a case, omit that case
+  rather than guessing — a wrong expectation is worse than fewer cases.
+
+Respond with JSON only: {"test_cases": [{"input": {...}, "expected_output": {...}}]}."""
+
+
+def test_generation_user(goal: str, input_schema: dict | None, output_schema: dict | None) -> str:
+    parts = [f"GOAL: {_sanitize_goal(goal)}"]
+    if input_schema:
+        parts.append(f"INPUT SCHEMA:\n{json.dumps(input_schema, indent=2)}")
+    if output_schema:
+        parts.append(f"OUTPUT SCHEMA:\n{json.dumps(output_schema, indent=2)}")
+    parts.append('Respond with {"test_cases": [{"input": {...}, "expected_output": {...}}, ...]}.')
+    return "\n\n".join(parts)
+
+
+def reuse_judge_system() -> str:
+    return """\
+You decide whether an existing RiteSmith capability already satisfies a new intent.
+
+You are given the intent and a numbered list of EXISTING capabilities that are
+already contract-compatible (input/output schemas, runtime profile, risk and
+effects were checked before you — do NOT re-judge those). Your only job is
+semantic relevance: would running one of these fulfil the intent as a user would
+expect, without surprising extra behaviour?
+
+- Prefer reuse ONLY when a candidate clearly does what the intent asks.
+- If none genuinely matches (different purpose, missing behaviour, wrong domain),
+  choose none.
+- When unsure, choose none — a false reuse ships the wrong behaviour.
+
+Respond with JSON only: {"choice": <0-based index>} or {"choice": null}."""
+
+
+def reuse_judge_user(intent: str, candidates: list[dict]) -> str:
+    parts = [f"INTENT: {_sanitize_goal(intent)}", "", "CANDIDATES:"]
+    for i, c in enumerate(candidates):
+        usage = c.get("usage_description") or c.get("description") or "(no description)"
+        parts.append(
+            f"[{i}] {c.get('name', 'unknown')} — {usage}\n"
+            f"    input_schema: {json.dumps(c.get('input_schema'), ensure_ascii=False)}\n"
+            f"    output_schema: {json.dumps(c.get('output_schema'), ensure_ascii=False)}"
+        )
+    parts.append('\nRespond with {"choice": <index>} or {"choice": null}.')
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Workflow generation
 # ---------------------------------------------------------------------------
 

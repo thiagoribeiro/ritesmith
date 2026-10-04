@@ -163,13 +163,12 @@ async def test_timeout_is_enforced(runtime):
 # ---------------------------------------------------------------------------
 
 
-async def _validate(source: str, strict_types: bool = True, **kwargs):
+async def _validate(source: str, **kwargs):
     return await ValidationPipeline(get_settings()).run(
         source,
         "luau_script",
         input_schema=INPUT_SCHEMA,
         output_schema=OUTPUT_SCHEMA,
-        strict_types=strict_types,
         **kwargs,
     )
 
@@ -182,18 +181,17 @@ async def test_validation_accepts_typed_script_with_tests():
     assert result.valid, result.errors
 
 
-async def test_strict_only_errors_block_then_fall_back_to_warnings():
-    gated = await _validate(STRICT_ONLY, strict_types=True)
-    assert not gated.valid
-    assert any(e.startswith("Strict-mode type errors") for e in gated.errors)
-
-    lenient = await _validate(STRICT_ONLY, strict_types=False)
-    assert lenient.valid
-    assert any(w.startswith("Strict-mode type errors") for w in lenient.warnings)
+async def test_strict_only_errors_are_warnings_not_blocking():
+    # Strict errors never block `valid` — they are reported as warnings and the caller
+    # (GenerationService) turns them into the nonstrict certification tier.
+    result = await _validate(STRICT_ONLY)
+    assert result.valid
+    assert any(w.startswith("Strict-mode type errors") for w in result.warnings)
+    assert any(c.name == "strict_type_check" and c.status == "warning" for c in result.checks)
 
 
 async def test_nonstrict_type_errors_always_block():
-    result = await _validate("function run() return { t = os.time() } end", strict_types=False)
+    result = await _validate("function run() return { t = os.time() } end")
     assert not result.valid
     assert any("Unknown global 'os'" in e for e in result.errors)
 
@@ -256,6 +254,17 @@ class MockLuaOnlyLLM(MockLuauLLM):
         ), _stats()
 
 
+class MockNonstrictLLM(MockLuauLLM):
+    """Never reaches strict-clean: both generation and repair stay in STRICT_ONLY."""
+
+    async def repair_luau(self, validation_errors=(), **kwargs):
+        self.calls.append("repair_luau")
+        self.repair_errors = list(validation_errors)
+        return RepairResponse(
+            repaired_content=STRICT_ONLY, changes_made="still nonstrict"
+        ), _stats()
+
+
 @pytest_asyncio.fixture(loop_scope="session")
 async def make_client(db_session):
     async def factory(llm):
@@ -293,6 +302,52 @@ async def test_generation_in_luau_with_strict_repair(make_client):
     assert any("Strict-mode type errors" in e for e in llm.repair_errors)
 
 
+async def test_generation_persists_nonstrict_when_strict_unreachable(make_client):
+    # Repair never clears strict, so the loop keeps trying toward strict until
+    # max_attempts, then accepts the nonstrict-valid script and persists it tagged
+    # certification="nonstrict" (default require_strict_typecheck=false).
+    llm = MockNonstrictLLM()
+    async with await make_client(llm) as client:
+        resp = await client.post(
+            "/generate/lua", json={**GEN_BODY, "intent": "zqx_luau_nonstrict_persist_777"}
+        )
+    assert resp.status_code == 200, resp.text
+    artifact = resp.json()["artifact"]
+    assert artifact["artifact_id"]
+    assert artifact["metadata"]["certification"] == "nonstrict"
+    assert llm.calls[0] == "generate_luau"
+    assert llm.calls.count("repair_luau") == get_settings().generation_max_attempts - 1
+
+
+async def test_require_strict_typecheck_fails_generation(db_session):
+    # With require_strict_typecheck, a script that only clears nonstrict is a
+    # generation failure: validated but not accepted, so nothing is persisted.
+    from sqlalchemy import func, select
+
+    from ritesmith.core.generation import GenerationService
+    from ritesmith.registry.models import Artifact as ArtifactORM
+    from ritesmith.schemas.generation import GenerateScriptRequest
+
+    settings = get_settings().model_copy(update={"require_strict_typecheck": True})
+    llm = MockNonstrictLLM()
+    svc = GenerationService(db=db_session, llm=llm, settings=settings)
+    req = GenerateScriptRequest(
+        intent="zqx_require_strict_fail_778",
+        language="luau",
+        save=True,
+        input_schema=INPUT_SCHEMA,
+        output_schema=OUTPUT_SCHEMA,
+        constraints={"reuse_policy": "force_new"},
+    )
+    resp = await svc.generate_lua(req)
+    assert resp.validation.valid
+    assert resp.artifact.metadata["certification"] == "nonstrict"
+    count = await db_session.scalar(
+        select(func.count()).select_from(ArtifactORM).where(ArtifactORM.name == resp.artifact.name)
+    )
+    assert count == 0
+
+
 async def test_generation_falls_back_to_lua_when_llm_lacks_luau(make_client):
     llm = MockLuaOnlyLLM()
     async with await make_client(llm) as client:
@@ -328,3 +383,69 @@ async def test_luau_artifact_runs_on_lunardyson(db_session):
     )
     assert result.status == ExecutionStatus.succeeded
     assert result.output == {"min_price": 2}
+
+
+# ---------------------------------------------------------------------------
+# P1.2: tool timeout + wall-clock budgets
+# ---------------------------------------------------------------------------
+
+
+def test_tool_timeout_raises_sentinel(monkeypatch):
+    import time as _t
+
+    from ritesmith.config import get_settings
+    from ritesmith.runtime import luau as L
+
+    monkeypatch.setenv("RITESMITH_LUAU_TOOL_TIMEOUT_MS", "50")
+    get_settings.cache_clear()
+
+    def slow(**kwargs):
+        _t.sleep(0.4)
+        return {"ok": True}
+
+    wrapped = L._adapter(slow, None)
+    with pytest.raises(TimeoutError, match="RiteSmith tool timeout"):
+        wrapped({"x": 1})
+
+
+def test_run_luau_maps_tool_timeout_to_timeout_not_self_heal(monkeypatch):
+    from ritesmith.runtime import luau as L
+
+    class _Stats:
+        peak_memory_bytes = 123
+
+    class _Result:
+        ok = False
+        error_kind = "runtime"
+        message = "tools.x.y: TimeoutError: RiteSmith tool timeout: exceeded 50ms"
+        stats = _Stats()
+
+    monkeypatch.setattr(
+        L,
+        "_pooled_runtime",
+        lambda *a, **k: type("RT", (), {"execute": lambda self, *a, **k: _Result()})(),
+    )
+    output, error, timed_out, _peak = L.run_luau("x", {}, {}, "transform_only", 1000, 16)
+    assert output is None
+    assert timed_out is True
+    assert "Tool call timed out" in error
+    # Must not look like a contract crash, or the self-heal would deprecate the artifact.
+    assert not error.startswith(("Runtime error:", "Syntax/load error:"))
+
+
+async def test_wall_clock_abandons_slow_execution(monkeypatch):
+    from ritesmith.config import get_settings
+    from ritesmith.runtime import luau as L
+
+    def slow_run(*args, **kwargs):
+        import time as _t
+
+        _t.sleep(0.5)
+        return ({"ok": 1}, None, False, 0)
+
+    monkeypatch.setattr(L, "run_luau", slow_run)
+    rt = L.LuauScriptRuntime(get_settings())
+    rt.wall_clock_ms = 100
+    result = await rt.execute("function run() return {} end", {}, {})
+    assert result.timed_out
+    assert "wall-clock" in result.error

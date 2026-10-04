@@ -53,6 +53,35 @@ from ritesmith.schemas.generation import GeneratedArtifactResponse, GenerateScri
 log = logging.getLogger(__name__)
 
 
+def _is_strict_clean(validation) -> bool:
+    """True when no strict-mode type errors remain (luau); always true for lua/trama."""
+    if validation is None:
+        return False
+    return not any(
+        c.name == "strict_type_check" and c.status == "warning" for c in validation.checks
+    )
+
+
+def _certification(language: str, strict_clean: bool) -> str:
+    """strict | nonstrict (luau) | lua (legacy)."""
+    if language != "luau":
+        return "lua"
+    return "strict" if strict_clean else "nonstrict"
+
+
+_RISK_ORDER = ["low", "medium", "high", "critical"]
+
+
+def _risk_at_least(risk: str | None, threshold: str | None) -> bool:
+    """True when `risk` is at or above `threshold`. Unknown/empty threshold disables."""
+    if not threshold or threshold not in _RISK_ORDER:
+        return False
+    r = risk or "low"
+    if r not in _RISK_ORDER:
+        return False
+    return _RISK_ORDER.index(r) >= _RISK_ORDER.index(threshold)
+
+
 class GenerationService:
     def __init__(
         self,
@@ -80,9 +109,19 @@ class GenerationService:
         artifact_type = script_artifact_type(language)
         max_attempts = self.settings.generation_max_attempts
 
-        # 1+2. Reuse check — a working script is reusable whatever its language
+        # 1+2+3. Reuse check — a working script is reusable whatever its language,
+        # but only if it is contract-compatible with this request and relevant.
         if reuse := await check_reuse(
-            self.db, req.intent, ["luau_script", "lua_script"], reuse_policy, self.audit
+            self.db,
+            req.intent,
+            ["luau_script", "lua_script"],
+            reuse_policy,
+            self.audit,
+            input_schema=req.input_schema,
+            output_schema=req.output_schema,
+            runtime_profile=profile,
+            llm=self.llm,
+            settings=self.settings,
         ):
             return reuse
 
@@ -109,9 +148,12 @@ class GenerationService:
         last_script: str | None = None
         last_validation: ValidationResult | None = None
         final_response: LuaGenerationResponse | None = None
+        effective_tests: list[dict] | None = (req.context or {}).get("test_cases")
+        tests_attempted = False
 
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_script, last_validation, final_response
+            nonlocal effective_tests, tests_attempted
 
             if language == "luau" and (attempt == 1 or last_script is None):
                 llm_response, stats = await self.llm.generate_luau(
@@ -135,7 +177,11 @@ class GenerationService:
                 )
                 script = llm_response.script
             else:
-                errors = last_validation.errors if last_validation else []
+                # Feed strict warnings to the repair too, so the loop tries to reach a
+                # strict-clean (certified) program before settling for nonstrict.
+                errors = list(last_validation.errors) if last_validation else []
+                if language == "luau" and last_validation:
+                    errors += last_validation.warnings
                 if language == "luau":
                     repair_resp, stats = await self.llm.repair_luau(
                         original_goal=req.intent,
@@ -176,16 +222,32 @@ class GenerationService:
                     },
                 )
 
+            # P0.3 risk-class test gate: a medium+ risk script must pass executed
+            # test cases. Use the caller's cases, else generate sanity cases once
+            # from the intent+schemas (not the script). Failing cases block `valid`
+            # and drive repair; *missing* cases are an acceptance gate handled after
+            # the loop (repairing the script cannot conjure tests).
+            require_tests = _risk_at_least(
+                llm_response.risk_assessment, self.settings.require_tests_min_risk
+            )
+            if require_tests and not effective_tests and not tests_attempted:
+                tests_attempted = True
+                try:
+                    generated, _tstats = await self.llm.generate_tests(
+                        req.intent, req.input_schema, req.output_schema
+                    )
+                    effective_tests = generated or None
+                except NotImplementedError:
+                    pass
+
             validation = await self.validator.run(
                 content=script,
                 artifact_type=artifact_type,
                 constraints=constraints,
-                test_cases=(req.context or {}).get("test_cases"),
+                test_cases=effective_tests,
                 profile=profile,
                 input_schema=req.input_schema,
                 output_schema=req.output_schema,
-                # Last attempt: accept strict-only type errors as warnings.
-                strict_types=attempt < max_attempts,
             )
 
             await self._record_attempt(job.generation_id, attempt, script, validation)
@@ -204,6 +266,13 @@ class GenerationService:
 
             last_script = script
             last_validation = validation
+            # For luau, keep repairing while strict errors remain so the loop drives
+            # toward a strict-clean (certified) program; it only stops early once the
+            # script is both valid and strict-clean. At exhaustion the caller still
+            # accepts a nonstrict-valid script (certification="nonstrict"), unless
+            # require_strict_typecheck forces a generation failure.
+            if language == "luau":
+                return validation.valid and _is_strict_clean(validation)
             return validation.valid
 
         try:
@@ -213,8 +282,30 @@ class GenerationService:
                 attempt_fn=attempt_fn,
             )
 
-            # 5. Atualiza job
-            job.status = "completed" if last_validation and last_validation.valid else "failed"
+            # 5. Certification + acceptance. `valid` = validated (syntax/contract/nonstrict
+            # types/tests). Strict type errors are reported as warnings and decide the
+            # certification tier, not validity.
+            strict_clean = _is_strict_clean(last_validation)
+            certification = _certification(language, strict_clean)
+            # require_strict_typecheck: a luau program that only clears nonstrict is a
+            # generation failure; otherwise it is persisted as certification="nonstrict"
+            # and the PolicyEngine will require approval to run it.
+            require_strict = self.settings.require_strict_typecheck and language == "luau"
+            # P0.3: a medium+ risk script with no executed test cases (caller or
+            # generated) is not accepted — this is an acceptance gate, not a
+            # validity failure, so it does not drive the repair loop.
+            require_tests = _risk_at_least(
+                final_response.risk_assessment if final_response else None,
+                self.settings.require_tests_min_risk,
+            )
+            tests_ok = (not require_tests) or bool(effective_tests)
+            accepted = bool(
+                last_validation
+                and last_validation.valid
+                and not (require_strict and not strict_clean)
+                and tests_ok
+            )
+            job.status = "completed" if accepted else "failed"
             job.finished_at = datetime.now(UTC)
             job.attempts = self.settings.generation_max_attempts
             log.info(
@@ -226,16 +317,19 @@ class GenerationService:
             # 6. Persiste se solicitado e válido
             artifact_orm = None
             artifact_version_orm = None
-            if req.save and last_validation and last_validation.valid and final_response:
+            if req.save and accepted and final_response:
                 artifact_orm, artifact_version_orm = await self.registry.create_artifact(
                     name=final_response.name,
                     artifact_type=artifact_type,
                     content=last_script,
                     description=final_response.description,
+                    usage_description=final_response.usage_description or None,
                     tags=final_response.tags,
+                    input_schema=req.input_schema,
+                    output_schema=req.output_schema,
                     risk_level=final_response.risk_assessment,
                     generated_by_plan_id=plan_id,
-                    metadata={"runtime_profile": profile},
+                    metadata={"runtime_profile": profile, "certification": certification},
                 )
                 job.final_artifact_id = artifact_orm.artifact_id
                 await self.db.flush()
@@ -269,6 +363,7 @@ class GenerationService:
                 gen_response=final_response,
                 validation=last_validation,
                 plan_id=plan_id,
+                certification=certification,
             )
 
         return GeneratedArtifactResponse(
@@ -328,8 +423,12 @@ class GenerationService:
         gen_response: LuaGenerationResponse | None,
         validation: ValidationResult | None,
         plan_id: str | None,
+        certification: str = "lua",
     ) -> Artifact:
         now = datetime.now(UTC)
+        meta = {"certification": certification}
+        if gen_response:
+            meta["runtime_profile"] = gen_response.runtime_profile
         return Artifact(
             artifact_id=generate_id("art"),
             artifact_type=ArtifactType(artifact_type),
@@ -338,11 +437,12 @@ class GenerationService:
             status=ArtifactStatus.draft,
             content=script,
             description=gen_response.description if gen_response else None,
+            usage_description=(gen_response.usage_description or None) if gen_response else None,
             tags=gen_response.tags if gen_response else [],
             risk_level=gen_response.risk_assessment if gen_response else "low",
             generated_by_plan_id=plan_id,
             validation=validation,
-            metadata={"runtime_profile": gen_response.runtime_profile} if gen_response else None,
+            metadata=meta,
             created_at=now,
             updated_at=now,
         )

@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     # Existing artifacts always run on the runtime of their own artifact_type. "luau"
     # falls back to "lua" when the lunardyson package is not installed.
     script_language: Literal["lua", "luau"] = "luau"
+    # When true, a program that only fails the strict Luau type check after the repair
+    # budget is a generation FAILURE. When false (default), it is persisted as
+    # certification="nonstrict" and the PolicyEngine requires approval to run it.
+    require_strict_typecheck: bool = False
+    # When true, a requested script_language="luau" with the lunardyson package
+    # missing is a hard startup failure instead of a silent fallback to "lua" —
+    # set this in production so the isolation guarantee never changes unnoticed.
+    require_luau: bool = False
 
     # Lua runtime (lua_timeout_ms / lua_memory_limit_mb also bound Luau executions)
     lua_enabled: bool = True
@@ -46,8 +54,26 @@ class Settings(BaseSettings):
     lua_memory_limit_mb: int = 32
     lua_sandbox_workers: int = 8
 
+    # Luau budgets beyond the VM CPU deadline (lua_timeout_ms). The VM deadline does
+    # not interrupt a blocked Python tool call (the VM is not running during it), so:
+    #   - luau_tool_timeout_ms caps each individual host-tool call (0 disables);
+    #   - luau_wall_clock_ms is a whole-execution wall-clock backstop that abandons
+    #     the run if exceeded (0 disables). Set it above VM + summed tool timeouts.
+    luau_tool_timeout_ms: int = 5000
+    luau_wall_clock_ms: int = 0
+
     # Generation
     generation_max_attempts: int = 5
+
+    # Test gate: artifacts at/above this risk level must pass executed test cases
+    # (caller-supplied, else LLM-generated as a sanity gate). "" / "off" disables.
+    require_tests_min_risk: str = "medium"
+
+    # Reuse (three-stage: FTS recall → deterministic contract compat → LLM judge)
+    reuse_recall_limit: int = 10
+    # When true (default), an LLM makes the final relevance call among compatible
+    # candidates. When false, reuse runs deterministic-only (best compatible FTS hit).
+    reuse_llm_judge: bool = True
 
     # Policy
     policy_default: str = "deny"

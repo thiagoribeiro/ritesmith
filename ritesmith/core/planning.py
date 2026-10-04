@@ -24,12 +24,12 @@ from ritesmith.core.exceptions import InvalidTransitionError, NotFoundError
 from ritesmith.core.generation import GenerationService
 from ritesmith.core.ids import generate_id
 from ritesmith.core.policy import PolicyEngine
+from ritesmith.core.reuse import check_reuse
 from ritesmith.core.workflow_generation import WorkflowGenerationService
 from ritesmith.llm.base import LLMProvider
 from ritesmith.registry.models import Artifact as ArtifactORM
 from ritesmith.registry.models import ArtifactVersion as ArtifactVersionORM
 from ritesmith.registry.models import Plan as PlanORM
-from ritesmith.registry.search import fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.runtime.luau import effective_script_language, script_artifact_type
 from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ValidationResult
@@ -53,7 +53,6 @@ from ritesmith.schemas.plan import (
 )
 from ritesmith.schemas.policy import PolicyDecisionValue, PolicyEvaluationRequest
 
-_REUSE_SCORE_THRESHOLD = 0.05
 _SCRIPT_TYPES = ("lua_script", "luau_script")
 
 _PRIVATE_URL_PREFIXES = (
@@ -340,23 +339,29 @@ class PlanBuilder:
         else:
             runtime_profile = "transform_only"
 
-        # Try reuse first
-        if req.reuse_policy != ReusePolicy.force_new:
-            search_results = await fts_search(
-                self.db, req.intent, artifact_types=list(_SCRIPT_TYPES), limit=3
+        # Try reuse first — same three-stage pipeline as the generation service
+        # (FTS recall → deterministic contract compat → LLM judge).
+        reuse = await check_reuse(
+            self.db,
+            req.intent,
+            list(_SCRIPT_TYPES),
+            req.reuse_policy.value,
+            self.audit,
+            runtime_profile=runtime_profile,
+            llm=self.llm,
+            settings=self.settings,
+        )
+        if reuse is not None:
+            artifact = reuse.artifact
+            step = PlanStep(
+                step_id=step_id,
+                title=f"Reuse {artifact_type}: {artifact.name}",
+                description="Reusing existing contract-compatible artifact",
+                status="completed",
+                artifact_id=artifact.artifact_id,
+                details={"reused": True, "source_artifact_id": reuse.source_artifact_id},
             )
-            if search_results and search_results[0].score >= _REUSE_SCORE_THRESHOLD:
-                best = search_results[0]
-                artifact = _build_artifact(best.artifact, best.version)
-                step = PlanStep(
-                    step_id=step_id,
-                    title=f"Reuse {artifact_type}: {artifact.name}",
-                    description=f"Reusing existing artifact (FTS score: {best.score:.3f})",
-                    status="completed",
-                    artifact_id=artifact.artifact_id,
-                    details={"reused": True, "score": best.score},
-                )
-                return step, artifact, None
+            return step, artifact, None
 
         # Generate
         gen_req = GenerateScriptRequest(

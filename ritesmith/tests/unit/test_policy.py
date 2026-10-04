@@ -33,6 +33,37 @@ def test_execute_by_risk(artifact_type, risk, expected):
     )
 
 
+def test_nonstrict_certification_requires_approval_even_at_low_risk():
+    # A luau artifact that only cleared nonstrict typecheck (not strict-certified)
+    # needs approval to run regardless of its (low) risk level.
+    assert (
+        _decide(
+            _engine(),
+            operation="execute",
+            artifact_type="luau_script",
+            risk_level="low",
+            certification="nonstrict",
+        )
+        == APPROVE
+    )
+
+
+@pytest.mark.parametrize("cert", ["strict", "lua", None])
+def test_strict_or_legacy_certification_is_not_gated_by_the_cert_rule(cert):
+    # strict-certified, legacy lua, and unset certification fall through to the
+    # ordinary risk-based rules (low risk → allow by default).
+    assert (
+        _decide(
+            _engine(),
+            operation="execute",
+            artifact_type="luau_script",
+            risk_level="low",
+            certification=cert,
+        )
+        == ALLOW
+    )
+
+
 @pytest.mark.parametrize("risk", ["low", "medium", "high", "critical", None])
 def test_shell_scripts_are_never_executed(risk):
     assert (
