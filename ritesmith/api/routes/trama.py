@@ -29,6 +29,7 @@ router = APIRouter(prefix="/trama", tags=["trama"])
 async def trama_execute(
     req: TramaExecuteRequest,
     authorization: str = Header(...),
+    x_rs_plan: str | None = Header(None),
     service: ExecutionService = Depends(get_execution_service),
     settings: Settings = Depends(get_settings),
 ) -> TramaExecuteResponse:
@@ -38,6 +39,20 @@ async def trama_execute(
         )
     if authorization != f"Bearer {settings.trama_token}":
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Kill switch: workflows started for a plan carry X-RS-Plan on every call
+    # (injected at execution time). Once the plan is cancelled, refuse — the
+    # task fails and the workflow stops instead of running out its iterations.
+    if x_rs_plan:
+        from sqlalchemy import select
+
+        from ritesmith.registry.models import Plan as PlanORM
+
+        status = (
+            await service.db.execute(select(PlanORM.status).where(PlanORM.plan_id == x_rs_plan))
+        ).scalar_one_or_none()
+        if status == "cancelled":
+            raise HTTPException(status_code=409, detail=f"Plan {x_rs_plan} was cancelled")
 
     if req.capability_name:
         cap = get_capability(req.capability_name)

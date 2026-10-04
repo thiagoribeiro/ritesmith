@@ -552,6 +552,8 @@ class ExecutionService:
             definition = json.loads(content)
         except Exception:
             definition = content
+        if isinstance(definition, dict) and exec_orm.plan_id:
+            definition = _bind_to_plan(definition, exec_orm.plan_id, self.settings.public_url)
 
         if self.settings.workflow_delegation_enabled and self.settings.workflow_engine_url:
             from ritesmith.core.delegation import DelegationService
@@ -610,3 +612,25 @@ class ExecutionService:
             finished_at=orm.finished_at,
             created_at=orm.created_at,
         )
+
+
+def _bind_to_plan(definition: dict, plan_id: str, public_url: str | None) -> dict:
+    """Tie a plan's workflow to its plan at run time (covers already-stored artifacts).
+
+    - every /trama/execute call carries ``X-RS-Plan`` so a cancelled plan's
+      workflow is refused on its next step;
+    - ``onFailureCallback`` completes the plan as failed when Trama gives up —
+      otherwise only the success path (rs_complete) ever reaches the plan.
+    """
+    for node in definition.get("nodes") or []:
+        request = ((node.get("action") or {}).get("request")) if isinstance(node, dict) else None
+        if isinstance(request, dict) and "/trama/execute" in str(request.get("url", "")):
+            request.setdefault("headers", {})["X-RS-Plan"] = plan_id
+    if public_url and "onFailureCallback" not in definition and definition.get("nodes"):
+        definition["onFailureCallback"] = {
+            "url": f"{public_url}/plans/{plan_id}/complete",
+            "verb": "POST",
+            "headers": {"Content-Type": "application/json"},
+            "body": {"status": "failed", "summary": "Workflow falhou no Trama ({{sagaId}})"},
+        }
+    return definition

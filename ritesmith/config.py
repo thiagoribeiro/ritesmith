@@ -118,6 +118,9 @@ class Settings(BaseSettings):
     # Trama integration
     public_url: str | None = None  # RITESMITH_PUBLIC_URL (e.g. http://ritesmith:8081)
     trama_token: str | None = None  # RITESMITH_TRAMA_TOKEN (shared secret for /trama/execute)
+    # Comma-separated hosts a plan callback_url may target even though they are
+    # private (e.g. the LAN address of the agent that created the plan).
+    callback_allowed_hosts: str = ""  # RITESMITH_CALLBACK_ALLOWED_HOSTS
     # Bearer token required on the API (except /health, /metrics and /trama/execute).
     # Unset = API open (development only; a warning is logged at startup).
     api_token: str | None = None  # RITESMITH_API_TOKEN
