@@ -290,3 +290,101 @@ async def test_generate_workflow_returns_artifact(mock_client_valid):
     data = resp.json()
     assert data["artifact"]["artifact_type"] == "trama_workflow"
     assert data["reused"] is False
+
+
+# ------------------------------------------------------------------
+# P0.3: risk-class test gate
+# ------------------------------------------------------------------
+
+_IN_V = {"type": "object", "properties": {"value": {"type": "number"}}, "required": ["value"]}
+_OUT_R = {"type": "object", "properties": {"result": {"type": "number"}}, "required": ["result"]}
+
+
+class _MediumRiskLLM(LLMProvider):
+    """Valid medium-risk script; generate_tests yields whatever it is seeded with."""
+
+    def __init__(self, tests):
+        self._tests = tests
+        self.gen_tests_called = False
+
+    async def generate_lua(self, goal: str = "", **kwargs):
+        return LuaGenerationResponse(
+            script="function run(input, context)\n  return {result = input.value * 2}\nend",
+            name=goal[:40].lower().replace(" ", "_") or "double",
+            description=goal or "doubles",
+            risk_assessment="medium",
+            runtime_profile="transform_only",
+        ), _stats()
+
+    async def generate_tests(self, goal, input_schema, output_schema):
+        self.gen_tests_called = True
+        return list(self._tests), _stats()
+
+    async def repair_lua(self, **kwargs):
+        raise AssertionError("repair must not run: the script is valid")
+
+    async def analyze_intent(self, **kwargs):
+        raise NotImplementedError
+
+
+async def _generate_direct(db_session, llm, intent):
+    from ritesmith.config import get_settings
+    from ritesmith.core.generation import GenerationService
+    from ritesmith.schemas.generation import GenerateScriptRequest
+
+    svc = GenerationService(db=db_session, llm=llm, settings=get_settings())
+    req = GenerateScriptRequest(
+        intent=intent,
+        language="lua",
+        save=True,
+        input_schema=_IN_V,
+        output_schema=_OUT_R,
+        constraints={"reuse_policy": "force_new"},
+    )
+    return await svc.generate_lua(req)
+
+
+async def _artifact_count(db_session, name):
+    from sqlalchemy import func, select
+
+    from ritesmith.registry.models import Artifact as ArtifactORM
+
+    return await db_session.scalar(
+        select(func.count()).select_from(ArtifactORM).where(ArtifactORM.name == name)
+    )
+
+
+@pytest.mark.asyncio
+async def test_medium_risk_generates_and_passes_tests_then_persists(db_session):
+    from ritesmith.tests.factories import unique
+
+    intent = unique("double the value")
+    llm = _MediumRiskLLM([{"input": {"value": 3}, "expected_output": {"result": 6}}])
+    resp = await _generate_direct(db_session, llm, intent)
+    assert llm.gen_tests_called
+    assert resp.validation.valid
+    assert await _artifact_count(db_session, resp.artifact.name) == 1
+
+
+@pytest.mark.asyncio
+async def test_medium_risk_without_tests_is_not_accepted(db_session):
+    from ritesmith.tests.factories import unique
+
+    intent = unique("double the value")
+    llm = _MediumRiskLLM([])  # no sanity cases could be produced
+    resp = await _generate_direct(db_session, llm, intent)
+    assert llm.gen_tests_called
+    # Validated (the script is fine), but the risk gate blocks acceptance/persistence.
+    assert resp.validation.valid
+    assert await _artifact_count(db_session, resp.artifact.name) == 0
+
+
+@pytest.mark.asyncio
+async def test_medium_risk_with_failing_generated_test_drives_repair(db_session):
+    # A wrong expected_output makes test execution fail → valid=False → repair.
+    from ritesmith.tests.factories import unique
+
+    intent = unique("double the value")
+    llm = _MediumRiskLLM([{"input": {"value": 3}, "expected_output": {"result": 999}}])
+    with pytest.raises(AssertionError, match="repair must not run"):
+        await _generate_direct(db_session, llm, intent)

@@ -91,6 +91,7 @@ _MAX_TOKENS: dict[str, int] = {
     "workflow_gen": 8000,
     "workflow_repair": 8000,
     "reuse_judge": 256,
+    "test_gen": 1500,
 }
 _TEMPERATURE: dict[str, float] = {
     "intent": 0.0,
@@ -99,6 +100,7 @@ _TEMPERATURE: dict[str, float] = {
     "workflow_gen": 0.2,
     "workflow_repair": 0.0,
     "reuse_judge": 0.0,
+    "test_gen": 0.0,
 }
 
 
@@ -330,6 +332,32 @@ class OpenAIProvider(LLMProvider):
             return IntentAnalysis(**data), stats
         except Exception as e:
             raise LLMError(f"Failed to parse intent analysis: {e}") from e
+
+    async def generate_tests(
+        self,
+        goal: str,
+        input_schema: dict | None,
+        output_schema: dict | None,
+    ) -> tuple[list[dict], LLMCallStats]:
+        raw, stats = await self._chat_with_retry(
+            model=self.model,
+            system=prompts.test_generation_system(),
+            user=prompts.test_generation_user(goal, input_schema, output_schema),
+            max_tokens=_MAX_TOKENS["test_gen"],
+            temperature=_TEMPERATURE["test_gen"],
+            method="test_gen",
+        )
+        try:
+            data = json.loads(raw)
+        except Exception as e:
+            raise LLMError(f"Failed to parse generated tests: {e}") from e
+        cases = data.get("test_cases", [])
+        if not isinstance(cases, list):
+            return [], stats
+        valid = [
+            c for c in cases if isinstance(c, dict) and "input" in c and "expected_output" in c
+        ]
+        return valid, stats
 
     async def judge_reuse(
         self,

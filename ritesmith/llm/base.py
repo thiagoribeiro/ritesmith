@@ -107,6 +107,20 @@ class LLMProvider(ABC):
     ) -> tuple[RepairResponse, LLMCallStats]:
         raise NotImplementedError("Luau repair not implemented in this provider")
 
+    async def generate_tests(
+        self,
+        goal: str,
+        input_schema: dict | None,
+        output_schema: dict | None,
+    ) -> tuple[list[dict], LLMCallStats]:
+        """Produce sanity test cases ([{input, expected_output}]) from the goal+schemas.
+
+        Derived from the intent, not from any candidate script, so they exercise
+        expected behaviour rather than mirroring whatever was generated. These are
+        a sanity gate, not a correctness proof — the `expected_output` can be wrong.
+        """
+        raise NotImplementedError("test generation not implemented in this provider")
+
     async def judge_reuse(
         self,
         intent: str,

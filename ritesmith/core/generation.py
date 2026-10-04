@@ -69,6 +69,19 @@ def _certification(language: str, strict_clean: bool) -> str:
     return "strict" if strict_clean else "nonstrict"
 
 
+_RISK_ORDER = ["low", "medium", "high", "critical"]
+
+
+def _risk_at_least(risk: str | None, threshold: str | None) -> bool:
+    """True when `risk` is at or above `threshold`. Unknown/empty threshold disables."""
+    if not threshold or threshold not in _RISK_ORDER:
+        return False
+    r = risk or "low"
+    if r not in _RISK_ORDER:
+        return False
+    return _RISK_ORDER.index(r) >= _RISK_ORDER.index(threshold)
+
+
 class GenerationService:
     def __init__(
         self,
@@ -135,9 +148,12 @@ class GenerationService:
         last_script: str | None = None
         last_validation: ValidationResult | None = None
         final_response: LuaGenerationResponse | None = None
+        effective_tests: list[dict] | None = (req.context or {}).get("test_cases")
+        tests_attempted = False
 
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_script, last_validation, final_response
+            nonlocal effective_tests, tests_attempted
 
             if language == "luau" and (attempt == 1 or last_script is None):
                 llm_response, stats = await self.llm.generate_luau(
@@ -206,11 +222,29 @@ class GenerationService:
                     },
                 )
 
+            # P0.3 risk-class test gate: a medium+ risk script must pass executed
+            # test cases. Use the caller's cases, else generate sanity cases once
+            # from the intent+schemas (not the script). Failing cases block `valid`
+            # and drive repair; *missing* cases are an acceptance gate handled after
+            # the loop (repairing the script cannot conjure tests).
+            require_tests = _risk_at_least(
+                llm_response.risk_assessment, self.settings.require_tests_min_risk
+            )
+            if require_tests and not effective_tests and not tests_attempted:
+                tests_attempted = True
+                try:
+                    generated, _tstats = await self.llm.generate_tests(
+                        req.intent, req.input_schema, req.output_schema
+                    )
+                    effective_tests = generated or None
+                except NotImplementedError:
+                    pass
+
             validation = await self.validator.run(
                 content=script,
                 artifact_type=artifact_type,
                 constraints=constraints,
-                test_cases=(req.context or {}).get("test_cases"),
+                test_cases=effective_tests,
                 profile=profile,
                 input_schema=req.input_schema,
                 output_schema=req.output_schema,
@@ -257,10 +291,19 @@ class GenerationService:
             # generation failure; otherwise it is persisted as certification="nonstrict"
             # and the PolicyEngine will require approval to run it.
             require_strict = self.settings.require_strict_typecheck and language == "luau"
+            # P0.3: a medium+ risk script with no executed test cases (caller or
+            # generated) is not accepted — this is an acceptance gate, not a
+            # validity failure, so it does not drive the repair loop.
+            require_tests = _risk_at_least(
+                final_response.risk_assessment if final_response else None,
+                self.settings.require_tests_min_risk,
+            )
+            tests_ok = (not require_tests) or bool(effective_tests)
             accepted = bool(
                 last_validation
                 and last_validation.valid
                 and not (require_strict and not strict_clean)
+                and tests_ok
             )
             job.status = "completed" if accepted else "failed"
             job.finished_at = datetime.now(UTC)

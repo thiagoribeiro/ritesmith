@@ -435,6 +435,34 @@ Analyse and respond with JSON matching this schema:
 # ---------------------------------------------------------------------------
 
 
+def test_generation_system() -> str:
+    return """\
+You write black-box test cases for a RiteSmith capability, from its goal and
+input/output schemas ALONE — you do not see the implementation.
+
+RULES
+- Produce 2 to 4 cases. Each is an input object (matching the input schema) and
+  the expected output object (matching the output schema) a correct capability
+  must return for that input.
+- Cover a typical case and at least one boundary/edge case the goal implies.
+- Only include inputs that are valid per the input schema.
+- Expected outputs must be exact values, not placeholders or ranges.
+- If you cannot determine an exact expected output for a case, omit that case
+  rather than guessing — a wrong expectation is worse than fewer cases.
+
+Respond with JSON only: {"test_cases": [{"input": {...}, "expected_output": {...}}]}."""
+
+
+def test_generation_user(goal: str, input_schema: dict | None, output_schema: dict | None) -> str:
+    parts = [f"GOAL: {_sanitize_goal(goal)}"]
+    if input_schema:
+        parts.append(f"INPUT SCHEMA:\n{json.dumps(input_schema, indent=2)}")
+    if output_schema:
+        parts.append(f"OUTPUT SCHEMA:\n{json.dumps(output_schema, indent=2)}")
+    parts.append('Respond with {"test_cases": [{"input": {...}, "expected_output": {...}}, ...]}.')
+    return "\n\n".join(parts)
+
+
 def reuse_judge_system() -> str:
     return """\
 You decide whether an existing RiteSmith capability already satisfies a new intent.

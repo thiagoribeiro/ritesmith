@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # Generation
     generation_max_attempts: int = 5
 
+    # Test gate: artifacts at/above this risk level must pass executed test cases
+    # (caller-supplied, else LLM-generated as a sanity gate). "" / "off" disables.
+    require_tests_min_risk: str = "medium"
+
     # Reuse (three-stage: FTS recall → deterministic contract compat → LLM judge)
     reuse_recall_limit: int = 10
     # When true (default), an LLM makes the final relevance call among compatible
