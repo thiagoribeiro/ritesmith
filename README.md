@@ -64,7 +64,7 @@ Trama        →  executes it reliably
 
 RiteSmith is the materialization layer.
 
-Given an intent, it searches for existing capabilities, generates new Lua scripts and workflow definitions when needed, validates them under guardrails (schema, policy, sandbox tests), registers them in a versioned artifact registry, and delegates durable execution to [Trama](https://trama.run).
+Given an intent, it searches for existing capabilities, generates new scripts (Luau by default, executed by the embedded [LunarDyson](https://github.com/thiagoribeiro/lunardyson) runtime) and workflow definitions when needed, validates them under guardrails (type check, policy, sandbox tests), registers them in a versioned artifact registry, and delegates durable execution to [Trama](https://trama.run).
 
 The LLM is no longer controlling the system while it runs. It defines the system before it runs.
 
@@ -200,7 +200,7 @@ end
 
 | Concept | What it is |
 |---|---|
-| **Capability** | A named, versioned, schema-validated Lua script with input/output contracts, risk level, and side-effect declaration |
+| **Capability** | A named, versioned, schema-validated script (`luau_script` by default, `lua_script` legacy) with input/output contracts, risk level, and side-effect declaration |
 | **Artifact** | A stored capability or workflow definition — versioned, searchable, reusable |
 | **Plan** | A proposed set of capabilities + workflow generated from an intent, with optional approval gate |
 | **Execution** | A durable record of running an artifact — status, input, output, duration, audit metadata |
@@ -221,6 +221,11 @@ Providers are the single source of truth for both surfaces: Lua host functions (
 | `email` | Gmail search/read | `RITESMITH_GOOGLE_TOKEN_JSON` |
 | `duckdb` | local SQL analytics (read-only) | `RITESMITH_DUCKDB_PATH` |
 | `obsidian` | Obsidian vault search/read | `RITESMITH_OBSIDIAN_VAULT_PATH` |
+| `report` | render/list HTML reports | `RITESMITH_REPORTS_PATH` |
+| `grafana` | dashboards, Prometheus queries | `RITESMITH_GRAFANA_URL` |
+| `casp` | device/resource control (query/resolve/execute) | `RITESMITH_CASP_PROVIDERS` |
+| `home` | LoomHarbor device control, findtag zones | `RITESMITH_LOOMHARBOR_URL` |
+| `stat` | running min/max, counters (pure) | — |
 
 Active providers are registered in the artifact registry at startup and returned by `GET /providers`.
 
@@ -236,7 +241,7 @@ The `mcp-server/` directory is a standalone MCP server that gives the agent two 
 **RiteSmith meta-tools** — delegate to the HTTP API:
 `ritesmith_plan`, `ritesmith_generate`, `ritesmith_search_artifacts`, `ritesmith_execute`, `ritesmith_get_execution`, `ritesmith_list_capabilities`
 
-The agent calls domain tools directly for fast, stateless lookups. It calls `ritesmith_plan` when the task needs generation, validation, registration, or durable execution. `ritesmith_generate` automatically decides whether to produce a Lua script or a Trama workflow from the given intent.
+The agent calls domain tools directly for fast, stateless lookups. It calls `ritesmith_plan` when the task needs generation, validation, registration, or durable execution. `ritesmith_generate` automatically decides whether to produce a script or a Trama workflow from the given intent.
 
 Run via stdio (spawned as subprocess by the agent):
 
@@ -258,9 +263,9 @@ flowchart LR
   RS --> REG[Artifact Registry\nPostgreSQL · FTS]
   RS --> DISP[GenerationDispatcher\nintent analysis → route]
   DISP --> GEN[LLM Generation Loop\nLua · Trama workflows]
-  GEN --> VAL[Validation + Repair\nschema · policy · sandbox]
+  GEN --> VAL[Validation + Repair\ntype check · policy · sandbox]
   VAL --> REG
-  REG --> LUA[Lua Runtime\nlupa sandbox]
+  REG --> LUA[Script Runtime\nLunarDyson/Luau · lupa/Lua legacy]
   REG --> TR[Trama\ndurable execution]
   TR -->|/trama/execute| RS
   RS --> P
@@ -276,7 +281,7 @@ flowchart LR
 POST /generate
 ```
 
-Accepts `intent` + optional `save`, `context`, `constraints`, `input_schema`, `output_schema`. Runs intent analysis to decide whether to produce a Lua script or a Trama workflow, then runs the full generate → validate → repair → register loop and returns the validated artifact.
+Accepts `intent` + optional `save`, `context`, `constraints`, `input_schema`, `output_schema`. Runs intent analysis to decide whether to produce a script (Luau/Lua) or a Trama workflow, then runs the full generate → validate → repair → register loop and returns the validated artifact.
 
 ```json
 {
@@ -305,8 +310,14 @@ GET  /plans/{plan_id}
 GET  /artifacts?query=extract+invoice&artifact_type=lua_script
 GET  /artifacts/{artifact_id}
 GET  /artifacts/{artifact_id}/versions
+GET  /artifacts/{artifact_id}/versions/{version}
 POST /artifacts
+POST /artifacts/{artifact_id}/versions/{version}/approve
 ```
+
+`POST /artifacts/{id}/versions/{v}/approve` issues the execution `approval_token` for
+that exact version (an HMAC the server verifies). An execution that policy gates on
+approval only runs when given a matching token; an arbitrary string no longer works.
 
 Full-text search via `query` parameter (PostgreSQL `tsvector`).
 
@@ -323,7 +334,8 @@ Runs a Lua capability directly or delegates a workflow to Trama.
 {
   "artifact_id": "art_01HX...",
   "input": {"text": "hello   world"},
-  "idempotency_key": "req_abc123"
+  "idempotency_key": "req_abc123",
+  "approval_token": "<from /artifacts/{id}/versions/{v}/approve, when policy requires it>"
 }
 ```
 
@@ -367,27 +379,74 @@ GET /metrics/
 
 ---
 
-## Lua script contract
+## Script contract
 
-Every Lua capability exposes a single `run` function:
+RiteSmith generates two script runtimes, selected by `RITESMITH_SCRIPT_LANGUAGE`
+(`luau`, the default, or `lua`). New capabilities are `luau_script`; existing
+`lua_script` artifacts keep running on the legacy lupa runtime unchanged. Both
+expose a single `run` function and the same tool surface.
+
+**Luau (default)** — executed by the embedded [LunarDyson](https://github.com/thiagoribeiro/lunardyson)
+runtime. Tools and provider functions are called as `tools.<ns>.<fn>({ ... })`, and
+generation injects typed signatures so the program is type-checked (`--!strict`)
+before it is ever run:
+
+```luau
+function run(input: Input, context: Context): Output
+  local p = tools.market.coin_price({ symbol = input.symbol })
+  if p.error then return { error = p.error, message = p.message } end
+  return { price = p.price }
+end
+```
+
+**Lua (legacy)** — executed by the lupa sandbox, host functions as bare globals:
 
 ```lua
 function run(input, context)
-  -- input matches the declared input_schema
-  -- return value must match output_schema
   return { result = "ok" }
 end
 ```
 
-Rules:
-- `input` is validated against the input schema before execution
-- return value is validated against the output schema after
-- unsafe stdlib modules are disabled
-- host functions are explicit and profile-controlled
-- timeout: `RITESMITH_LUA_TIMEOUT_MS` (default 1000 ms)
-- memory: `RITESMITH_LUA_MEMORY_LIMIT_MB` (default 32 MB)
+Rules (both runtimes):
+- `input` is validated against the input schema before execution; the return value
+  against the output schema after
+- unsafe stdlib modules are disabled; host functions are explicit and profile-controlled
+- timeout: `RITESMITH_LUA_TIMEOUT_MS` (default 1000 ms); memory: `RITESMITH_LUA_MEMORY_LIMIT_MB` (default 32 MB)
 
-Available host functions depend on the sandbox profile (`transform_only`, `readonly_network`, `notification`, `sensitive_personal`, `analytics_local`, `trusted_internal`).
+Host functions depend on the sandbox profile (`transform_only`, `readonly_network`,
+`notification`, `sensitive_personal`, `analytics_local`, `filesystem_write`,
+`reporting`, `side_effects`, `trusted_internal`).
+
+## Why Luau + LunarDyson
+
+RiteSmith started on Lua (lupa). It moved to Luau, executed by a purpose-built
+runtime (LunarDyson), for reasons specific to running LLM-generated code safely and
+cheaply:
+
+- **Type check before execution.** Luau is gradually typed. Generation feeds the
+  tool signatures (derived from each provider's JSON Schema) into the prompt and into
+  `luau-analyze`, so whole classes of bugs — using a tool result without checking its
+  `ok`/`error`, a wrong field, a return that violates `output_schema` — are caught at
+  generation time, before anything runs and without another LLM call. This matters
+  because most production artifacts have no hand-written test cases; the type check is
+  the semantic gate.
+- **Real resource limits.** LunarDyson enforces a wall-clock/VM deadline that actually
+  interrupts a runaway program, a memory budget via a custom allocator, and per-tool
+  and per-effect-class budgets — things the in-process lupa sandbox could not enforce
+  (its timeout could not kill a spinning thread).
+- **Capability-first, default-deny.** A generated program starts with no I/O. It can
+  only reach the outside world through the `tools.*` a host registered; a tool that was
+  not registered does not exist in the program's environment.
+- **A stable, pinned language.** Luau is pinned to one upstream version, so the
+  language the saved artifacts are written in does not drift when a dependency moves.
+  (The lupa path had silently become Lua 5.5.)
+- **A benchmark decided it.** A 450-sample run showed the production model generates
+  Luau that passes tests at the same rate as Lua (100% vs 100% on the primary model),
+  so the move cost nothing in generation quality while adding the guarantees above.
+
+LunarDyson is a separate, generic runtime (capability-first execution for untrusted
+Luau programs); RiteSmith is its first consumer. Not in production yet: the host-side
+sandbox/auth hardening tracked in the roadmap.
 
 ---
 
@@ -395,7 +454,7 @@ Available host functions depend on the sandbox profile (`transform_only`, `reado
 
 RiteSmith generates [Trama v2](https://trama.run) workflow definitions. Each step is an HTTP call — there is no intermediate abstraction.
 
-Node kinds: `task` (HTTP call), `switch` (JSON Logic branch), `sleep` (time pause).
+Node kinds: `task` (HTTP call), `switch` (JSON Logic branch), `sleep` (time pause), and `split`/`join` (parallel fan-out: a split runs its branches as independent child executions; the join barriers on all of them and the parent reads the aggregated results via `nodes.<join>.response.body.branches`).
 
 ```json
 {
@@ -503,10 +562,12 @@ ssh user@host "cd ~/ritesmith/deploy && docker compose build && docker compose u
 |---|---|---|
 | `RITESMITH_DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection |
 | `OPENAI_API_KEY` | — | Required for generation |
-| `RITESMITH_LLM_MODEL` | `gpt-4.1` | Generation model |
-| `RITESMITH_LLM_MODEL_FAST` | `gpt-4o-mini` | Repair / fast calls |
-| `RITESMITH_LUA_TIMEOUT_MS` | `1000` | Sandbox timeout |
-| `RITESMITH_LUA_SANDBOX_WORKERS` | `8` | Parallel Lua workers |
+| `RITESMITH_LLM_MODEL` | `gpt-5-mini` | Generation model |
+| `RITESMITH_LLM_MODEL_FAST` | `gpt-4.1-nano` | Intent analysis / fast calls |
+| `RITESMITH_SCRIPT_LANGUAGE` | `luau` | Language for new scripts: `luau` (LunarDyson) or `lua` (lupa); falls back to `lua` if the lunardyson package is missing |
+| `RITESMITH_LUA_TIMEOUT_MS` | `1000` | Script VM timeout (both runtimes) |
+| `RITESMITH_LUA_MEMORY_LIMIT_MB` | `32` | Script memory budget |
+| `RITESMITH_LUA_SANDBOX_WORKERS` | `8` | Parallel script workers |
 | `RITESMITH_GENERATION_MAX_ATTEMPTS` | `5` | Repair loop limit |
 | `RITESMITH_POLICY_DEFAULT` | `deny` | Default policy decision |
 | `RITESMITH_WORKFLOW_ENGINE_URL` | — | Trama endpoint for delegation |
@@ -561,7 +622,10 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 - Execution status tracking and history
 - Idempotency keys
 - Audit log
-- Tool providers (8 namespaces) — dual Lua / MCP surface
+- Luau script runtime (LunarDyson) — default; type-checked before execution, with VM time / memory / tool / effect budgets; Lua (lupa) kept for legacy artifacts
+- Server-issued approval tokens (HMAC per artifact version) gating policy-restricted executions
+- Split/join parallel nodes in generated Trama workflows
+- Tool providers (13 namespaces) — dual Lua / MCP surface
 - MCP server (`mcp-server/`)
 - Alembic migrations
 - Prometheus metrics (HTTP, LLM, generation, execution, audit) + Grafana dashboard
@@ -575,9 +639,9 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 
 ### Next
 
+- Host-side security hardening — API authentication, compile-only `/validate`, DNS-resolving SSRF guard
 - Embeddings-based artifact search
 - Provider/tool manifests UI
-- Approval flow API
 - Generated test suggestions
 - Signed artifact versions
 
