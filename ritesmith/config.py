@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     # budget is a generation FAILURE. When false (default), it is persisted as
     # certification="nonstrict" and the PolicyEngine requires approval to run it.
     require_strict_typecheck: bool = False
+    # When true, a requested script_language="luau" with the lunardyson package
+    # missing is a hard startup failure instead of a silent fallback to "lua" —
+    # set this in production so the isolation guarantee never changes unnoticed.
+    require_luau: bool = False
 
     # Lua runtime (lua_timeout_ms / lua_memory_limit_mb also bound Luau executions)
     lua_enabled: bool = True

@@ -388,3 +388,38 @@ async def test_medium_risk_with_failing_generated_test_drives_repair(db_session)
     llm = _MediumRiskLLM([{"input": {"value": 3}, "expected_output": {"result": 999}}])
     with pytest.raises(AssertionError, match="repair must not run"):
         await _generate_direct(db_session, llm, intent)
+
+
+# ------------------------------------------------------------------
+# P0.5: explicit Luau requirement at startup
+# ------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_require_luau_fails_startup_when_lunardyson_missing(monkeypatch):
+    from ritesmith.api.app import _lifespan, create_app
+    from ritesmith.config import get_settings
+    from ritesmith.runtime import luau
+
+    monkeypatch.setenv("RITESMITH_SCRIPT_LANGUAGE", "luau")
+    monkeypatch.setenv("RITESMITH_REQUIRE_LUAU", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr(luau, "luau_available", lambda: False)
+
+    app = create_app()
+    with pytest.raises(RuntimeError, match="lunardyson"):
+        async with _lifespan(app):
+            pass
+
+
+def test_missing_luau_without_require_falls_back_to_lua(monkeypatch):
+    # require_luau=false → no startup error; language quietly resolves to lua.
+    from ritesmith.config import get_settings
+    from ritesmith.runtime import luau
+
+    monkeypatch.setenv("RITESMITH_SCRIPT_LANGUAGE", "luau")
+    monkeypatch.setenv("RITESMITH_REQUIRE_LUAU", "false")
+    get_settings.cache_clear()
+    monkeypatch.setattr(luau, "luau_available", lambda: False)
+
+    assert luau.effective_script_language(get_settings()) == "lua"

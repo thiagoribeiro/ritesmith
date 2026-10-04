@@ -42,16 +42,22 @@ async def _lifespan(app: FastAPI):
 
     log = logging.getLogger(__name__)
 
-    from ritesmith.runtime.luau import effective_script_language
+    from ritesmith.runtime.luau import effective_script_language, luau_available
 
-    language = effective_script_language(get_settings())
-    if language != get_settings().script_language:
+    settings = get_settings()
+    if settings.script_language == "luau" and not luau_available():
+        if settings.require_luau:
+            raise RuntimeError(
+                "RITESMITH_SCRIPT_LANGUAGE=luau and RITESMITH_REQUIRE_LUAU=true, but the "
+                "lunardyson package is not installed. Refusing to start and silently fall "
+                "back to the lua (lupa) sandbox, which has different isolation guarantees. "
+                "Install lunardyson or set RITESMITH_REQUIRE_LUAU=false."
+            )
         log.warning(
-            "script_language=%s requested but lunardyson is missing; generating lua",
-            get_settings().script_language,
+            "script_language=luau requested but lunardyson is missing; generating lua",
         )
     else:
-        log.info("new scripts are generated in %s", language)
+        log.info("new scripts are generated in %s", effective_script_language(settings))
 
     # Validate policy_default at startup to catch misconfiguration early
     try:
