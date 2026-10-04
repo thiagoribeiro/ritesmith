@@ -54,6 +54,14 @@ class Settings(BaseSettings):
     lua_memory_limit_mb: int = 32
     lua_sandbox_workers: int = 8
 
+    # Luau budgets beyond the VM CPU deadline (lua_timeout_ms). The VM deadline does
+    # not interrupt a blocked Python tool call (the VM is not running during it), so:
+    #   - luau_tool_timeout_ms caps each individual host-tool call (0 disables);
+    #   - luau_wall_clock_ms is a whole-execution wall-clock backstop that abandons
+    #     the run if exceeded (0 disables). Set it above VM + summed tool timeouts.
+    luau_tool_timeout_ms: int = 5000
+    luau_wall_clock_ms: int = 0
+
     # Generation
     generation_max_attempts: int = 5
 

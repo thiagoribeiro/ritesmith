@@ -26,6 +26,7 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 
 import jsonschema
 
@@ -277,6 +278,17 @@ def describe_tools_for_prompt(profile: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+# Sentinel kept out of the "Runtime error:" self-heal path: a tool timeout is a
+# latency event, not a bad artifact, so it must not auto-deprecate + regenerate.
+_TOOL_TIMEOUT_SENTINEL = "RiteSmith tool timeout"
+
+
+def _invoke(fn: Callable, positional: list[str] | None, args: dict):
+    if positional is not None:
+        return fn(*[args[k] for k in positional if k in args])
+    return fn(**args)
+
+
 def _adapter(fn: Callable, positional: list[str] | None) -> Callable:
     def call(args):
         if args is None or args == []:
@@ -285,9 +297,19 @@ def _adapter(fn: Callable, positional: list[str] | None) -> Callable:
             raise TypeError(
                 "tools take a single table of named arguments, e.g. tools.ns.fn({ x = 1 })"
             )
-        if positional is not None:
-            return fn(*[args[k] for k in positional if k in args])
-        return fn(**args)
+        # Per-tool wall-clock timeout. The VM CPU deadline cannot interrupt a blocked
+        # Python call, so run it on a side thread with a deadline. A timed-out thread
+        # cannot be force-killed (it leaks until it returns), but the VM is freed and
+        # network clients already carry their own httpx timeouts.
+        timeout_ms = get_settings().luau_tool_timeout_ms
+        if not timeout_ms or timeout_ms <= 0:
+            return _invoke(fn, positional, args)
+        future = _get_tool_executor().submit(_invoke, fn, positional, args)
+        try:
+            return future.result(timeout=timeout_ms / 1000)
+        except FuturesTimeout as e:
+            future.cancel()
+            raise TimeoutError(f"{_TOOL_TIMEOUT_SENTINEL}: exceeded {timeout_ms}ms") from e
 
     return call
 
@@ -312,6 +334,8 @@ def build_runtime(profile: str, cpu_time_ms: int, memory_mb: float, type_decls: 
 _local = threading.local()
 _executor: ThreadPoolExecutor | None = None
 _executor_lock = threading.Lock()
+_tool_executor: ThreadPoolExecutor | None = None
+_tool_executor_lock = threading.Lock()
 
 
 def _get_executor() -> ThreadPoolExecutor:
@@ -324,12 +348,28 @@ def _get_executor() -> ThreadPoolExecutor:
         return _executor
 
 
+def _get_tool_executor() -> ThreadPoolExecutor:
+    """Side pool for per-tool timeouts; distinct from the sandbox pool to avoid deadlock."""
+    global _tool_executor
+    with _tool_executor_lock:
+        if _tool_executor is None:
+            _tool_executor = ThreadPoolExecutor(
+                max_workers=max(8, get_settings().lua_sandbox_workers * 2),
+                thread_name_prefix="luau-tool",
+            )
+        return _tool_executor
+
+
 def shutdown_executor() -> None:
-    global _executor
+    global _executor, _tool_executor
     with _executor_lock:
         if _executor is not None:
             _executor.shutdown(wait=False)
             _executor = None
+    with _tool_executor_lock:
+        if _tool_executor is not None:
+            _tool_executor.shutdown(wait=False)
+            _tool_executor = None
 
 
 def _pooled_runtime(profile: str, cpu_time_ms: int, memory_mb: float):
@@ -358,6 +398,11 @@ def run_luau(
     kind, message = result.error_kind, result.message
     if kind == "timeout":
         return None, f"Execution timed out after {timeout_ms}ms", True, peak
+    # A per-tool timeout surfaces as a runtime error carrying our sentinel; treat it
+    # as a timeout (timed_out=True, no "Runtime error:" prefix) so it does not trigger
+    # the auto-deprecate/regenerate self-heal — a slow tool is not a broken artifact.
+    if message and _TOOL_TIMEOUT_SENTINEL in message:
+        return None, f"Tool call timed out: {message}", True, peak
     if kind == "syntax":
         return None, f"Syntax/load error: {message}", False, peak
     if kind == "contract":
@@ -372,6 +417,7 @@ class LuauScriptRuntime:
     def __init__(self, settings: Settings):
         self.default_timeout_ms = settings.lua_timeout_ms
         self.memory_limit_mb = settings.lua_memory_limit_mb
+        self.wall_clock_ms = settings.luau_wall_clock_ms
 
     async def execute(
         self,
@@ -385,7 +431,7 @@ class LuauScriptRuntime:
         timeout = timeout_ms if timeout_ms is not None else self.default_timeout_ms
         start = time.monotonic()
         loop = asyncio.get_running_loop()
-        output, error, timed_out, peak = await loop.run_in_executor(
+        fut = loop.run_in_executor(
             _get_executor(),
             run_luau,
             content,
@@ -395,6 +441,25 @@ class LuauScriptRuntime:
             timeout,
             self.memory_limit_mb,
         )
+        # Wall-clock backstop: if a tool (or chain of tools) blocks past the cap, stop
+        # waiting and return a timeout. The sandbox thread is abandoned, not killed —
+        # it keeps running until its own tool/VM deadlines release it.
+        if self.wall_clock_ms and self.wall_clock_ms > 0:
+            try:
+                output, error, timed_out, peak = await asyncio.wait_for(
+                    fut, timeout=self.wall_clock_ms / 1000
+                )
+            except TimeoutError:
+                lua_timeout_total.inc()
+                return RuntimeResult(
+                    output={},
+                    error=f"Execution abandoned after wall-clock {self.wall_clock_ms}ms",
+                    duration_ms=int((time.monotonic() - start) * 1000),
+                    memory_used_bytes=0,
+                    timed_out=True,
+                )
+        else:
+            output, error, timed_out, peak = await fut
         duration_ms = int((time.monotonic() - start) * 1000)
         if timed_out:
             lua_timeout_total.inc()

@@ -383,3 +383,69 @@ async def test_luau_artifact_runs_on_lunardyson(db_session):
     )
     assert result.status == ExecutionStatus.succeeded
     assert result.output == {"min_price": 2}
+
+
+# ---------------------------------------------------------------------------
+# P1.2: tool timeout + wall-clock budgets
+# ---------------------------------------------------------------------------
+
+
+def test_tool_timeout_raises_sentinel(monkeypatch):
+    import time as _t
+
+    from ritesmith.config import get_settings
+    from ritesmith.runtime import luau as L
+
+    monkeypatch.setenv("RITESMITH_LUAU_TOOL_TIMEOUT_MS", "50")
+    get_settings.cache_clear()
+
+    def slow(**kwargs):
+        _t.sleep(0.4)
+        return {"ok": True}
+
+    wrapped = L._adapter(slow, None)
+    with pytest.raises(TimeoutError, match="RiteSmith tool timeout"):
+        wrapped({"x": 1})
+
+
+def test_run_luau_maps_tool_timeout_to_timeout_not_self_heal(monkeypatch):
+    from ritesmith.runtime import luau as L
+
+    class _Stats:
+        peak_memory_bytes = 123
+
+    class _Result:
+        ok = False
+        error_kind = "runtime"
+        message = "tools.x.y: TimeoutError: RiteSmith tool timeout: exceeded 50ms"
+        stats = _Stats()
+
+    monkeypatch.setattr(
+        L,
+        "_pooled_runtime",
+        lambda *a, **k: type("RT", (), {"execute": lambda self, *a, **k: _Result()})(),
+    )
+    output, error, timed_out, _peak = L.run_luau("x", {}, {}, "transform_only", 1000, 16)
+    assert output is None
+    assert timed_out is True
+    assert "Tool call timed out" in error
+    # Must not look like a contract crash, or the self-heal would deprecate the artifact.
+    assert not error.startswith(("Runtime error:", "Syntax/load error:"))
+
+
+async def test_wall_clock_abandons_slow_execution(monkeypatch):
+    from ritesmith.config import get_settings
+    from ritesmith.runtime import luau as L
+
+    def slow_run(*args, **kwargs):
+        import time as _t
+
+        _t.sleep(0.5)
+        return ({"ok": 1}, None, False, 0)
+
+    monkeypatch.setattr(L, "run_luau", slow_run)
+    rt = L.LuauScriptRuntime(get_settings())
+    rt.wall_clock_ms = 100
+    result = await rt.execute("function run() return {} end", {}, {})
+    assert result.timed_out
+    assert "wall-clock" in result.error
