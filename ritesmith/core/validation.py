@@ -6,8 +6,11 @@ Checks para lua_script (em ordem):
 3. SizeLimitCheck       — máx 60 linhas, máx 4KB
 4. SchemaPresenceCheck  — deve ter 'function run(input'
 5. AllowedPrimitivesCheck — host functions usadas estão no profile?
-6. PolicyCheck          — stub (always allow) — wired na Fase 6
-7. TestExecutionCheck   — executa test_cases fornecidos
+6. TestExecutionCheck   — executa test_cases fornecidos
+
+Política NÃO é verificada aqui: `valid` significa apenas "validado" (sintaxe,
+contrato, tipos, testes). A aprovação para execução é do PolicyEngine, no
+PlanBuilder e no ExecutionService (os três estados: gerado → validado → aprovado).
 
 Checks para luau_script (LunarDyson):
 1. TypeCheck            — luau-analyze in-process contra as tools do profile e os tipos
@@ -85,7 +88,6 @@ class ValidationPipeline:
             checks.extend(self._check_size(content, constraints))
             checks.extend(self._check_schema_presence(content))
             checks.extend(self._check_allowed_primitives(content, profile))
-            checks.extend(self._check_policy(artifact_type, constraints))
 
             if test_cases:
                 exec_checks = await self._check_test_execution(content, test_cases, profile)
@@ -100,7 +102,6 @@ class ValidationPipeline:
             checks.extend(self._check_forbidden_tokens(content, extra=_LUAU_EXTRA_FORBIDDEN))
             checks.extend(self._check_size(content, constraints, factor=_LUAU_SIZE_FACTOR))
             checks.extend(self._check_schema_presence(content))
-            checks.extend(self._check_policy(artifact_type, constraints))
 
             if test_cases:
                 checks.extend(
@@ -279,12 +280,6 @@ class ValidationPipeline:
                 )
             ]
         return [ValidationCheck(name="allowed_primitives", status="passed")]
-
-    def _check_policy(self, artifact_type: str, constraints: dict | None) -> list[ValidationCheck]:
-        # Stub — PolicyEngine real é wired na Fase 6
-        return [
-            ValidationCheck(name="policy", status="passed", message="policy check stub (allow)")
-        ]
 
     def _check_json_syntax(self, content: str) -> list[ValidationCheck]:
         import json

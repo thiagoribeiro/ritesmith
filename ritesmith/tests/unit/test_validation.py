@@ -193,3 +193,38 @@ async def test_validate_endpoint_workflow(client):
     )
     assert response.status_code == 200
     assert response.json()["valid"] is True
+
+
+# ---------------------------------------------------------------------------
+# P0.1 — validation no longer claims a policy check
+# ---------------------------------------------------------------------------
+
+
+async def test_validation_does_not_include_a_policy_check():
+    """`valid` means validated (syntax/contract/tests), not approved for execution."""
+    v = ValidationPipeline(make_settings())
+    result = await v.run(
+        "function run(input, context) return { ok = true } end",
+        "lua_script",
+    )
+    assert result.valid
+    assert "policy" not in {c.name for c in result.checks}
+
+
+async def test_valid_artifact_still_gated_by_policy_at_execution(client):
+    """A valid, high-risk artifact does not run without approval — policy is the gate."""
+    created = await client.post(
+        "/artifacts",
+        json={
+            "name": "valid_but_high_risk",
+            "artifact_type": "lua_script",
+            "content": "function run(input, context) return { ok = true } end",
+            "risk_level": "high",
+        },
+    )
+    assert created.status_code == 201, created.text
+    resp = await client.post(
+        "/executions", json={"artifact_id": created.json()["artifact_id"], "input": {}}
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "waiting"  # PolicyEngine held it, despite being "valid"
