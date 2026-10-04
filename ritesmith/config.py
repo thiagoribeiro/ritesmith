@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Existing artifacts always run on the runtime of their own artifact_type. "luau"
     # falls back to "lua" when the lunardyson package is not installed.
     script_language: Literal["lua", "luau"] = "luau"
+    # When true, a program that only fails the strict Luau type check after the repair
+    # budget is a generation FAILURE. When false (default), it is persisted as
+    # certification="nonstrict" and the PolicyEngine requires approval to run it.
+    require_strict_typecheck: bool = False
 
     # Lua runtime (lua_timeout_ms / lua_memory_limit_mb also bound Luau executions)
     lua_enabled: bool = True

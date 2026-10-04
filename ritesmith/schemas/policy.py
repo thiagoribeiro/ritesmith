@@ -19,6 +19,9 @@ class PolicyEvaluationRequest(BaseModel):
     # profile, so a caller cannot declare "low" risk on a device-control script.
     runtime_profile: str | None = None
     manual: bool = False
+    # "strict" | "nonstrict" | "lua" | None. A luau artifact that only cleared the
+    # nonstrict type check ("nonstrict") is not certified and requires approval.
+    certification: str | None = None
 
 
 class PolicyDecision(BaseModel):

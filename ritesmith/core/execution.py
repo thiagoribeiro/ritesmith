@@ -136,6 +136,7 @@ class ExecutionService:
             risk_level=version_orm.risk_level or "low",
             runtime_profile=version_meta.get("runtime_profile"),
             manual=version_meta.get("source") == "manual",
+            certification=version_meta.get("certification"),
         )
         decision = self.policy.evaluate(policy_req)
 
