@@ -20,6 +20,7 @@ from ritesmith.api.routes.artifacts import _build_artifact
 from ritesmith.config import Settings
 from ritesmith.core.audit import AuditLogger
 from ritesmith.core.ids import generate_id
+from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_workflow
 from ritesmith.core.repair import run_repair_loop
 from ritesmith.core.reuse import check_reuse
 from ritesmith.llm.base import LLMProvider, WorkflowGenerationResponse
@@ -101,10 +102,15 @@ class WorkflowGenerationService:
     ) -> GeneratedArtifactResponse:
         constraints = req.constraints or {}
         reuse_policy = constraints.get("reuse_policy", "prefer_reuse")
+        presence = None
+        if "presence_reminder" in (req.context or {}):
+            presence = PresenceReminder.model_validate(req.context["presence_reminder"])
 
         # 1. Reuse check
-        if reuse := await check_reuse(
-            self.db, req.intent, ["trama_workflow"], reuse_policy, self.audit
+        if not presence and (
+            reuse := await check_reuse(
+                self.db, req.intent, ["trama_workflow"], reuse_policy, self.audit
+            )
         ):
             return reuse
 
@@ -112,6 +118,14 @@ class WorkflowGenerationService:
         from ritesmith.runtime.host_functions import get_available_provider_capabilities
 
         provider_caps = get_available_provider_capabilities()
+        if presence:
+            missing = {"home.execute", "telegram.send"} - {
+                c["capability_name"] for c in provider_caps
+            }
+            if missing:
+                raise ValueError(
+                    "Presence reminder capabilities unavailable: " + ", ".join(sorted(missing))
+                )
         db_caps = await self._get_capabilities()
 
         # Combined: provider caps first (they're the primary ones), then DB artifacts
@@ -125,7 +139,11 @@ class WorkflowGenerationService:
                 cap_registry[key] = c
 
         # 3. Similar workflows for few-shot examples — include full content like Lua generation does
-        similar = await fts_search(self.db, req.intent, artifact_types=["trama_workflow"], limit=2)
+        similar = (
+            []
+            if presence
+            else await fts_search(self.db, req.intent, artifact_types=["trama_workflow"], limit=2)
+        )
         similar_dicts = [
             {
                 "name": r.artifact.name,
@@ -144,7 +162,17 @@ class WorkflowGenerationService:
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_definition, last_errors, final_response
 
-            if attempt == 1 or last_definition is None:
+            if presence:
+                definition = presence_arrival_workflow(
+                    presence, self.settings.public_url or "http://ritesmith:8081"
+                )
+                llm_resp = WorkflowGenerationResponse(
+                    definition=definition,
+                    name=definition["name"],
+                    description=req.intent,
+                    required_capabilities=["home.execute", "telegram.send"],
+                )
+            elif attempt == 1 or last_definition is None:
                 base_url = self.settings.public_url or "http://ritesmith:8081"
                 llm_resp, stats = await self.llm.generate_workflow(
                     goal=req.intent,
@@ -175,7 +203,7 @@ class WorkflowGenerationService:
 
             final_response = llm_resp
 
-            if self.audit:
+            if self.audit and not presence:
                 await self.audit.log_event(
                     "workflow_generation.llm_call",
                     "workflow_generation",
