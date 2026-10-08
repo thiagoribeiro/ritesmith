@@ -22,7 +22,7 @@ router = APIRouter(prefix="/artifacts", tags=["Artifacts"])
 
 
 def _build_artifact(orm: ArtifactORM, av: ArtifactVersionORM | None = None) -> Artifact:
-    return Artifact(
+    artifact = Artifact(
         artifact_id=orm.artifact_id,
         artifact_type=ArtifactType(orm.artifact_type),
         name=orm.name,
@@ -39,6 +39,10 @@ def _build_artifact(orm: ArtifactORM, av: ArtifactVersionORM | None = None) -> A
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
+    if av is not None:
+        artifact._input_schema = av.input_schema
+        artifact._output_schema = av.output_schema
+    return artifact
 
 
 def _build_version(av: ArtifactVersionORM) -> ArtifactVersion:

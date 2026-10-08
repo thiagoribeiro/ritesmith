@@ -12,21 +12,33 @@ Fluxo:
 
 import json
 import logging
+from copy import deepcopy
 from datetime import UTC, datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.api.routes.artifacts import _build_artifact
 from ritesmith.config import Settings
 from ritesmith.core.audit import AuditLogger
+from ritesmith.core.diagnostics import Diagnostic
+from ritesmith.core.exceptions import LLMError
+from ritesmith.core.generation_budget import bounded_generation, current_budget
 from ritesmith.core.ids import generate_id
+from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_workflow
 from ritesmith.core.repair import run_repair_loop
 from ritesmith.core.reuse import check_reuse
-from ritesmith.llm.base import LLMProvider, WorkflowGenerationResponse
-from ritesmith.registry.search import fts_search
+from ritesmith.llm.base import LLMCallStats, LLMProvider, WorkflowGenerationResponse
+from ritesmith.llm.generation_context import prepare_catalog
+from ritesmith.observability.generation import current_trace, outcome, stage
+from ritesmith.registry.models import Artifact as ArtifactORM
+from ritesmith.registry.models import ArtifactVersion
+from ritesmith.registry.search import SearchResult, fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, ValidationResult
 from ritesmith.schemas.generation import GeneratedArtifactResponse, GenerateWorkflowRequest
+from ritesmith.workflows.semantic import FORMAT_VERSION, compile_plan
+from ritesmith.workflows.semantic_validation import validate_semantics
 from ritesmith.workflows.validator import WorkflowValidator, branch_node_ids
 
 log = logging.getLogger(__name__)
@@ -76,6 +88,8 @@ def _inject_completion_step(definition: dict) -> dict:
         },
         "next": "end",
     }
+    if definition.get("entrypoint") == "end":
+        definition["entrypoint"] = _COMPLETION_NODE_ID
     nodes.append(completion_node)
     return definition
 
@@ -94,17 +108,64 @@ class WorkflowGenerationService:
         self.registry = RegistryService(db)
         self.audit = audit
 
+    @bounded_generation
     async def generate_workflow(
         self,
         req: GenerateWorkflowRequest,
         plan_id: str | None = None,
+        *,
+        initial: tuple[WorkflowGenerationResponse, LLMCallStats] | None = None,
+        recall: list[SearchResult] | None = None,
+        pre_reused: GeneratedArtifactResponse | None = None,
+        reuse_checked: bool = False,
+        validated_scripts: list[Artifact] | None = None,
     ) -> GeneratedArtifactResponse:
+        trace = current_trace.get()
+        if trace is not None:
+            trace.artifact_types.add("trama_workflow")
+        if pre_reused is not None:
+            return pre_reused
         constraints = req.constraints or {}
+        if req.required_capabilities is not None:
+            constraints = {**constraints, "required_capabilities": req.required_capabilities}
         reuse_policy = constraints.get("reuse_policy", "prefer_reuse")
+        continuation = (
+            (req.context or {}).get("workflow_continuation")
+            if self.settings.generation_semantic_workflows
+            else None
+        )
+        if continuation and continuation.get("intent") != req.intent:
+            continuation = None
+        presence = None
+        if "presence_reminder" in (req.context or {}):
+            presence = PresenceReminder.model_validate(req.context["presence_reminder"])
+
+        if recall is None and not presence and not continuation:
+            with stage("recall", "trama_workflow"):
+                recall = await fts_search(
+                    self.db,
+                    req.intent,
+                    artifact_types=["trama_workflow"],
+                    limit=max(2, self.settings.reuse_recall_limit),
+                )
 
         # 1. Reuse check
-        if reuse := await check_reuse(
-            self.db, req.intent, ["trama_workflow"], reuse_policy, self.audit
+        if (
+            not presence
+            and not continuation
+            and not reuse_checked
+            and (
+                reuse := await check_reuse(
+                    self.db,
+                    req.intent,
+                    ["trama_workflow"],
+                    reuse_policy,
+                    self.audit,
+                    results=recall,
+                    llm=self.llm,
+                    settings=self.settings,
+                )
+            )
         ):
             return reuse
 
@@ -112,6 +173,14 @@ class WorkflowGenerationService:
         from ritesmith.runtime.host_functions import get_available_provider_capabilities
 
         provider_caps = get_available_provider_capabilities()
+        if presence:
+            missing = {"home.execute", "telegram.send"} - {
+                c["capability_name"] for c in provider_caps
+            }
+            if missing:
+                raise ValueError(
+                    "Presence reminder capabilities unavailable: " + ", ".join(sorted(missing))
+                )
         db_caps = await self._get_capabilities()
 
         # Combined: provider caps first (they're the primary ones), then DB artifacts
@@ -122,10 +191,14 @@ class WorkflowGenerationService:
         for c in db_caps:
             key = c.get("capability_name") or c.get("capability_id", "")
             if key:
-                cap_registry[key] = c
+                cap_registry.setdefault(key, c)
 
         # 3. Similar workflows for few-shot examples — include full content like Lua generation does
-        similar = await fts_search(self.db, req.intent, artifact_types=["trama_workflow"], limit=2)
+        similar = (
+            []
+            if presence
+            else [r for r in recall or [] if r.artifact.artifact_type == "trama_workflow"][:2]
+        )
         similar_dicts = [
             {
                 "name": r.artifact.name,
@@ -135,28 +208,88 @@ class WorkflowGenerationService:
             for r in similar
         ]
 
+        catalog = prepare_catalog(req.intent, all_caps_for_prompt)
+        if continuation and (
+            continuation.get("version") != FORMAT_VERSION
+            or continuation.get("contract_version") != catalog.version
+        ):
+            continuation = None
+        artifact_contracts = {
+            artifact.artifact_id: {
+                "input_schema": artifact._input_schema,
+                "output_schema": artifact._output_schema,
+            }
+            for artifact in validated_scripts or []
+        }
         validator = WorkflowValidator(cap_registry)
 
         last_definition: dict | None = None
         last_errors: list[str] = []
         final_response: WorkflowGenerationResponse | None = None
+        active_llm = self.llm
 
         async def attempt_fn(attempt: int) -> bool:
-            nonlocal last_definition, last_errors, final_response
+            nonlocal last_definition, last_errors, final_response, active_llm
+            if attempt > 1 and last_definition is None:
+                active_llm = self.llm.fallback()
 
-            if attempt == 1 or last_definition is None:
-                base_url = self.settings.public_url or "http://ritesmith:8081"
-                llm_resp, stats = await self.llm.generate_workflow(
-                    goal=req.intent,
-                    available_capabilities=all_caps_for_prompt,
+            if continuation:
+                catalog = prepare_catalog(req.intent, all_caps_for_prompt)
+                if (
+                    continuation.get("version") != FORMAT_VERSION
+                    or continuation.get("contract_version") != catalog.version
+                ):
+                    raise ValueError(
+                        "Continuation version/contracts changed; explicit regeneration required"
+                    )
+                state = dict((req.context or {}).get("continuation", {}))
+                state["_resume_repeat"] = continuation.get("completed_repeat")
+                definition = compile_plan(
+                    continuation["plan"],
+                    self.settings.public_url or "http://ritesmith:8081",
+                    contract_version=catalog.version,
+                    continuation=state,
+                    intent=req.intent,
                     constraints=constraints,
-                    similar_workflows=similar_dicts,
-                    ritesmith_base_url=base_url,
-                    context=req.context,
                 )
+                llm_resp = WorkflowGenerationResponse(
+                    definition=definition,
+                    name=definition["name"],
+                    description=req.intent,
+                )
+            elif presence:
+                definition = presence_arrival_workflow(
+                    presence, self.settings.public_url or "http://ritesmith:8081"
+                )
+                llm_resp = WorkflowGenerationResponse(
+                    definition=definition,
+                    name=definition["name"],
+                    description=req.intent,
+                    required_capabilities=["home.execute", "telegram.send"],
+                )
+            elif attempt == 1 and initial is not None:
+                llm_resp, stats = initial
+                definition = llm_resp.definition
+            elif attempt == 1 or last_definition is None:
+                base_url = self.settings.public_url or "http://ritesmith:8081"
+                try:
+                    llm_resp, stats = await active_llm.generate_workflow(
+                        goal=req.intent,
+                        available_capabilities=all_caps_for_prompt,
+                        constraints=constraints,
+                        similar_workflows=similar_dicts,
+                        ritesmith_base_url=base_url,
+                        context=req.context,
+                    )
+                except LLMError as exc:
+                    candidate = exc.details.get("candidate")
+                    if isinstance(candidate, (dict, str)):
+                        last_definition = candidate
+                        last_errors = [str(exc)]
+                    raise
                 definition = llm_resp.definition
             else:
-                repair_resp, stats = await self.llm.repair_workflow(
+                repair_resp, stats = await active_llm.repair_workflow(
                     original_goal=req.intent,
                     current_definition=last_definition,
                     validation_errors=last_errors,
@@ -174,16 +307,59 @@ class WorkflowGenerationService:
                 )
 
             final_response = llm_resp
+            if plan_id:
+                definition = _inject_completion_step(deepcopy(definition))
 
-            if self.audit:
+            if self.audit and not presence and not continuation:
                 await self.audit.log_event(
                     "workflow_generation.llm_call",
                     "workflow_generation",
                     plan_id or "none",
-                    payload={"attempt": attempt, "tokens": stats.total_tokens},
+                    payload={
+                        "attempt": attempt,
+                        "tokens": stats.total_tokens,
+                        "stats": stats.model_dump(),
+                    },
                 )
 
-            errors = validator.validate(definition)
+            with stage("validation", "trama_workflow"):
+                errors = validator.validate(definition)
+                if not errors:
+                    ids = {
+                        node.get("action", {}).get("request", {}).get("body", {}).get("artifact_id")
+                        for node in definition.get("nodes", [])
+                        if node.get("kind") == "task"
+                    } - {None}
+                    missing = ids - artifact_contracts.keys()
+                    if missing:
+                        result = await self.db.execute(
+                            select(ArtifactORM, ArtifactVersion)
+                            .join(
+                                ArtifactVersion,
+                                (ArtifactORM.artifact_id == ArtifactVersion.artifact_id)
+                                & (ArtifactORM.current_version == ArtifactVersion.version),
+                            )
+                            .where(
+                                ArtifactORM.artifact_id.in_(missing),
+                                ArtifactORM.artifact_type.in_(["lua_script", "luau_script"]),
+                                ArtifactORM.status.not_in(["deprecated", "rejected", "archived"]),
+                            )
+                        )
+                        for artifact, version in result.all():
+                            artifact_contracts[artifact.artifact_id] = {
+                                "input_schema": version.input_schema,
+                                "output_schema": version.output_schema,
+                            }
+                        for unknown in missing - artifact_contracts.keys():
+                            errors.append(f"Unknown/unavailable script artifact: {unknown}")
+                    if not errors:
+                        errors.extend(
+                            validate_semantics(
+                                definition,
+                                {**cap_registry, **artifact_contracts},
+                                check_graph=self.settings.generation_semantic_workflows,
+                            )
+                        )
             last_definition = definition
             last_errors = errors
             log.info(
@@ -202,10 +378,17 @@ class WorkflowGenerationService:
                 artifact_type="trama_workflow",
                 max_attempts=self.settings.generation_max_attempts,
                 attempt_fn=attempt_fn,
+                settings=self.settings,
+                state_fn=lambda: (
+                    json.dumps(last_definition, sort_keys=True),
+                    [Diagnostic(category="graph", message=error) for error in last_errors],
+                ),
+                initial_recoveries=max(0, initial[1].api_attempts - 1) if initial else 0,
+                initial_duration=initial[1].duration_s if initial else 0,
             )
 
             # 5. Build ValidationResult
-            valid = not last_errors
+            valid = last_definition is not None and not last_errors
             validation = ValidationResult(
                 valid=valid,
                 errors=last_errors,
@@ -238,12 +421,12 @@ class WorkflowGenerationService:
             log.error("workflow generation failed with exception", exc_info=True)
             raise
         else:
-            if not req.save:
-                await self.db.rollback()
-
-        # Inject completion step so RiteSmith is notified when the workflow finishes
-        if last_definition and plan_id:
-            last_definition = _inject_completion_step(last_definition)
+            # Audit is durable even when the generated artifact is transient.
+            with stage("persist", "trama_workflow"):
+                if not req.save and self.audit is None:
+                    await self.db.rollback()
+                else:
+                    await self.db.commit()
 
         # 7. Build response
         if artifact_orm and artifact_version_orm:
@@ -265,6 +448,7 @@ class WorkflowGenerationService:
                 updated_at=now,
             )
 
+        outcome("trama_workflow", valid)
         return GeneratedArtifactResponse(
             artifact=artifact_schema,
             validation=validation,
@@ -272,10 +456,14 @@ class WorkflowGenerationService:
         )
 
     async def _get_capabilities(self) -> list[dict]:
-        caps = await self.registry.list_capabilities(limit=50, status="available")
-        return [
+        budget = current_budget.get()
+        if budget and "capabilities" in budget.prepared:
+            return budget.prepared["capabilities"]
+        caps = await self.registry.list_capabilities(limit=None, status="available")
+        result = [
             {
                 "capability_id": c.capability_id,
+                "capability_name": c.name,
                 "name": c.name,
                 "description": c.description,
                 "input_schema": c.input_schema,
@@ -283,3 +471,6 @@ class WorkflowGenerationService:
             }
             for c in caps
         ]
+        if budget is not None:
+            budget.prepared["capabilities"] = result
+        return result

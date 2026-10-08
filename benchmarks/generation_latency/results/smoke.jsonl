@@ -1,0 +1,1 @@
+{"task": "wf_reminder", "kind": "trama_workflow", "held_out": false, "phase": "full", "model": "gpt-5.4-mini", "repetition": 0, "entrypoint": "specialized", "concurrency": 1, "duration_s": 0.7967895810143091, "http_status": 0, "valid": false, "errors": ["ConnectError: All connection attempts failed"], "calls": [], "response": {}}

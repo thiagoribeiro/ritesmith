@@ -2,65 +2,20 @@
   "openapi": "3.1.0",
   "info": {
     "title": "RiteSmith API",
-    "version": "0.1.0",
-    "summary": "Capability-aware code and workflow generation engine.",
-    "description": "RiteSmith is a capability-aware generation engine for safe, reusable automation artifacts.\n\nIt can discover available tools/capabilities, search its memory/repository for reusable artifacts,\ngenerate Lua scripts, shell scripts, and Trama workflows, validate generated artifacts with\nguardrails, persist approved artifacts, and optionally delegate execution to external runtimes.\n\nRiteSmith is not just a storage service. It is the generator, reviewer, validator, catalog-aware\nplanner, and artifact repository.\n\nMain responsibilities:\n\n- discover available tools and providers\n- search reusable scripts/workflows from memory\n- generate Lua scripts\n- generate shell scripts\n- generate Trama workflows\n- compose scripts and workflows into executable plans\n- validate artifacts against guardrails\n- persist generated artifacts with metadata and audit trail\n- delegate execution to external runtimes when allowed\n\nSecurity model:\n\n- generation is not execution\n- execution requires explicit policy and runtime permission\n- dangerous capabilities require approval/policy checks\n- artifacts should be versioned, auditable, and reproducible\n"
+    "description": "AI-assisted capability and workflow generation control plane",
+    "version": "0.1.0"
   },
-  "servers": [
-    {
-      "url": "http://localhost:8081",
-      "description": "Local development"
-    }
-  ],
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
-  "tags": [
-    {
-      "name": "Health"
-    },
-    {
-      "name": "Capabilities"
-    },
-    {
-      "name": "Plans"
-    },
-    {
-      "name": "Artifacts"
-    },
-    {
-      "name": "Generation"
-    },
-    {
-      "name": "Validation"
-    },
-    {
-      "name": "Execution"
-    },
-    {
-      "name": "Memory"
-    },
-    {
-      "name": "Policies"
-    },
-    {
-      "name": "Providers"
-    }
-  ],
   "paths": {
     "/health": {
       "get": {
         "tags": [
           "Health"
         ],
-        "summary": "Health check",
-        "operationId": "getHealth",
-        "security": [],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -72,570 +27,110 @@
         }
       }
     },
-    "/capabilities": {
-      "get": {
-        "tags": [
-          "Capabilities"
-        ],
-        "summary": "List available capabilities",
-        "operationId": "listCapabilities",
-        "description": "Returns the capability catalog known by RiteSmith.\n\nCapabilities represent things RiteSmith may use when generating scripts or workflows,\nsuch as tool calls, HTTP providers, Trama workflow targets, local runtime functions,\nstorage providers, or notification providers.\n",
-        "parameters": [
-          {
-            "name": "kind",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/CapabilityKind"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/CapabilityStatus"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Capabilities.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CapabilityListResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/capabilities/{capabilityId}": {
-      "get": {
-        "tags": [
-          "Capabilities"
-        ],
-        "summary": "Get capability details",
-        "operationId": "getCapability",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/CapabilityId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Capability.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Capability"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/providers/discover": {
-      "post": {
-        "tags": [
-          "Providers"
-        ],
-        "summary": "Discover capabilities from configured providers",
-        "operationId": "discoverProviders",
-        "description": "Refreshes capability metadata from configured providers.\n\nExamples:\n- tool discovery\n- Trama workflow endpoint discovery\n- HTTP provider catalog discovery\n- local runtime capability discovery\n",
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProviderDiscoveryRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Discovery started.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProviderDiscoveryResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/plans": {
-      "post": {
-        "tags": [
-          "Plans"
-        ],
-        "summary": "Create a generation plan from user intent",
-        "operationId": "createPlan",
-        "description": "Main RiteSmith entrypoint.\n\nGiven a user intent, RiteSmith searches memory, discovers capabilities, proposes a plan,\ngenerates or reuses artifacts, validates them, and optionally persists them.\n\nA plan may produce:\n- Lua scripts\n- shell scripts\n- Trama workflow definitions\n- composed execution plans\n",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePlanRequest"
-              },
-              "examples": {
-                "bitcoin_drop_monitor": {
-                  "value": {
-                    "intent": "Notify me if Bitcoin drops 3% from its current price.",
-                    "requested_artifact_types": [
-                      "lua_script",
-                      "trama_workflow"
-                    ],
-                    "mode": "propose",
-                    "constraints": {
-                      "require_approval_for_execution": true,
-                      "allow_shell": false,
-                      "allow_network": true
-                    },
-                    "context": {
-                      "room_id": "room_personal"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Plan created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plan"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/plans/{planId}": {
-      "get": {
-        "tags": [
-          "Plans"
-        ],
-        "summary": "Get plan details",
-        "operationId": "getPlan",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Plan.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plan"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          }
-        }
-      }
-    },
-    "/plans/{planId}/approve": {
-      "post": {
-        "tags": [
-          "Plans"
-        ],
-        "summary": "Approve a proposed plan",
-        "operationId": "approvePlan",
-        "description": "Approves a proposed plan. Approval may allow persistence, workflow creation,\nor execution depending on policy.\n",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ApprovalRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Plan approved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plan"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          }
-        }
-      }
-    },
-    "/plans/{planId}/reject": {
-      "post": {
-        "tags": [
-          "Plans"
-        ],
-        "summary": "Reject a proposed plan",
-        "operationId": "rejectPlan",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RejectionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Plan rejected.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Plan"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          }
-        }
-      }
-    },
-    "/plans/{planId}/artifacts": {
-      "post": {
-        "tags": [
-          "Plans",
-          "Artifacts"
-        ],
-        "summary": "Persist generated artifacts from a plan",
-        "operationId": "persistPlanArtifacts",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/PlanId"
-          }
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PersistArtifactsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Artifacts persisted.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArtifactListResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          }
-        }
-      }
-    },
-    "/generate/lua": {
-      "post": {
-        "tags": [
-          "Generation"
-        ],
-        "summary": "Generate a Lua script",
-        "operationId": "generateLuaScript",
-        "description": "Generates a Lua script from intent and capability context.\n\nThe script is validated against Lua guardrails before being returned.\n",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerateScriptRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Lua script generated.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/generate/shell": {
-      "post": {
-        "tags": [
-          "Generation"
-        ],
-        "summary": "Generate a shell script",
-        "operationId": "generateShellScript",
-        "description": "Generates a shell script from intent and capability context.\n\nShell generation is high risk and should be disabled or approval-gated by default.\n",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerateScriptRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Shell script generated.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/generate/trama-workflow": {
-      "post": {
-        "tags": [
-          "Generation"
-        ],
-        "summary": "Generate a Trama workflow",
-        "operationId": "generateTramaWorkflow",
-        "description": "Generates a Trama workflow definition.\n\nRiteSmith may compose scripts, tool calls, sleep/loop patterns, switch nodes,\ncallbacks, and notification steps into a workflow.\n",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GenerateWorkflowRequest"
-              },
-              "examples": {
-                "bitcoin_drop_monitor": {
-                  "value": {
-                    "intent": "Monitor Bitcoin and notify if it drops 3%.",
-                    "target_runtime": "trama",
-                    "required_capabilities": [
-                      "crypto.get_price",
-                      "math.percentage_change",
-                      "notification.send"
-                    ],
-                    "constraints": {
-                      "polling_interval_seconds": 900,
-                      "require_approval_for_execution": true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Trama workflow generated.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/validate": {
-      "post": {
-        "tags": [
-          "Validation"
-        ],
-        "summary": "Validate an artifact",
-        "operationId": "validateArtifact",
-        "description": "Validates an artifact against syntax, capability, policy, and guardrail rules.\n\nValidation does not execute the artifact.\n",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateArtifactRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Validation result.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidationResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          }
-        }
-      }
-    },
     "/artifacts": {
       "get": {
         "tags": [
           "Artifacts"
         ],
-        "summary": "Search artifacts",
-        "operationId": "searchArtifacts",
+        "summary": "List Artifacts",
+        "operationId": "list_artifacts_artifacts_get",
         "parameters": [
           {
             "name": "query",
             "in": "query",
+            "required": false,
             "schema": {
-              "type": "string"
-            }
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Full-text search query",
+              "title": "Query"
+            },
+            "description": "Full-text search query"
           },
           {
             "name": "artifact_type",
             "in": "query",
+            "required": false,
             "schema": {
-              "$ref": "#/components/schemas/ArtifactType"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Artifact Type"
             }
           },
           {
             "name": "status",
             "in": "query",
+            "required": false,
             "schema": {
-              "$ref": "#/components/schemas/ArtifactStatus"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           },
           {
             "name": "tags",
             "in": "query",
-            "description": "Comma-separated tags.",
+            "required": false,
             "schema": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tags"
             }
           },
           {
             "name": "limit",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "integer",
-              "minimum": 1,
               "maximum": 200,
-              "default": 50
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Matching artifacts.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -644,8 +139,15 @@
               }
             }
           },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       },
@@ -653,8 +155,8 @@
         "tags": [
           "Artifacts"
         ],
-        "summary": "Create an artifact manually",
-        "operationId": "createArtifact",
+        "summary": "Create Artifact",
+        "operationId": "create_artifact_artifacts_post",
         "requestBody": {
           "required": true,
           "content": {
@@ -667,7 +169,7 @@
         },
         "responses": {
           "201": {
-            "description": "Artifact created.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -676,30 +178,40 @@
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/artifacts/{artifactId}": {
+    "/artifacts/{artifact_id}": {
       "get": {
         "tags": [
           "Artifacts"
         ],
-        "summary": "Get artifact",
-        "operationId": "getArtifact",
+        "summary": "Get Artifact",
+        "operationId": "get_artifact_artifacts__artifact_id__get",
         "parameters": [
           {
-            "$ref": "#/components/parameters/ArtifactId"
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Artifact.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -708,51 +220,81 @@
               }
             }
           },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/artifacts/{artifactId}/versions": {
+    "/artifacts/{artifact_id}/versions": {
       "get": {
         "tags": [
           "Artifacts"
         ],
-        "summary": "List artifact versions",
-        "operationId": "listArtifactVersions",
+        "summary": "List Versions",
+        "operationId": "list_versions_artifacts__artifact_id__versions_get",
         "parameters": [
           {
-            "$ref": "#/components/parameters/ArtifactId"
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Artifact versions.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ArtifactVersionListResponse"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArtifactVersion"
+                  },
+                  "title": "Response List Versions Artifacts  Artifact Id  Versions Get"
                 }
               }
             }
           },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/artifacts/{artifactId}/versions/{version}": {
+    "/artifacts/{artifact_id}/versions/{version}": {
       "get": {
         "tags": [
           "Artifacts"
         ],
-        "summary": "Get artifact version",
-        "operationId": "getArtifactVersion",
+        "summary": "Get Artifact Version",
+        "operationId": "get_artifact_version_artifacts__artifact_id__versions__version__get",
         "parameters": [
           {
-            "$ref": "#/components/parameters/ArtifactId"
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
           },
           {
             "name": "version",
@@ -760,13 +302,13 @@
             "required": true,
             "schema": {
               "type": "integer",
-              "minimum": 1
+              "title": "Version"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Artifact version.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -775,8 +317,188 @@
               }
             }
           },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/artifacts/{artifact_id}/versions/{version}/approve": {
+      "post": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Approve Artifact Version",
+        "description": "Issues the approval token that lets this exact version run when policy requires approval.",
+        "operationId": "approve_artifact_version_artifacts__artifact_id__versions__version__approve_post",
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Approve Artifact Version Artifacts  Artifact Id  Versions  Version  Approve Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "tags": [
+          "Capabilities"
+        ],
+        "summary": "List Capabilities",
+        "operationId": "list_capabilities_capabilities_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities/{capability_id}": {
+      "get": {
+        "tags": [
+          "Capabilities"
+        ],
+        "summary": "Get Capability",
+        "operationId": "get_capability_capabilities__capability_id__get",
+        "parameters": [
+          {
+            "name": "capability_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Capability Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capability"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -786,22 +508,21 @@
         "tags": [
           "Memory"
         ],
-        "summary": "Search reusable memory/artifacts",
-        "operationId": "searchMemory",
-        "description": "Searches prior artifacts, reusable snippets, workflow templates, and capability notes.\n\nImplementations may use full-text search, embeddings, tags, metadata filters, or hybrid search.\n",
+        "summary": "Memory Search",
+        "operationId": "memory_search_memory_search_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/MemorySearchRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Search results.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -810,8 +531,499 @@
               }
             }
           },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/validate": {
+      "post": {
+        "tags": [
+          "Validation"
+        ],
+        "summary": "Validate Artifact",
+        "operationId": "validate_artifact_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateArtifactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/generate": {
+      "post": {
+        "tags": [
+          "generation"
+        ],
+        "summary": "Generate",
+        "description": "Generate a capability or workflow from a natural-language intent.\n\nRiteSmith automatically decides whether to produce a Lua script or a Trama\nworkflow based on intent analysis \u2014 the caller does not need to specify a type.",
+        "operationId": "generate_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratedArtifactResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "List Plans",
+        "operationId": "list_plans_plans_get",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Plan"
+                  },
+                  "title": "Response List Plans Plans Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Create Plan",
+        "operationId": "create_plan_plans_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Plan",
+        "operationId": "get_plan_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/approve": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Approve Plan",
+        "operationId": "approve_plan_plans__plan_id__approve_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovePlanRequest",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/reject": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Reject Plan",
+        "operationId": "reject_plan_plans__plan_id__reject_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectPlanRequest",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/cancel": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Cancel Plan",
+        "operationId": "cancel_plan_plans__plan_id__cancel_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelPlanRequest",
+                "default": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/complete": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Complete Plan",
+        "operationId": "complete_plan_plans__plan_id__complete_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletePlanRequest",
+                "default": {
+                  "status": "completed"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/artifacts": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Persist Artifacts",
+        "operationId": "persist_artifacts_plans__plan_id__artifacts_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -819,24 +1031,23 @@
     "/executions": {
       "post": {
         "tags": [
-          "Execution"
+          "executions"
         ],
-        "summary": "Request artifact execution",
-        "operationId": "requestExecution",
-        "description": "Requests execution or delegation of an artifact.\n\nRiteSmith may execute only in an explicitly configured runtime, or delegate to a workflow/runtime system.\nExecution is policy-gated and may require approval.\n",
+        "summary": "Create Execution",
+        "operationId": "create_execution_executions_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateExecutionRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "202": {
-            "description": "Execution accepted or queued.",
+          "201": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -845,33 +1056,40 @@
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/executions/{executionId}": {
+    "/executions/{execution_id}": {
       "get": {
         "tags": [
-          "Execution"
+          "executions"
         ],
-        "summary": "Get execution status",
-        "operationId": "getExecution",
+        "summary": "Get Execution",
+        "operationId": "get_execution_executions__execution_id__get",
         "parameters": [
           {
-            "$ref": "#/components/parameters/ExecutionId"
+            "name": "execution_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Execution Id"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Execution.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -880,8 +1098,15 @@
               }
             }
           },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -889,28 +1114,268 @@
     "/policies/evaluate": {
       "post": {
         "tags": [
-          "Policies"
+          "policies"
         ],
-        "summary": "Evaluate policy for a proposed operation",
-        "operationId": "evaluatePolicy",
-        "description": "Evaluates whether an operation is allowed, denied, or approval-gated.\n",
+        "summary": "Evaluate Policy",
+        "operationId": "evaluate_policy_policies_evaluate_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PolicyEvaluationRequest"
               }
             }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ritesmith__schemas__policy__PolicyDecision"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "List Providers",
+        "operationId": "list_providers_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers/{namespace}": {
+      "get": {
+        "tags": [
+          "providers"
+        ],
+        "summary": "Get Provider",
+        "operationId": "get_provider_providers__namespace__get",
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Namespace"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Web Search",
+        "operationId": "web_search_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Search query",
+              "title": "Q"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trama/execute": {
+      "post": {
+        "tags": [
+          "trama"
+        ],
+        "summary": "Trama Execute",
+        "operationId": "trama_execute_trama_execute_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "x-rs-plan",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Rs-Plan"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TramaExecuteRequest"
+              }
+            }
           }
         },
         "responses": {
           "200": {
-            "description": "Policy decision.",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PolicyDecision"
+                  "$ref": "#/components/schemas/TramaExecuteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/casp/migration-status": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Casp Migration Status",
+        "description": "Returns how many persisted Lua artifacts still use home.* functions.\n\nWhen pending == 0, the home.* provider can be removed.",
+        "operationId": "casp_migration_status_admin_casp_migration_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Casp Migration Status Admin Casp Migration Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/casp/providers": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Casp Providers Status",
+        "description": "Returns CASP provider configuration and discovery cache state.",
+        "operationId": "casp_providers_status_admin_casp_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Casp Providers Status Admin Casp Providers Get"
                 }
               }
             }
@@ -920,153 +1385,203 @@
     }
   },
   "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "opaque"
-      }
-    },
-    "parameters": {
-      "PlanId": {
-        "name": "planId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string"
-        }
-      },
-      "ArtifactId": {
-        "name": "artifactId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string"
-        }
-      },
-      "CapabilityId": {
-        "name": "capabilityId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string"
-        }
-      },
-      "ExecutionId": {
-        "name": "executionId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string"
-        }
-      }
-    },
-    "responses": {
-      "BadRequest": {
-        "description": "Invalid request.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "Unauthorized": {
-        "description": "Missing, invalid, expired, or revoked access token.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "Forbidden": {
-        "description": "Operation is not allowed by policy or permissions.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "NotFound": {
-        "description": "Resource not found.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "Conflict": {
-        "description": "Conflict with current state.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      }
-    },
     "schemas": {
-      "ErrorResponse": {
-        "type": "object",
-        "required": [
-          "error",
-          "message"
-        ],
+      "ApprovePlanRequest": {
         "properties": {
-          "error": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "additionalProperties": true
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
           }
         },
-        "additionalProperties": false
-      },
-      "HealthResponse": {
         "type": "object",
-        "required": [
-          "status"
-        ],
+        "title": "ApprovePlanRequest"
+      },
+      "Artifact": {
         "properties": {
-          "status": {
+          "artifact_id": {
             "type": "string",
-            "enum": [
-              "ok"
-            ]
+            "title": "Artifact Id"
+          },
+          "artifact_type": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
           },
           "version": {
-            "type": "string"
+            "type": "integer",
+            "title": "Version"
           },
-          "time": {
+          "status": {
+            "$ref": "#/components/schemas/ArtifactStatus"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "usage_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage Description"
+          },
+          "generated_by_plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated By Plan Id"
+          },
+          "source_artifact_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Artifact Ids"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValidationResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
           }
         },
-        "additionalProperties": false
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "artifact_type",
+          "name",
+          "version",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Artifact"
       },
-      "ArtifactType": {
-        "type": "string",
-        "enum": [
-          "lua_script",
-          "shell_script",
-          "trama_workflow",
-          "workflow_template",
-          "prompt_template",
-          "capability_adapter",
-          "plan"
-        ]
+      "ArtifactListResponse": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifacts",
+          "total"
+        ],
+        "title": "ArtifactListResponse"
       },
       "ArtifactStatus": {
         "type": "string",
@@ -1079,7 +1594,1514 @@
           "deprecated",
           "rejected",
           "archived"
-        ]
+        ],
+        "title": "ArtifactStatus"
+      },
+      "ArtifactType": {
+        "type": "string",
+        "enum": [
+          "lua_script",
+          "luau_script",
+          "shell_script",
+          "trama_workflow",
+          "workflow_template",
+          "prompt_template",
+          "capability_adapter",
+          "plan"
+        ],
+        "title": "ArtifactType"
+      },
+      "ArtifactVersion": {
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "side_effects": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side Effects"
+          },
+          "deterministic": {
+            "type": "boolean",
+            "title": "Deterministic",
+            "default": true
+          },
+          "requires_approval": {
+            "type": "boolean",
+            "title": "Requires Approval",
+            "default": false
+          },
+          "allowed_primitives": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Primitives"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "version",
+          "content",
+          "created_at"
+        ],
+        "title": "ArtifactVersion"
+      },
+      "CancelPlanRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "title": "CancelPlanRequest"
+      },
+      "Capability": {
+        "properties": {
+          "capability_id": {
+            "type": "string",
+            "title": "Capability Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CapabilityKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CapabilityStatus"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level",
+            "default": "low"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Id"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "capability_id",
+          "name",
+          "kind",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Capability"
+      },
+      "CapabilityKind": {
+        "type": "string",
+        "enum": [
+          "tool",
+          "provider",
+          "runtime",
+          "storage",
+          "notification",
+          "workflow_engine",
+          "script_function",
+          "catalog"
+        ],
+        "title": "CapabilityKind"
+      },
+      "CapabilityListResponse": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/Capability"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "capabilities",
+          "total"
+        ],
+        "title": "CapabilityListResponse"
+      },
+      "CapabilityStatus": {
+        "type": "string",
+        "enum": [
+          "available",
+          "unavailable",
+          "disabled",
+          "experimental",
+          "deprecated"
+        ],
+        "title": "CapabilityStatus"
+      },
+      "CompletePlanRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "completed"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "title": "CompletePlanRequest"
+      },
+      "CreateArtifactRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "artifact_type": {
+            "$ref": "#/components/schemas/ArtifactType"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "artifact_type",
+          "content"
+        ],
+        "title": "CreateArtifactRequest"
+      },
+      "CreateExecutionRequest": {
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": false
+          },
+          "approval_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Token"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_id"
+        ],
+        "title": "CreateExecutionRequest"
+      },
+      "CreatePlanRequest": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Intent"
+          },
+          "requested_artifact_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Artifact Types"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/GenerationMode",
+            "default": "propose"
+          },
+          "reuse_policy": {
+            "$ref": "#/components/schemas/ReusePolicy",
+            "default": "prefer_reuse"
+          },
+          "constraints": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlanConstraints"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "properties": {
+              "test_cases": {
+                "items": {
+                  "properties": {
+                    "input": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "title": "Input"
+                    },
+                    "context": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "title": "Context"
+                    },
+                    "expected_output": {
+                      "title": "Expected Output"
+                    },
+                    "assertions": {
+                      "items": {
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "title": "Path"
+                          },
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "equals",
+                              "length",
+                              "max_length",
+                              "contains",
+                              "subset"
+                            ],
+                            "title": "Op"
+                          },
+                          "value": {
+                            "title": "Value"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "op",
+                          "value"
+                        ],
+                        "title": "FunctionalAssertion"
+                      },
+                      "type": "array",
+                      "title": "Assertions"
+                    },
+                    "tool_fixtures": {
+                      "items": {
+                        "properties": {
+                          "tool": {
+                            "type": "string",
+                            "title": "Tool"
+                          },
+                          "args": {
+                            "additionalProperties": true,
+                            "type": "object",
+                            "title": "Args"
+                          },
+                          "output": {
+                            "title": "Output"
+                          },
+                          "times": {
+                            "type": "integer",
+                            "maximum": 100.0,
+                            "minimum": 1.0,
+                            "title": "Times",
+                            "default": 1
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "tool",
+                          "output"
+                        ],
+                        "title": "ToolFixture"
+                      },
+                      "type": "array",
+                      "title": "Tool Fixtures"
+                    },
+                    "expected_calls": {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object",
+                      "title": "Expected Calls"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "client",
+                        "fixture",
+                        "intent"
+                      ],
+                      "title": "Source",
+                      "default": "client"
+                    }
+                  },
+                  "type": "object",
+                  "title": "TestSpec"
+                },
+                "type": "array",
+                "description": "Independent black-box cases. Input-only cases check execution, not functional certification. External tools require controlled fixtures."
+              },
+              "test_fixtures": {
+                "items": {
+                  "properties": {
+                    "tool": {
+                      "type": "string",
+                      "title": "Tool"
+                    },
+                    "args": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "title": "Args"
+                    },
+                    "output": {
+                      "title": "Output"
+                    },
+                    "times": {
+                      "type": "integer",
+                      "maximum": 100.0,
+                      "minimum": 1.0,
+                      "title": "Times",
+                      "default": 1
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "tool",
+                    "output"
+                  ],
+                  "title": "ToolFixture"
+                },
+                "type": "array",
+                "description": "Known tool inputs and responses supplied to the independent test generator; never run external effects during validation."
+              },
+              "workflow_examples": {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "linear",
+                    "bounded_polling",
+                    "fixed_samples",
+                    "continuation",
+                    "parallel",
+                    "state_tracking",
+                    "content_monitor",
+                    "async_callback",
+                    "compensation"
+                  ]
+                },
+                "type": "array",
+                "description": "Omit for local automatic selection; [] sends essential rules only. Examples guide generation without restricting node kinds. Unknown identifiers return 422."
+              }
+            },
+            "additionalProperties": true,
+            "title": "Context"
+          },
+          "replan_budget": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Replan Budget",
+            "default": 2
+          },
+          "callback_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Callback Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "intent"
+        ],
+        "title": "CreatePlanRequest"
+      },
+      "Execution": {
+        "properties": {
+          "execution_id": {
+            "type": "string",
+            "title": "Execution Id"
+          },
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id"
+          },
+          "artifact_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Version"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExecutionStatus"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "delegated_execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delegated Execution Id"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "default": false
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "execution_id",
+          "artifact_id",
+          "status",
+          "created_at"
+        ],
+        "title": "Execution"
+      },
+      "ExecutionStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "waiting",
+          "succeeded",
+          "failed",
+          "cancelled",
+          "rejected"
+        ],
+        "title": "ExecutionStatus"
+      },
+      "GenerateRequest": {
+        "properties": {
+          "intent": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Intent"
+          },
+          "save": {
+            "type": "boolean",
+            "title": "Save",
+            "default": false
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "properties": {
+              "test_cases": {
+                "items": {
+                  "properties": {
+                    "input": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "title": "Input"
+                    },
+                    "context": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "title": "Context"
+                    },
+                    "expected_output": {
+                      "title": "Expected Output"
+                    },
+                    "assertions": {
+                      "items": {
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "title": "Path"
+                          },
+                          "op": {
+                            "type": "string",
+                            "enum": [
+                              "equals",
+                              "length",
+                              "max_length",
+                              "contains",
+                              "subset"
+                            ],
+                            "title": "Op"
+                          },
+                          "value": {
+                            "title": "Value"
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "path",
+                          "op",
+                          "value"
+                        ],
+                        "title": "FunctionalAssertion"
+                      },
+                      "type": "array",
+                      "title": "Assertions"
+                    },
+                    "tool_fixtures": {
+                      "items": {
+                        "properties": {
+                          "tool": {
+                            "type": "string",
+                            "title": "Tool"
+                          },
+                          "args": {
+                            "additionalProperties": true,
+                            "type": "object",
+                            "title": "Args"
+                          },
+                          "output": {
+                            "title": "Output"
+                          },
+                          "times": {
+                            "type": "integer",
+                            "maximum": 100.0,
+                            "minimum": 1.0,
+                            "title": "Times",
+                            "default": 1
+                          }
+                        },
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "tool",
+                          "output"
+                        ],
+                        "title": "ToolFixture"
+                      },
+                      "type": "array",
+                      "title": "Tool Fixtures"
+                    },
+                    "expected_calls": {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object",
+                      "title": "Expected Calls"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "client",
+                        "fixture",
+                        "intent"
+                      ],
+                      "title": "Source",
+                      "default": "client"
+                    }
+                  },
+                  "type": "object",
+                  "title": "TestSpec"
+                },
+                "type": "array",
+                "description": "Independent black-box cases. Input-only cases check execution, not functional certification. External tools require controlled fixtures."
+              },
+              "test_fixtures": {
+                "items": {
+                  "properties": {
+                    "tool": {
+                      "type": "string",
+                      "title": "Tool"
+                    },
+                    "args": {
+                      "additionalProperties": true,
+                      "type": "object",
+                      "title": "Args"
+                    },
+                    "output": {
+                      "title": "Output"
+                    },
+                    "times": {
+                      "type": "integer",
+                      "maximum": 100.0,
+                      "minimum": 1.0,
+                      "title": "Times",
+                      "default": 1
+                    }
+                  },
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "tool",
+                    "output"
+                  ],
+                  "title": "ToolFixture"
+                },
+                "type": "array",
+                "description": "Known tool inputs and responses supplied to the independent test generator; never run external effects during validation."
+              },
+              "workflow_examples": {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "linear",
+                    "bounded_polling",
+                    "fixed_samples",
+                    "continuation",
+                    "parallel",
+                    "state_tracking",
+                    "content_monitor",
+                    "async_callback",
+                    "compensation"
+                  ]
+                },
+                "type": "array",
+                "description": "Omit for local automatic selection; [] sends essential rules only. Examples guide generation without restricting node kinds. Unknown identifiers return 422."
+              }
+            },
+            "additionalProperties": true,
+            "title": "Context"
+          },
+          "constraints": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraints"
+          },
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "intent"
+        ],
+        "title": "GenerateRequest",
+        "description": "Unified generation request \u2014 RiteSmith decides internally whether to produce Lua or a workflow."
+      },
+      "GeneratedArtifactResponse": {
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/Artifact"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValidationResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reused": {
+            "type": "boolean",
+            "title": "Reused",
+            "default": false
+          },
+          "source_artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Artifact Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact"
+        ],
+        "title": "GeneratedArtifactResponse"
+      },
+      "GenerationMode": {
+        "type": "string",
+        "enum": [
+          "propose",
+          "generate",
+          "validate_only",
+          "persist",
+          "execute"
+        ],
+        "title": "GenerationMode"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "time": {
+            "type": "string",
+            "title": "Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "time"
+        ],
+        "title": "HealthResponse"
+      },
+      "MemorySearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "artifact_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Types"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "search_mode": {
+            "type": "string",
+            "title": "Search Mode",
+            "default": "full_text"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "default": 20
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "MemorySearchRequest"
+      },
+      "MemorySearchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/MemorySearchResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "MemorySearchResponse"
+      },
+      "MemorySearchResult": {
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "title": "Artifact Id"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Artifact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_id",
+          "score"
+        ],
+        "title": "MemorySearchResult"
+      },
+      "Plan": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanStatus"
+          },
+          "intent": {
+            "type": "string",
+            "title": "Intent"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/PlanStep"
+            },
+            "type": "array",
+            "title": "Steps",
+            "default": []
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            },
+            "type": "array",
+            "title": "Artifacts",
+            "default": []
+          },
+          "validations": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationResult"
+            },
+            "type": "array",
+            "title": "Validations",
+            "default": []
+          },
+          "policy_decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ritesmith__schemas__plan__PolicyDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "executions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Executions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "status",
+          "intent",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Plan"
+      },
+      "PlanConstraints": {
+        "properties": {
+          "allow_shell": {
+            "type": "boolean",
+            "title": "Allow Shell",
+            "default": false
+          },
+          "allow_network": {
+            "type": "boolean",
+            "title": "Allow Network",
+            "default": true
+          },
+          "allow_filesystem": {
+            "type": "boolean",
+            "title": "Allow Filesystem",
+            "default": false
+          },
+          "allow_workflow_creation": {
+            "type": "boolean",
+            "title": "Allow Workflow Creation",
+            "default": true
+          },
+          "require_approval_for_execution": {
+            "type": "boolean",
+            "title": "Require Approval For Execution",
+            "default": false
+          },
+          "max_runtime_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Runtime Seconds"
+          },
+          "polling_interval_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Polling Interval Seconds"
+          },
+          "allowed_capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Capabilities"
+          },
+          "denied_capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Denied Capabilities"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "PlanConstraints"
       },
       "PlanStatus": {
         "type": "string",
@@ -1094,41 +3116,201 @@
           "executing",
           "completed",
           "failed",
-          "cancelled"
-        ]
+          "cancelled",
+          "superseded"
+        ],
+        "title": "PlanStatus"
       },
-      "GenerationMode": {
+      "PlanStep": {
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "artifact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id"
+          },
+          "capability_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Id"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_id",
+          "title",
+          "status"
+        ],
+        "title": "PlanStep"
+      },
+      "PolicyDecisionValue": {
         "type": "string",
         "enum": [
-          "propose",
-          "generate",
-          "validate_only",
-          "persist",
-          "execute"
-        ]
+          "allow",
+          "deny",
+          "require_approval"
+        ],
+        "title": "PolicyDecisionValue"
       },
-      "CapabilityKind": {
+      "PolicyEvaluationRequest": {
+        "properties": {
+          "operation": {
+            "type": "string",
+            "title": "Operation"
+          },
+          "artifact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Type"
+          },
+          "capability_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Ids"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "runtime_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Profile"
+          },
+          "manual": {
+            "type": "boolean",
+            "title": "Manual",
+            "default": false
+          },
+          "certification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "operation"
+        ],
+        "title": "PolicyEvaluationRequest"
+      },
+      "RejectPlanRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "title": "RejectPlanRequest"
+      },
+      "ReusePolicy": {
         "type": "string",
         "enum": [
-          "tool",
-          "provider",
-          "runtime",
-          "storage",
-          "notification",
-          "workflow_engine",
-          "script_function",
-          "catalog"
-        ]
-      },
-      "CapabilityStatus": {
-        "type": "string",
-        "enum": [
-          "available",
-          "unavailable",
-          "disabled",
-          "experimental",
-          "deprecated"
-        ]
+          "prefer_reuse",
+          "force_new",
+          "reuse_or_generate"
+        ],
+        "title": "ReusePolicy"
       },
       "RiskLevel": {
         "type": "string",
@@ -1137,896 +3319,477 @@
           "medium",
           "high",
           "critical"
-        ]
-      },
-      "PolicyDecisionValue": {
-        "type": "string",
-        "enum": [
-          "allow",
-          "deny",
-          "require_approval"
-        ]
-      },
-      "Capability": {
-        "type": "object",
-        "required": [
-          "capability_id",
-          "name",
-          "kind",
-          "status"
         ],
-        "properties": {
-          "capability_id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/CapabilityKind"
-          },
-          "status": {
-            "$ref": "#/components/schemas/CapabilityStatus"
-          },
-          "description": {
-            "type": "string"
-          },
-          "input_schema": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "output_schema": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "risk_level": {
-            "$ref": "#/components/schemas/RiskLevel"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        },
-        "additionalProperties": false
+        "title": "RiskLevel"
       },
-      "CapabilityListResponse": {
-        "type": "object",
-        "required": [
-          "capabilities"
-        ],
-        "properties": {
-          "capabilities": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Capability"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "ProviderDiscoveryRequest": {
-        "type": "object",
-        "properties": {
-          "provider_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "force_refresh": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "additionalProperties": false
-      },
-      "ProviderDiscoveryResponse": {
-        "type": "object",
-        "required": [
-          "discovery_id",
-          "status"
-        ],
-        "properties": {
-          "discovery_id": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "queued",
-              "running",
-              "completed",
-              "failed"
-            ]
-          },
-          "capabilities_discovered": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "additionalProperties": false
-      },
-      "PlanConstraints": {
-        "type": "object",
-        "properties": {
-          "allow_shell": {
-            "type": "boolean",
-            "default": false
-          },
-          "allow_network": {
-            "type": "boolean",
-            "default": true
-          },
-          "allow_filesystem": {
-            "type": "boolean",
-            "default": false
-          },
-          "allow_workflow_creation": {
-            "type": "boolean",
-            "default": true
-          },
-          "require_approval_for_execution": {
-            "type": "boolean",
-            "default": true
-          },
-          "max_runtime_seconds": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "polling_interval_seconds": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "allowed_capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "denied_capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": true
-      },
-      "CreatePlanRequest": {
-        "type": "object",
-        "required": [
-          "intent"
-        ],
-        "properties": {
-          "intent": {
-            "type": "string",
-            "minLength": 1
-          },
-          "requested_artifact_types": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ArtifactType"
-            }
-          },
-          "mode": {
-            "$ref": "#/components/schemas/GenerationMode"
-          },
-          "constraints": {
-            "$ref": "#/components/schemas/PlanConstraints"
-          },
-          "context": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "reuse_policy": {
-            "type": "string",
-            "enum": [
-              "prefer_reuse",
-              "force_new",
-              "reuse_or_generate"
-            ],
-            "default": "prefer_reuse"
-          }
-        },
-        "additionalProperties": false
-      },
-      "Plan": {
-        "type": "object",
-        "required": [
-          "plan_id",
-          "status",
-          "intent",
-          "created_at"
-        ],
-        "properties": {
-          "plan_id": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/PlanStatus"
-          },
-          "intent": {
-            "type": "string"
-          },
-          "summary": {
-            "type": "string"
-          },
-          "steps": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlanStep"
-            }
-          },
-          "artifacts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Artifact"
-            }
-          },
-          "validations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ValidationResult"
-            }
-          },
-          "policy_decision": {
-            "$ref": "#/components/schemas/PolicyDecision"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "PlanStep": {
-        "type": "object",
-        "required": [
-          "step_id",
-          "title",
-          "status"
-        ],
-        "properties": {
-          "step_id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "running",
-              "completed",
-              "failed",
-              "skipped",
-              "blocked"
-            ]
-          },
-          "artifact_id": {
-            "type": "string"
-          },
-          "capability_id": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ApprovalRequest": {
-        "type": "object",
-        "properties": {
-          "comment": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "RejectionRequest": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "PersistArtifactsRequest": {
-        "type": "object",
-        "properties": {
-          "artifact_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "status": {
-            "$ref": "#/components/schemas/ArtifactStatus"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "GenerateScriptRequest": {
-        "type": "object",
-        "required": [
-          "intent"
-        ],
-        "properties": {
-          "intent": {
-            "type": "string"
-          },
-          "language": {
-            "type": "string",
-            "enum": [
-              "lua",
-              "shell"
-            ]
-          },
-          "required_capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "constraints": {
-            "$ref": "#/components/schemas/PlanConstraints"
-          },
-          "context": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "save": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "additionalProperties": false
-      },
-      "GenerateWorkflowRequest": {
-        "type": "object",
-        "required": [
-          "intent"
-        ],
-        "properties": {
-          "intent": {
-            "type": "string"
-          },
-          "target_runtime": {
-            "type": "string",
-            "enum": [
-              "trama"
-            ],
-            "default": "trama"
-          },
-          "required_capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "constraints": {
-            "$ref": "#/components/schemas/PlanConstraints"
-          },
-          "context": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "save": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "additionalProperties": false
-      },
-      "GeneratedArtifactResponse": {
-        "type": "object",
-        "required": [
-          "artifact",
-          "validation"
-        ],
-        "properties": {
-          "artifact": {
-            "$ref": "#/components/schemas/Artifact"
-          },
-          "validation": {
-            "$ref": "#/components/schemas/ValidationResult"
-          },
-          "reused": {
-            "type": "boolean",
-            "default": false
-          },
-          "source_artifact_id": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "ValidateArtifactRequest": {
-        "type": "object",
-        "required": [
-          "artifact_type",
-          "content"
-        ],
-        "properties": {
-          "artifact_type": {
-            "$ref": "#/components/schemas/ArtifactType"
-          },
-          "content": {
-            "type": "string"
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "constraints": {
-            "$ref": "#/components/schemas/PlanConstraints"
-          }
-        },
-        "additionalProperties": false
-      },
-      "ValidationResult": {
-        "type": "object",
-        "required": [
-          "valid",
-          "checks"
-        ],
-        "properties": {
-          "valid": {
-            "type": "boolean"
-          },
-          "risk_level": {
-            "$ref": "#/components/schemas/RiskLevel"
-          },
-          "checks": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ValidationCheck"
-            }
-          },
-          "warnings": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "errors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "ValidationCheck": {
-        "type": "object",
-        "required": [
-          "name",
-          "status"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "passed",
-              "warning",
-              "failed",
-              "skipped"
-            ]
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "CreateArtifactRequest": {
-        "type": "object",
-        "required": [
-          "artifact_type",
-          "name",
-          "content"
-        ],
-        "properties": {
-          "artifact_type": {
-            "$ref": "#/components/schemas/ArtifactType"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "Artifact": {
-        "type": "object",
-        "required": [
-          "artifact_id",
-          "artifact_type",
-          "name",
-          "version",
-          "status",
-          "content",
-          "created_at"
-        ],
-        "properties": {
-          "artifact_id": {
-            "type": "string"
-          },
-          "artifact_type": {
-            "$ref": "#/components/schemas/ArtifactType"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "version": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "status": {
-            "$ref": "#/components/schemas/ArtifactStatus"
-          },
-          "content": {
-            "type": "string"
-          },
-          "content_hash": {
-            "type": "string"
-          },
-          "generated_by_plan_id": {
-            "type": "string"
-          },
-          "source_artifact_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "validation": {
-            "$ref": "#/components/schemas/ValidationResult"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "metadata": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ArtifactListResponse": {
-        "type": "object",
-        "required": [
-          "artifacts"
-        ],
-        "properties": {
-          "artifacts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Artifact"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "ArtifactVersionListResponse": {
-        "type": "object",
-        "required": [
-          "versions"
-        ],
-        "properties": {
-          "versions": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Artifact"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "MemorySearchRequest": {
-        "type": "object",
-        "required": [
-          "query"
-        ],
+      "SearchResponse": {
         "properties": {
           "query": {
-            "type": "string"
-          },
-          "artifact_types": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ArtifactType"
-            }
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "search_mode": {
             "type": "string",
-            "enum": [
-              "full_text",
-              "embeddings",
-              "hybrid"
-            ],
-            "default": "hybrid"
+            "title": "Query"
           },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100,
-            "default": 20
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Results"
           }
         },
-        "additionalProperties": false
-      },
-      "MemorySearchResponse": {
         "type": "object",
         "required": [
+          "query",
           "results"
         ],
-        "properties": {
-          "results": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MemorySearchResult"
-            }
-          }
-        },
-        "additionalProperties": false
+        "title": "SearchResponse"
       },
-      "MemorySearchResult": {
-        "type": "object",
-        "required": [
-          "artifact_id",
-          "score"
-        ],
+      "TramaExecuteRequest": {
         "properties": {
+          "capability_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capability Name"
+          },
           "artifact_id": {
-            "type": "string"
-          },
-          "score": {
-            "type": "number"
-          },
-          "artifact": {
-            "$ref": "#/components/schemas/Artifact"
-          },
-          "reason": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "CreateExecutionRequest": {
-        "type": "object",
-        "required": [
-          "artifact_id"
-        ],
-        "properties": {
-          "artifact_id": {
-            "type": "string"
-          },
-          "version": {
-            "type": "integer",
-            "minimum": 1
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id"
           },
           "input": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "runtime": {
-            "type": "string",
-            "enum": [
-              "lua_sandbox",
-              "shell_sandbox",
-              "trama"
-            ]
-          },
-          "dry_run": {
-            "type": "boolean",
-            "default": false
-          },
-          "approval_token": {
-            "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
           }
         },
-        "additionalProperties": false
-      },
-      "ExecutionStatus": {
-        "type": "string",
-        "enum": [
-          "queued",
-          "running",
-          "waiting",
-          "succeeded",
-          "failed",
-          "cancelled",
-          "rejected"
-        ]
-      },
-      "Execution": {
         "type": "object",
-        "required": [
-          "execution_id",
-          "artifact_id",
-          "status",
-          "created_at"
-        ],
+        "title": "TramaExecuteRequest"
+      },
+      "TramaExecuteResponse": {
         "properties": {
-          "execution_id": {
-            "type": "string"
-          },
-          "artifact_id": {
-            "type": "string"
-          },
-          "artifact_version": {
-            "type": "integer"
-          },
-          "runtime": {
-            "type": "string"
-          },
-          "status": {
-            "$ref": "#/components/schemas/ExecutionStatus"
-          },
-          "input": {
-            "type": "object",
-            "additionalProperties": true
-          },
           "output": {
+            "additionalProperties": true,
             "type": "object",
-            "additionalProperties": true
-          },
-          "error": {
-            "type": "string"
-          },
-          "delegated_execution_id": {
-            "type": "string",
-            "description": "External runtime execution id, for example a Trama execution id."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "started_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "finished_at": {
-            "type": "string",
-            "format": "date-time"
+            "title": "Output"
           }
         },
-        "additionalProperties": false
-      },
-      "PolicyEvaluationRequest": {
         "type": "object",
         "required": [
-          "operation"
+          "output"
         ],
+        "title": "TramaExecuteResponse"
+      },
+      "ValidateArtifactRequest": {
         "properties": {
-          "operation": {
+          "content": {
             "type": "string",
-            "enum": [
-              "generate",
-              "persist",
-              "execute",
-              "discover",
-              "delegate"
-            ]
+            "minLength": 1,
+            "title": "Content"
           },
           "artifact_type": {
-            "$ref": "#/components/schemas/ArtifactType"
+            "type": "string",
+            "title": "Artifact Type"
           },
-          "capability_ids": {
-            "type": "array",
+          "input_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Schema"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Schema"
+          },
+          "test_cases": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "items": {
-              "type": "string"
-            }
+              "properties": {
+                "input": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Input"
+                },
+                "context": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Context"
+                },
+                "expected_output": {
+                  "title": "Expected Output"
+                },
+                "assertions": {
+                  "items": {
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "title": "Path"
+                      },
+                      "op": {
+                        "type": "string",
+                        "enum": [
+                          "equals",
+                          "length",
+                          "max_length",
+                          "contains",
+                          "subset"
+                        ],
+                        "title": "Op"
+                      },
+                      "value": {
+                        "title": "Value"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "path",
+                      "op",
+                      "value"
+                    ],
+                    "title": "FunctionalAssertion"
+                  },
+                  "type": "array",
+                  "title": "Assertions"
+                },
+                "tool_fixtures": {
+                  "items": {
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "title": "Tool"
+                      },
+                      "args": {
+                        "additionalProperties": true,
+                        "type": "object",
+                        "title": "Args"
+                      },
+                      "output": {
+                        "title": "Output"
+                      },
+                      "times": {
+                        "type": "integer",
+                        "maximum": 100.0,
+                        "minimum": 1.0,
+                        "title": "Times",
+                        "default": 1
+                      }
+                    },
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "tool",
+                      "output"
+                    ],
+                    "title": "ToolFixture"
+                  },
+                  "type": "array",
+                  "title": "Tool Fixtures"
+                },
+                "expected_calls": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Expected Calls"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "client",
+                    "fixture",
+                    "intent"
+                  ],
+                  "title": "Source",
+                  "default": "client"
+                }
+              },
+              "type": "object",
+              "title": "TestSpec"
+            },
+            "title": "Test Cases"
           },
-          "risk_level": {
-            "$ref": "#/components/schemas/RiskLevel"
-          },
-          "context": {
-            "type": "object",
-            "additionalProperties": true
+          "constraints": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Constraints"
           }
         },
-        "additionalProperties": false
+        "type": "object",
+        "required": [
+          "content",
+          "artifact_type"
+        ],
+        "title": "ValidateArtifactRequest"
       },
-      "PolicyDecision": {
+      "ValidationCheck": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "status"
+        ],
+        "title": "ValidationCheck"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationResult": {
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "title": "Valid"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RiskLevel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationCheck"
+            },
+            "type": "array",
+            "title": "Checks",
+            "default": []
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "valid"
+        ],
+        "title": "ValidationResult"
+      },
+      "ritesmith__schemas__plan__PolicyDecision": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "title": "Decision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "required_approvals": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Approvals"
+          },
+          "blocked_capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Capabilities"
+          }
+        },
         "type": "object",
         "required": [
           "decision"
         ],
+        "title": "PolicyDecision"
+      },
+      "ritesmith__schemas__policy__PolicyDecision": {
         "properties": {
           "decision": {
             "$ref": "#/components/schemas/PolicyDecisionValue"
           },
           "reason": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           },
           "required_approvals": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Approvals"
           },
           "blocked_capabilities": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Capabilities"
           }
         },
-        "additionalProperties": false
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "PolicyDecision"
       }
     }
   }

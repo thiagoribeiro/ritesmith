@@ -21,6 +21,7 @@ import _ritesmith as rs
 
 from ritesmith.runtime.providers import PROVIDERS
 from ritesmith.runtime.providers.base import MCPToolDef
+from ritesmith.workflows.examples import WORKFLOW_CONTEXT_SCHEMA
 
 server = Server("jarvis-ritesmith")
 
@@ -58,6 +59,30 @@ def _build_tool_registry() -> list[Tool]:
                 "properties": {
                     "intent": {"type": "string", "description": "What you want to accomplish"},
                     "constraints": {"type": "object", "description": "Optional constraints dict"},
+                    "context": {
+                        "type": "object",
+                        "properties": {
+                            **WORKFLOW_CONTEXT_SCHEMA["properties"],
+                            "workflow_examples": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "linear",
+                                        "bounded_polling",
+                                        "fixed_samples",
+                                        "continuation",
+                                        "parallel",
+                                        "state_tracking",
+                                        "content_monitor",
+                                        "async_callback",
+                                        "compensation",
+                                    ],
+                                },
+                                "description": "Omit for automatic selection; [] for essential rules only.",
+                            },
+                        },
+                    },
                 },
                 "required": ["intent"],
             },
@@ -79,7 +104,30 @@ def _build_tool_registry() -> list[Tool]:
                         "type": "boolean",
                         "description": "Persist the artifact in the registry",
                     },
-                    "context": {"type": "object", "description": "Extra generation context"},
+                    "context": {
+                        "type": "object",
+                        "properties": {
+                            **WORKFLOW_CONTEXT_SCHEMA["properties"],
+                            "workflow_examples": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "linear",
+                                        "bounded_polling",
+                                        "fixed_samples",
+                                        "continuation",
+                                        "parallel",
+                                        "state_tracking",
+                                        "content_monitor",
+                                        "async_callback",
+                                        "compensation",
+                                    ],
+                                },
+                                "description": "Omit for automatic selection; [] for essential rules only.",
+                            },
+                        },
+                    },
                     "constraints": {
                         "type": "object",
                         "description": "Optional generation constraints",
@@ -167,7 +215,9 @@ async def call_tool(name: str, arguments: dict | None) -> list[TextContent]:
     # RiteSmith meta-tools
     match name:
         case "ritesmith_plan":
-            result = await rs.plan(args["intent"], args.get("constraints"))
+            result = await rs.plan(
+                args["intent"], args.get("constraints"), context=args.get("context")
+            )
         case "ritesmith_generate":
             intent = args.pop("intent")
             result = await rs.generate(intent, **args)

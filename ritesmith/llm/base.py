@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 
 class LuaGenerationResponse(BaseModel):
@@ -44,17 +44,52 @@ class WorkflowRepairResponse(BaseModel):
     changes_made: str
 
 
+class GenerationProposal(BaseModel):
+    analysis: IntentAnalysis
+    script: LuaGenerationResponse | None = None
+    workflow: WorkflowGenerationResponse | None = None
+    # Populated only by the service's independent intent/schema test generator.
+    _test_cases: list[dict] | None = PrivateAttr(default=None)
+    _tests_attempted: bool = PrivateAttr(default=False)
+
+
 class LLMCallStats(BaseModel):
     model: str
+    resolved_model: str = ""
+    reasoning_effort: str | None = None
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    duration_s: float = 0
+    reasoning_tokens: int = 0
+    cached_tokens: int = 0
+    api_attempts: int = 1
+    method: str = ""
+    fallback: bool = False
+    examples: list[str] = []
+    usage_known: bool = True
+    prompt_version: str = ""
+    contract_version: str = ""
+    format_version: str = ""
 
 
 class LLMProvider(ABC):
     # Providers that implement generate_luau/repair_luau set this to True; the
     # GenerationService falls back to Lua for providers that do not.
     supports_luau: bool = False
+    supports_proposal: bool = False
+
+    async def generate_validation_tests(
+        self, goal, input_schema, output_schema, *, profile="transform_only", fixtures=None
+    ):
+        # Compatibility for providers that implement the original independent test API.
+        return await self.generate_tests(goal, input_schema, output_schema)
+
+    async def propose(self, **kwargs) -> tuple[GenerationProposal, LLMCallStats]:
+        raise NotImplementedError("unified proposal not supported")
+
+    def fallback(self) -> "LLMProvider":
+        return self
 
     @abstractmethod
     async def generate_lua(

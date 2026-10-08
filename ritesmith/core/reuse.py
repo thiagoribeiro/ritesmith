@@ -23,6 +23,7 @@ from ritesmith.config import Settings, get_settings
 from ritesmith.core.audit import AuditLogger
 from ritesmith.core.compat import is_compatible
 from ritesmith.llm.base import LLMProvider
+from ritesmith.observability.generation import outcome
 from ritesmith.observability.metrics import artifact_reuse_total
 from ritesmith.registry.search import SearchResult, fts_search
 from ritesmith.schemas.generation import GeneratedArtifactResponse
@@ -45,6 +46,7 @@ async def check_reuse(
     allowed_risk: str | None = None,
     llm: LLMProvider | None = None,
     settings: Settings | None = None,
+    results: list[SearchResult] | None = None,
 ) -> GeneratedArtifactResponse | None:
     """Return a reuse response if a compatible, relevant artifact exists, else None."""
     if reuse_policy == "force_new":
@@ -53,9 +55,11 @@ async def check_reuse(
     requested_type = artifact_types[0] if artifact_types else "unknown"
 
     # 1. Recall
-    results = await fts_search(
-        db, intent, artifact_types=artifact_types, limit=settings.reuse_recall_limit
-    )
+    if results is None:
+        results = await fts_search(
+            db, intent, artifact_types=artifact_types, limit=settings.reuse_recall_limit
+        )
+    results = [r for r in results if r.artifact.artifact_type in artifact_types]
     results = [r for r in results if r.score >= _REUSE_SCORE_THRESHOLD]
     if not results:
         return None
@@ -70,7 +74,7 @@ async def check_reuse(
             request_output_schema=output_schema,
             requested_profile=runtime_profile,
             allowed_risk=allowed_risk,
-            requested_type=requested_type,
+            requested_type=r.artifact.artifact_type if len(artifact_types) > 1 else requested_type,
         )
     ]
     if not compatible:
@@ -91,6 +95,7 @@ async def check_reuse(
             chosen.artifact.artifact_id,
             payload={"goal": intent, "score": chosen.score},
         )
+    outcome(chosen.artifact.artifact_type, True)
     return GeneratedArtifactResponse(
         artifact=_build_artifact(chosen.artifact, chosen.version),
         reused=True,
@@ -110,6 +115,7 @@ async def _judge(
     candidates = [
         {
             "name": r.artifact.name,
+            "artifact_type": r.artifact.artifact_type,
             "usage_description": r.artifact.usage_description,
             "description": r.artifact.description,
             "input_schema": r.version.input_schema if r.version else None,

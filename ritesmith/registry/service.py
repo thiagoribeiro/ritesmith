@@ -208,9 +208,11 @@ class RegistryService:
         *,
         kind: str | None = None,
         status: str | None = None,
-        limit: int = 100,
+        limit: int | None = 100,
     ) -> list[Capability]:
-        stmt = select(Capability).order_by(Capability.name).limit(limit)
+        stmt = select(Capability).order_by(Capability.name)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         if kind:
             stmt = stmt.where(Capability.kind == kind)
         if status:

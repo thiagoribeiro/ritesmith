@@ -1,0 +1,133 @@
+{
+  "machine": "x86_64",
+  "python": "3.14.7",
+  "rows": [
+    {
+      "pattern": "linear",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.03383299917913973,
+      "definition_json_bytes": 297
+    },
+    {
+      "pattern": "linear",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.0792479986557737,
+      "definition_json_bytes": 439
+    },
+    {
+      "pattern": "bounded_polling",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.061074002587702125,
+      "definition_json_bytes": 555
+    },
+    {
+      "pattern": "bounded_polling",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.18664800154510885,
+      "definition_json_bytes": 788
+    },
+    {
+      "pattern": "fixed_samples",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.11470399476820603,
+      "definition_json_bytes": 525
+    },
+    {
+      "pattern": "fixed_samples",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.14683399786008522,
+      "definition_json_bytes": 732
+    },
+    {
+      "pattern": "continuation",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.085528998170048,
+      "definition_json_bytes": 847
+    },
+    {
+      "pattern": "continuation",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.16992600285448134,
+      "definition_json_bytes": 1148
+    },
+    {
+      "pattern": "parallel",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.11155800166307017,
+      "definition_json_bytes": 513
+    },
+    {
+      "pattern": "parallel",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.13760699948761612,
+      "definition_json_bytes": 788
+    },
+    {
+      "pattern": "state_tracking",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.05753699952038005,
+      "definition_json_bytes": 828
+    },
+    {
+      "pattern": "state_tracking",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.10945400572381914,
+      "definition_json_bytes": 1108
+    },
+    {
+      "pattern": "content_monitor",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.077373995736707,
+      "definition_json_bytes": 1262
+    },
+    {
+      "pattern": "content_monitor",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.1620110051590018,
+      "definition_json_bytes": 1663
+    },
+    {
+      "pattern": "async_callback",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.026900001103058457,
+      "definition_json_bytes": 431
+    },
+    {
+      "pattern": "async_callback",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.051635994168464094,
+      "definition_json_bytes": 581
+    },
+    {
+      "pattern": "compensation",
+      "format": "compact",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.021218998881522566,
+      "definition_json_bytes": 358
+    },
+    {
+      "pattern": "compensation",
+      "format": "mermaid",
+      "repetitions": 500,
+      "compile_validate_p95_ms": 0.04601600085152313,
+      "definition_json_bytes": 506
+    }
+  ],
+  "qualification": "Only deterministic parsing/compilation/structural validation of examples; not artifact-generation latency or model quality."
+}

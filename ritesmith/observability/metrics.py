@@ -121,3 +121,39 @@ sandbox_conversion_depth = Histogram(
     "Max recursion depth reached during Lua↔Python table conversion",
     buckets=_BUCKETS_DEPTH,
 )
+
+# Request-level SLO includes unsuccessful responses and all repair/fallback time.
+generation_stage_duration = Histogram(
+    "ritesmith_generation_stage_duration_seconds",
+    "Generation stage duration",
+    ["stage", "artifact_type"],
+    buckets=_BUCKETS_LATENCY,
+)
+generation_duration = Histogram(
+    "ritesmith_generation_duration_seconds",
+    "Complete generation response duration",
+    ["entrypoint", "artifact_type"],
+    buckets=(0.1, 0.25, 0.5, 1, 2, 3, 4, 5, 10, 30, 60, 180),
+)
+generation_requests_total = Counter(
+    "ritesmith_generation_requests_total",
+    "Generation responses by validity and latency",
+    ["entrypoint", "artifact_type", "outcome"],
+)
+generation_target_requests_total = Counter(
+    "ritesmith_generation_target_requests_total",
+    "Generation responses against the configured complete-artifact latency target",
+    ["entrypoint", "artifact_type", "target_seconds", "outcome"],
+)
+
+
+generation_estimated_cost_total = Counter(
+    "ritesmith_generation_estimated_cost_usd_total",
+    "Known estimated request cost including failed artifacts; historical price snapshot",
+    ["entrypoint", "artifact_type", "client_tests", "dependencies"],
+)
+generation_unknown_cost_total = Counter(
+    "ritesmith_generation_unknown_cost_total",
+    "Requests with unmetered usage; cannot demonstrate a cost saving",
+    ["entrypoint", "artifact_type", "client_tests", "dependencies"],
+)

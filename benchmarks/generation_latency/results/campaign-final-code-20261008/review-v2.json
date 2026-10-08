@@ -1,0 +1,904 @@
+{
+  "assessment_version": 2,
+  "raw_sha256": {
+    "all-baseline-gpt-5-mini-mixed-c1.jsonl": "2a994264528c1be9e5827a57e679cddc4ff847d5824c33eb390f87aeb094da37",
+    "triage-baseline-gpt-5-mini-mixed-c1.jsonl": "b76820509991888d24bb0807564c012c760830f73262a217e2ea49bac1562824",
+    "triage-filtered-gpt-5-mini-mixed-c1.jsonl": "85b5b075853402ffed19b977d530df83bd6fff36c5be739fa2008b17bc7a6ff2",
+    "triage-filtered-gpt-5-mixed-c1.jsonl": "deeb79970a36acace1ad3ddbade6920be4910f4cdc4b07a3f02552797fbc334a",
+    "triage-filtered-gpt-5.2-mixed-c1.jsonl": "c18380459bb80d399fba09c3c5847eb1418c669b8797abc0c875806643365f15",
+    "triage-filtered-gpt-5.4-mini-mixed-c1.jsonl": "c0766d7eb1141db0ba8b2c7b4519d63aa98cf0dd36e0b54e415ffcc6d0aff4f3",
+    "triage-full-gpt-5-mini-mixed-c1.jsonl": "154a7ca6e85d1ed325133adebea8d6cd3b7f7d1e6c85704a4608c387320205de",
+    "triage-full-gpt-5-mixed-c1.jsonl": "edb073e116874f056a91dcd8eebe88f10dc5f3e4f7fb0e361b826df7757c3d79",
+    "triage-full-gpt-5.2-mixed-c1.jsonl": "30c85bc7311336babb64b409fd705eb44958338980d110ae3ed35692dcfb3e1f",
+    "triage-full-gpt-5.4-mini-mixed-c1.jsonl": "2e9c8dd79828aba223947a207383ce60a30df04900aa0607bfacb88365c1328f",
+    "triage-model-gpt-5-mini-mixed-c1.jsonl": "eecc8cf9a7dd7d16dce4354c61cfd7856a8fccc2d5a1b3ceef19444901147386",
+    "triage-model-gpt-5-mixed-c1.jsonl": "6fa48331ae5ad07a57b1c88320170bd50a2285f575639db25316223858c5729b",
+    "triage-model-gpt-5.2-mixed-c1.jsonl": "a702869bb0bf549dc73848986ba1e99b67eba143a8a7103af9d10c63bfc077d0",
+    "triage-model-gpt-5.4-mini-mixed-c1.jsonl": "3408af558a9000e9bd40dcf3d24c41aaeb52914c090a9407f46d8d56405f2bc2"
+  },
+  "changes": [
+    {
+      "source": "all-baseline-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_conditional",
+      "repetition": 0,
+      "entrypoint": "plans",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "all-baseline-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "plans",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "all-baseline-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_threshold",
+      "repetition": 2,
+      "entrypoint": "plans",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "all-baseline-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 3,
+      "entrypoint": "generate",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-baseline-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at track"
+      ]
+    },
+    {
+      "source": "triage-baseline-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at track"
+      ]
+    },
+    {
+      "source": "triage-filtered-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-filtered-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-filtered-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-filtered-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at track_iteration"
+      ]
+    },
+    {
+      "source": "triage-filtered-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at tick"
+      ]
+    },
+    {
+      "source": "triage-filtered-gpt-5.4-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at tick"
+      ]
+    },
+    {
+      "source": "triage-full-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5.4-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at tick"
+      ]
+    },
+    {
+      "source": "triage-full-gpt-5.4-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-full-gpt-5.4-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5.2-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 2,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    },
+    {
+      "source": "triage-model-gpt-5.4-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 0,
+      "entrypoint": "specialized",
+      "original_errors": [],
+      "reviewed_errors": [
+        "counter-controlled cycle resets iteration at tick"
+      ]
+    },
+    {
+      "source": "triage-model-gpt-5.4-mini-mixed-c1.jsonl",
+      "task": "wf_week",
+      "repetition": 1,
+      "entrypoint": "specialized",
+      "original_errors": [
+        "missing capability market.coin_price"
+      ],
+      "reviewed_errors": []
+    }
+  ],
+  "groups": [
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 50,
+      "p95_s": 52.434667799971066,
+      "valid_fraction": 0.92,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.36,
+      "prompt_tokens": 151097,
+      "cached_tokens": 26624,
+      "estimated_usd": 0.27423549999999997,
+      "completion_tokens": 128716
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 49,
+      "p95_s": 46.428255879029166,
+      "valid_fraction": 0.9795918367346939,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.3877551020408163,
+      "prompt_tokens": 134241,
+      "cached_tokens": 2176,
+      "estimated_usd": 0.2726119,
+      "completion_tokens": 127414
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 59,
+      "p95_s": 44.8391260849894,
+      "valid_fraction": 0.9830508474576272,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.22033898305084745,
+      "prompt_tokens": 99586,
+      "cached_tokens": 23424,
+      "estimated_usd": 0.26648610000000006,
+      "completion_tokens": 123430
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 27,
+      "p95_s": 98.74550758599071,
+      "valid_fraction": 0.48148148148148145,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.48148148148148145,
+      "prompt_tokens": 258215,
+      "cached_tokens": 98432,
+      "estimated_usd": 0.4199355999999999,
+      "completion_tokens": 192735
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 27,
+      "p95_s": 88.13129086000845,
+      "valid_fraction": 0.7407407407407407,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.25925925925925924,
+      "prompt_tokens": 273672,
+      "cached_tokens": 104704,
+      "estimated_usd": 0.2938830500000001,
+      "completion_tokens": 128579
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 35,
+      "p95_s": 44.139331985032186,
+      "valid_fraction": 0.9428571428571428,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.02857142857142857,
+      "prompt_tokens": 343176,
+      "cached_tokens": 194048,
+      "estimated_usd": 0.2330552,
+      "completion_tokens": 95461
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 28.9936806979822,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 16233,
+      "cached_tokens": 4608,
+      "estimated_usd": 0.09355325000000002,
+      "completion_tokens": 10403
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 43.36744526703842,
+      "valid_fraction": 0.8888888888888888,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 39894,
+      "cached_tokens": 12928,
+      "estimated_usd": 0.20123350000000004,
+      "completion_tokens": 16591
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 8.195627726963721,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11384,
+      "cached_tokens": 3328,
+      "estimated_usd": 0.012819200000000001,
+      "completion_tokens": 5361
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 15.79175320500508,
+      "valid_fraction": 0.7777777777777778,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 39893,
+      "cached_tokens": 12928,
+      "estimated_usd": 0.03146045,
+      "completion_tokens": 12198
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 15.784260165004525,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.3333333333333333,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11339,
+      "cached_tokens": 0,
+      "estimated_usd": 0.06550825,
+      "completion_tokens": 4180
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 119.1000506169512,
+      "valid_fraction": 0.5555555555555556,
+      "valid_under_5s_fraction": 0.1111111111111111,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 44889,
+      "cached_tokens": 12160,
+      "estimated_usd": 0.28426925000000003,
+      "completion_tokens": 18484
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.951822594972327,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.5555555555555556,
+      "fallback_fraction": 0.4444444444444444,
+      "prompt_tokens": 17715,
+      "cached_tokens": 0,
+      "estimated_usd": 0.03133475,
+      "completion_tokens": 6688
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.33637491299305,
+      "valid_fraction": 0.5555555555555556,
+      "valid_under_5s_fraction": 0.2222222222222222,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 60009,
+      "cached_tokens": 17408,
+      "estimated_usd": 0.08370965000000001,
+      "completion_tokens": 14578
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 30.610331082018092,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.4444444444444444,
+      "prompt_tokens": 15362,
+      "cached_tokens": 4608,
+      "estimated_usd": 0.09569649999999999,
+      "completion_tokens": 10715
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 66.41713054501452,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 28726,
+      "cached_tokens": 9216,
+      "estimated_usd": 0.1525495,
+      "completion_tokens": 12701
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 6.5768532730289735,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.3333333333333333,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 10564,
+      "cached_tokens": 2304,
+      "estimated_usd": 0.011412599999999998,
+      "completion_tokens": 4645
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 16.10286325600464,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.2222222222222222,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 29936,
+      "cached_tokens": 9216,
+      "estimated_usd": 0.024214400000000004,
+      "completion_tokens": 9402
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.2",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 16.64209243800724,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.4444444444444444,
+      "fallback_fraction": 0.2222222222222222,
+      "prompt_tokens": 12698,
+      "cached_tokens": 0,
+      "estimated_usd": 0.068594,
+      "completion_tokens": 4650
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.2",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 25.53534533001948,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.4444444444444444,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 28735,
+      "cached_tokens": 8064,
+      "estimated_usd": 0.13292545,
+      "completion_tokens": 6810
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 17.77077006100444,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 16645,
+      "cached_tokens": 0,
+      "estimated_usd": 0.03128525,
+      "completion_tokens": 6967
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 13.314951381005812,
+      "valid_fraction": 0.8888888888888888,
+      "valid_under_5s_fraction": 0.5555555555555556,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 29968,
+      "cached_tokens": 8960,
+      "estimated_usd": 0.04622850000000001,
+      "completion_tokens": 7162
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 26.017974299029447,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.1111111111111111,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 15264,
+      "cached_tokens": 1280,
+      "estimated_usd": 0.090174,
+      "completion_tokens": 9505
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 77.29104179603746,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.2222222222222222,
+      "prompt_tokens": 100711,
+      "cached_tokens": 45696,
+      "estimated_usd": 0.26489835,
+      "completion_tokens": 22623
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 10.317977642989717,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11615,
+      "cached_tokens": 2304,
+      "estimated_usd": 0.012557349999999998,
+      "completion_tokens": 5086
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 20.265234481950756,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 86562,
+      "cached_tokens": 40320,
+      "estimated_usd": 0.0400485,
+      "completion_tokens": 13740
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.2",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 13.411066564032808,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.3333333333333333,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11336,
+      "cached_tokens": 0,
+      "estimated_usd": 0.065278,
+      "completion_tokens": 4450
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.2",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 38.86994624196086,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.2222222222222222,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 86556,
+      "cached_tokens": 35968,
+      "estimated_usd": 0.24851540000000003,
+      "completion_tokens": 10978
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.654339674976654,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.4444444444444444,
+      "prompt_tokens": 17755,
+      "cached_tokens": 0,
+      "estimated_usd": 0.03334925,
+      "completion_tokens": 7109
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.50818494602572,
+      "valid_fraction": 0.8888888888888888,
+      "valid_under_5s_fraction": 0.4444444444444444,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 86554,
+      "cached_tokens": 40192,
+      "estimated_usd": 0.09098039999999999,
+      "completion_tokens": 11821
+    }
+  ],
+  "qualification": "Independent versioned review; timings and raw responses unchanged. Corrects BTC capability equivalence and detects counter-reset cycles. Structural/limited semantic checks do not prove live workflow execution."
+}

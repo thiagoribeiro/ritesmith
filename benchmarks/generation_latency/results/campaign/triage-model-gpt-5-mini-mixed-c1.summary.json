@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "model",
+    "model": "gpt-5-mini",
+    "kind": "luau_script",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "requests": 9,
+    "p95_s": 8.91470515500987,
+    "valid_fraction": 1.0,
+    "valid_under_5s_fraction": 0.5555555555555556,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 10566,
+    "cached_tokens": 0,
+    "completion_tokens": 4459
+  },
+  {
+    "phase": "model",
+    "model": "gpt-5-mini",
+    "kind": "trama_workflow",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "requests": 9,
+    "p95_s": 23.971088196034543,
+    "valid_fraction": 0.6666666666666666,
+    "valid_under_5s_fraction": 0.1111111111111111,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 86556,
+    "cached_tokens": 23552,
+    "completion_tokens": 13786
+  }
+]

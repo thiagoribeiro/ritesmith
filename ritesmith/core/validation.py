@@ -97,18 +97,15 @@ class ValidationPipeline:
                 checks.extend(exec_checks)
 
         elif artifact_type == "luau_script":
-            checks.extend(
-                await self._check_luau_types(content, profile, input_schema, output_schema)
-            )
             checks.extend(self._check_luau_tools_in_profile(content, profile))
             checks.extend(self._check_forbidden_tokens(content, extra=_LUAU_EXTRA_FORBIDDEN))
             checks.extend(self._check_size(content, constraints, factor=_LUAU_SIZE_FACTOR))
             checks.extend(self._check_schema_presence(content))
-
-            if test_cases:
-                checks.extend(
-                    await self._check_test_execution(content, test_cases, profile, luau=True)
+            checks.extend(
+                await self._check_luau_session(
+                    content, profile, input_schema, output_schema, test_cases or []
                 )
+            )
 
         elif artifact_type in ("trama_workflow", "workflow_template"):
             checks.extend(self._check_json_syntax(content))
@@ -159,17 +156,57 @@ class ValidationPipeline:
             ]
         return [ValidationCheck(name="syntax", status="passed")]
 
+    async def _check_luau_session(self, content, profile, input_schema, output_schema, cases):
+        from ritesmith.runtime.validation_session import LuauValidationSession, preflight
+
+        def evaluate():
+            session = LuauValidationSession(self.settings, profile, input_schema, output_schema)
+            test_checks = []
+            try:
+                diagnostics = session.check(content)
+                try:
+                    specs = preflight(cases, session.tools, input_schema, output_schema)
+                except Exception as exc:
+                    return diagnostics, [
+                        ValidationCheck(name="test_spec_fixture", status="failed", message=str(exc))
+                    ]
+                if diagnostics["nonstrict"]:
+                    return diagnostics, []
+                for index, spec in enumerate(specs):
+                    result, fixture_error, errors = session.execute(content, spec)
+                    error = fixture_error or (result.message if not result.ok else None)
+                    error = error or ("; ".join(errors) if errors else None)
+                    test_checks.append(
+                        ValidationCheck(
+                            name=f"test_fixture_{index}" if fixture_error else f"test_case_{index}",
+                            status="failed" if error else "passed",
+                            message=f"Test case {index}: {error}" if error else None,
+                        )
+                    )
+                return diagnostics, test_checks
+            finally:
+                session.close()
+
+        diagnostics, test_checks = await asyncio.to_thread(evaluate)
+        return (
+            await self._check_luau_types(
+                content, profile, input_schema, output_schema, diagnostics=diagnostics
+            )
+            + test_checks
+        )
+
     async def _check_luau_types(
         self,
         content: str,
         profile: str,
         input_schema: dict | None,
         output_schema: dict | None,
+        diagnostics: dict | None = None,
     ) -> list[ValidationCheck]:
         from ritesmith.runtime.luau import LuauScriptRuntime
 
         rt = LuauScriptRuntime(self.settings)
-        diags = await asyncio.to_thread(
+        diags = diagnostics or await asyncio.to_thread(
             rt.check,
             content,
             profile=profile,

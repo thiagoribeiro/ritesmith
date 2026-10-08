@@ -35,11 +35,14 @@ from ritesmith.storage.postgres import get_db
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     import logging
+    import os
 
     from ritesmith.config import get_settings
     from ritesmith.core.provider_registration import register_all_providers
     from ritesmith.schemas.policy import PolicyDecisionValue
 
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger("ritesmith").setLevel(logging.INFO)
     log = logging.getLogger(__name__)
 
     from ritesmith.runtime.luau import effective_script_language, luau_available
@@ -94,19 +97,26 @@ async def _lifespan(app: FastAPI):
             break
     except Exception as e:
         log.debug("CASP migration check skipped: %s", e)
-    yield
-    # Graceful shutdown: drain Lua executor and release DB pool
-    log.info("shutdown: draining Lua sandbox executor")
-    from ritesmith.runtime.sandbox import _EXECUTOR
+    from ritesmith.llm.openai_provider import OpenAIProvider
 
-    _EXECUTOR.shutdown(wait=True, cancel_futures=False)
-    from ritesmith.runtime.luau import shutdown_executor
+    # Registry/health/execution remain available without an LLM credential.
+    app.state.llm_provider = OpenAIProvider(settings, lazy_client=not os.getenv("OPENAI_API_KEY"))
+    try:
+        yield
+    finally:
+        await app.state.llm_provider.close()
+        # Drain executors and DB pool even if the application exits with an error.
+        log.info("shutdown: draining Lua sandbox executor")
+        from ritesmith.runtime.sandbox import _EXECUTOR
 
-    shutdown_executor()
-    log.info("shutdown: disposing DB connection pool")
-    from ritesmith.storage.postgres import engine
+        _EXECUTOR.shutdown(wait=True, cancel_futures=False)
+        from ritesmith.runtime.luau import shutdown_executor
 
-    await engine.dispose()
+        shutdown_executor()
+        log.info("shutdown: disposing DB connection pool")
+        from ritesmith.storage.postgres import engine
+
+        await engine.dispose()
 
 
 class _RequestIdMiddleware(BaseHTTPMiddleware):
@@ -120,15 +130,114 @@ class _RequestIdMiddleware(BaseHTTPMiddleware):
 
 class _MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        import json
+        import logging
+
+        from ritesmith.observability.generation import GenerationTrace, current_trace
+        from ritesmith.observability.metrics import (
+            generation_duration,
+            generation_requests_total,
+            generation_target_requests_total,
+        )
+
         start = time.perf_counter()
-        response = await call_next(request)
-        elapsed = time.perf_counter() - start
-        method = request.method
         endpoint = request.url.path
-        status = str(response.status_code)
-        http_request_duration.labels(method=method, endpoint=endpoint).observe(elapsed)
-        http_requests_total.labels(method=method, endpoint=endpoint, status_code=status).inc()
-        return response
+        is_generation = request.method == "POST" and (
+            endpoint.startswith("/generate") or endpoint == "/plans"
+        )
+        entrypoint = (
+            f"mcp:{endpoint}" if request.headers.get("X-Ritesmith-Interface") == "mcp" else endpoint
+        )
+        trace = GenerationTrace() if is_generation else None
+        if trace is not None:
+            request.state.generation_trace = trace
+        token = current_trace.set(trace) if trace is not None else None
+        status = "500"
+        try:
+            response = await call_next(request)
+            status = str(response.status_code)
+            return response
+        finally:
+            elapsed = time.perf_counter() - start
+            http_request_duration.labels(method=request.method, endpoint=endpoint).observe(elapsed)
+            http_requests_total.labels(
+                method=request.method, endpoint=endpoint, status_code=status
+            ).inc()
+            if trace is not None:
+                valid = trace.accepted and bool(trace.artifact_types) and int(status) < 400
+                from ritesmith.config import get_settings
+
+                target = get_settings().generation_latency_target_seconds
+                target_result = (
+                    "valid_within_target"
+                    if valid and elapsed <= target
+                    else "valid_over_target"
+                    if valid
+                    else "invalid"
+                )
+                result = (
+                    "valid_under_5s"
+                    if valid and elapsed < 5
+                    else "valid_over_5s"
+                    if valid
+                    else "invalid"
+                )
+                for kind in trace.artifact_types or {"unknown"}:
+                    generation_duration.labels(entrypoint=entrypoint, artifact_type=kind).observe(
+                        elapsed
+                    )
+                    generation_requests_total.labels(
+                        entrypoint=entrypoint, artifact_type=kind, outcome=result
+                    ).inc()
+                    generation_target_requests_total.labels(
+                        entrypoint=entrypoint,
+                        artifact_type=kind,
+                        target_seconds=f"{target:g}",
+                        outcome=target_result,
+                    ).inc()
+                from ritesmith.observability.costs import PRICE_VERSION, estimated_cost
+                from ritesmith.observability.metrics import (
+                    generation_estimated_cost_total,
+                    generation_unknown_cost_total,
+                )
+
+                cost = estimated_cost(trace.calls)
+                group = (
+                    "compound"
+                    if len(trace.artifact_types) > 1
+                    else next(iter(trace.artifact_types), "unknown")
+                )
+                labels = {
+                    "entrypoint": entrypoint,
+                    "artifact_type": group,
+                    "client_tests": str(trace.client_tests).lower(),
+                    "dependencies": str(trace.has_dependencies).lower(),
+                }
+
+                if cost is None:
+                    generation_unknown_cost_total.labels(**labels).inc()
+                else:
+                    generation_estimated_cost_total.labels(**labels).inc(cost)
+                logging.getLogger(__name__).info(
+                    "generation response duration=%.3fs outcome=%s trace=%s",
+                    elapsed,
+                    result,
+                    json.dumps(
+                        {
+                            "calls": trace.calls,
+                            "stages": trace.stages,
+                            "fallback": trace.fallback,
+                            "diagnostics": trace.diagnostics,
+                            "estimated_usd": cost,
+                            "price_version": PRICE_VERSION,
+                            "client_tests": trace.client_tests,
+                            "dependencies": trace.has_dependencies,
+                            "entrypoint": entrypoint,
+                        }
+                    ),
+                )
+            if token is not None:
+                current_trace.reset(token)
 
 
 def create_app() -> FastAPI:

@@ -1,0 +1,8 @@
+{
+  "reason": "scope reduced by user",
+  "recorded_requests": 463,
+  "inflight_request_may_have_unrecorded_usage": true,
+  "old_matrix_and_queued_formats_stopped": true,
+  "new_target_seconds": 10,
+  "required_cost_reduction": 0.5
+}
