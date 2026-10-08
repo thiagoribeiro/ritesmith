@@ -50,7 +50,9 @@ async def _auto_execute(artifact_id: str, plan_id: str) -> None:
                 CreateExecutionRequest(
                     artifact_id=artifact_id,
                     plan_id=plan_id,
-                    input=continuation_input,
+                    input={**continuation_input, "continuation": continuation_input}
+                    if continuation_input
+                    else None,
                 )
             )
             log.info(

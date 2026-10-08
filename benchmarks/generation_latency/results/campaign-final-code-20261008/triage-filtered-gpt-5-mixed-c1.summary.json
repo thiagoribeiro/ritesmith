@@ -1,0 +1,38 @@
+[
+  {
+    "phase": "filtered",
+    "model": "gpt-5",
+    "kind": "luau_script",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "client_tests": true,
+    "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+    "requests": 9,
+    "p95_s": 28.9936806979822,
+    "valid_fraction": 1.0,
+    "valid_under_5s_fraction": 0.0,
+    "fallback_fraction": 0.3333333333333333,
+    "prompt_tokens": 16233,
+    "cached_tokens": 4608,
+    "estimated_usd": 0.09355325000000002,
+    "completion_tokens": 10403
+  },
+  {
+    "phase": "filtered",
+    "model": "gpt-5",
+    "kind": "trama_workflow",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "client_tests": true,
+    "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+    "requests": 9,
+    "p95_s": 43.36744526703842,
+    "valid_fraction": 0.5555555555555556,
+    "valid_under_5s_fraction": 0.0,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 39894,
+    "cached_tokens": 12928,
+    "estimated_usd": 0.20123350000000004,
+    "completion_tokens": 16591
+  }
+]

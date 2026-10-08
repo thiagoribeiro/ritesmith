@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +30,7 @@ class AuditLogger:
                 entity_id=entity_id,
                 actor=actor,
                 payload=payload,
+                created_at=datetime.now(UTC),
             )
             self.db.add(event)
             await self.db.flush()

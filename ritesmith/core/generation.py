@@ -18,6 +18,7 @@ Fluxo principal (generate_lua):
 6. Retorna GeneratedArtifactResponse
 """
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 
@@ -26,13 +27,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ritesmith.api.routes.artifacts import _build_artifact
 from ritesmith.config import Settings
 from ritesmith.core.audit import AuditLogger
+from ritesmith.core.diagnostics import validation_diagnostics
+from ritesmith.core.exceptions import LLMError
+from ritesmith.core.generation_budget import bounded_generation
 from ritesmith.core.ids import generate_id
 from ritesmith.core.repair import run_repair_loop
 from ritesmith.core.reuse import check_reuse
 from ritesmith.core.validation import ValidationPipeline
-from ritesmith.llm.base import LLMProvider, LuaGenerationResponse
+from ritesmith.llm.base import LLMCallStats, LLMProvider, LuaGenerationResponse
+from ritesmith.observability.generation import current_trace, outcome, stage
 from ritesmith.registry.models import GenerationAttempt, GenerationJob
-from ritesmith.registry.search import fts_search
+from ritesmith.registry.search import SearchResult, fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.runtime.host_functions import list_names_for_profile
 from ritesmith.runtime.luau import (
@@ -46,9 +51,11 @@ from ritesmith.schemas.artifact import (
     Artifact,
     ArtifactStatus,
     ArtifactType,
+    ValidationCheck,
     ValidationResult,
 )
 from ritesmith.schemas.generation import GeneratedArtifactResponse, GenerateScriptRequest
+from ritesmith.schemas.test_spec import bind_known_fixtures, functional_tests
 
 log = logging.getLogger(__name__)
 
@@ -97,38 +104,64 @@ class GenerationService:
         self.registry = RegistryService(db)
         self.audit = audit
 
+    @bounded_generation
     async def generate_lua(
         self,
         req: GenerateScriptRequest,
         plan_id: str | None = None,
+        *,
+        initial: tuple[LuaGenerationResponse, LLMCallStats] | None = None,
+        recall: list[SearchResult] | None = None,
+        pre_reused: GeneratedArtifactResponse | None = None,
+        initial_tests: tuple[list[dict] | None, bool] | None = None,
+        reuse_checked: bool = False,
     ) -> GeneratedArtifactResponse:
+        if pre_reused is not None:
+            return pre_reused
         constraints = req.constraints.model_dump() if req.constraints else {}
+        if req.required_capabilities is not None:
+            constraints["required_capabilities"] = req.required_capabilities
         profile = constraints.get("runtime_profile", "transform_only")
         reuse_policy = constraints.get("reuse_policy", "prefer_reuse")
         language = self._resolve_language(req)
         artifact_type = script_artifact_type(language)
+        trace = current_trace.get()
+        if trace is not None:
+            trace.artifact_types.add(artifact_type)
         max_attempts = self.settings.generation_max_attempts
+
+        if req.context:
+            constraints = {**constraints, "context": req.context}
+        if recall is None:
+            with stage("recall", artifact_type):
+                recall = await fts_search(
+                    self.db,
+                    req.intent,
+                    artifact_types=["luau_script", "lua_script"],
+                    limit=max(5, self.settings.reuse_recall_limit),
+                )
 
         # 1+2+3. Reuse check — a working script is reusable whatever its language,
         # but only if it is contract-compatible with this request and relevant.
-        if reuse := await check_reuse(
-            self.db,
-            req.intent,
-            ["luau_script", "lua_script"],
-            reuse_policy,
-            self.audit,
-            input_schema=req.input_schema,
-            output_schema=req.output_schema,
-            runtime_profile=profile,
-            llm=self.llm,
-            settings=self.settings,
+        if not reuse_checked and (
+            reuse := await check_reuse(
+                self.db,
+                req.intent,
+                ["luau_script", "lua_script"],
+                reuse_policy,
+                self.audit,
+                input_schema=req.input_schema,
+                output_schema=req.output_schema,
+                runtime_profile=profile,
+                llm=self.llm,
+                settings=self.settings,
+                results=recall,
+            )
         ):
             return reuse
 
         # Similar artifacts for few-shot prompt context (same language only)
-        search_results = await fts_search(
-            self.db, req.intent, artifact_types=[artifact_type], limit=5
-        )
+        search_results = [r for r in recall if r.artifact.artifact_type == artifact_type][:5]
 
         # 3. Registra GenerationJob
         job = await self._create_job(req, plan_id, artifact_type)
@@ -149,14 +182,43 @@ class GenerationService:
         last_validation: ValidationResult | None = None
         final_response: LuaGenerationResponse | None = None
         effective_tests: list[dict] | None = (req.context or {}).get("test_cases")
+        trace = current_trace.get()
+        if trace is not None:
+            trace.client_tests |= bool(effective_tests)
         tests_attempted = False
+        if initial_tests is not None and not effective_tests:
+            effective_tests, tests_attempted = initial_tests
+        active_llm = self.llm
+        tests_task = None
+        test_failure = None
+        if (
+            self.settings.generation_parallel_tests
+            and not effective_tests
+            and not tests_attempted
+            and self.settings.require_tests_min_risk not in ("", "off")
+        ):
+            tests_task = asyncio.create_task(
+                self.llm.generate_validation_tests(
+                    req.intent,
+                    req.input_schema,
+                    req.output_schema,
+                    profile=profile,
+                    fixtures=(req.context or {}).get("test_fixtures", []),
+                )
+            )
 
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_script, last_validation, final_response
-            nonlocal effective_tests, tests_attempted
+            nonlocal effective_tests, tests_attempted, active_llm, test_failure
+            job.attempts = attempt
+            if attempt > 1 and last_script is None:
+                active_llm = self.llm.fallback()
 
-            if language == "luau" and (attempt == 1 or last_script is None):
-                llm_response, stats = await self.llm.generate_luau(
+            if attempt == 1 and initial is not None:
+                llm_response, stats = initial
+                script = llm_response.script
+            elif language == "luau" and (attempt == 1 or last_script is None):
+                llm_response, stats = await active_llm.generate_luau(
                     goal=req.intent,
                     input_schema=req.input_schema,
                     output_schema=req.output_schema,
@@ -167,7 +229,7 @@ class GenerationService:
                 )
                 script = llm_response.script
             elif attempt == 1 or last_script is None:
-                llm_response, stats = await self.llm.generate_lua(
+                llm_response, stats = await active_llm.generate_lua(
                     goal=req.intent,
                     input_schema=req.input_schema,
                     output_schema=req.output_schema,
@@ -183,7 +245,7 @@ class GenerationService:
                 if language == "luau" and last_validation:
                     errors += last_validation.warnings
                 if language == "luau":
-                    repair_resp, stats = await self.llm.repair_luau(
+                    repair_resp, stats = await active_llm.repair_luau(
                         original_goal=req.intent,
                         current_script=last_script,
                         validation_errors=errors,
@@ -192,7 +254,7 @@ class GenerationService:
                         type_declarations=type_declarations,
                     )
                 else:
-                    repair_resp, stats = await self.llm.repair_lua(
+                    repair_resp, stats = await active_llm.repair_lua(
                         original_goal=req.intent,
                         current_script=last_script,
                         validation_errors=errors,
@@ -208,6 +270,7 @@ class GenerationService:
                     runtime_profile=profile,
                 )
 
+            llm_response.runtime_profile = profile
             final_response = llm_response
 
             if self.audit:
@@ -219,6 +282,7 @@ class GenerationService:
                         "attempt": attempt,
                         "tokens": stats.total_tokens,
                         "model": stats.model,
+                        "stats": stats.model_dump(),
                     },
                 )
 
@@ -230,26 +294,50 @@ class GenerationService:
             require_tests = _risk_at_least(
                 llm_response.risk_assessment, self.settings.require_tests_min_risk
             )
-            if require_tests and not effective_tests and not tests_attempted:
+            if (
+                (require_tests or tests_task is not None)
+                and not effective_tests
+                and not tests_attempted
+            ):
                 tests_attempted = True
                 try:
-                    generated, _tstats = await self.llm.generate_tests(
-                        req.intent, req.input_schema, req.output_schema
-                    )
+                    with stage("tests", artifact_type):
+                        generated, _tstats = (
+                            await tests_task
+                            if tests_task is not None
+                            else await self.llm.generate_validation_tests(
+                                req.intent,
+                                req.input_schema,
+                                req.output_schema,
+                                profile=profile,
+                                fixtures=(req.context or {}).get("test_fixtures", []),
+                            )
+                        )
                     effective_tests = generated or None
                 except NotImplementedError:
                     pass
+                except LLMError as exc:
+                    test_failure = str(exc)
 
-            validation = await self.validator.run(
-                content=script,
-                artifact_type=artifact_type,
-                constraints=constraints,
-                test_cases=effective_tests,
-                profile=profile,
-                input_schema=req.input_schema,
-                output_schema=req.output_schema,
-            )
+            if effective_tests and (req.context or {}).get("test_fixtures"):
+                effective_tests = bind_known_fixtures(effective_tests, req.context["test_fixtures"])
+            with stage("validation", artifact_type):
+                validation = await self.validator.run(
+                    content=script,
+                    artifact_type=artifact_type,
+                    constraints=constraints,
+                    test_cases=effective_tests,
+                    profile=profile,
+                    input_schema=req.input_schema,
+                    output_schema=req.output_schema,
+                )
 
+            if test_failure:
+                validation.valid = False
+                validation.errors.append(test_failure)
+                validation.checks.append(
+                    ValidationCheck(name="test_spec_fixture", status="failed", message=test_failure)
+                )
             await self._record_attempt(job.generation_id, attempt, script, validation)
             log.info(
                 "generation attempt %d/%d valid=%s",
@@ -276,10 +364,17 @@ class GenerationService:
             return validation.valid
 
         try:
-            await run_repair_loop(
+            performed = await run_repair_loop(
                 artifact_type=artifact_type,
                 max_attempts=max_attempts,
                 attempt_fn=attempt_fn,
+                settings=self.settings,
+                initial_recoveries=max(0, initial[1].api_attempts - 1) if initial else 0,
+                initial_duration=initial[1].duration_s if initial else 0,
+                state_fn=lambda: (
+                    last_script,
+                    validation_diagnostics(last_validation) if last_validation else [],
+                ),
             )
 
             # 5. Certification + acceptance. `valid` = validated (syntax/contract/nonstrict
@@ -298,7 +393,7 @@ class GenerationService:
                 final_response.risk_assessment if final_response else None,
                 self.settings.require_tests_min_risk,
             )
-            tests_ok = (not require_tests) or bool(effective_tests)
+            tests_ok = (not require_tests) or functional_tests(effective_tests)
             accepted = bool(
                 last_validation
                 and last_validation.valid
@@ -307,7 +402,7 @@ class GenerationService:
             )
             job.status = "completed" if accepted else "failed"
             job.finished_at = datetime.now(UTC)
-            job.attempts = self.settings.generation_max_attempts
+            job.attempts = performed
             log.info(
                 "generation job finished status=%s",
                 job.status,
@@ -341,6 +436,10 @@ class GenerationService:
                         artifact_orm.artifact_id,
                         payload={"goal": req.intent, "generation_id": job.generation_id},
                     )
+        except asyncio.CancelledError:
+            job.status = "failed"
+            job.finished_at = datetime.now(UTC)
+            raise
         except Exception:
             job.status = "failed"
             job.finished_at = datetime.now(UTC)
@@ -351,7 +450,18 @@ class GenerationService:
             )
             raise
         finally:
-            await self.db.commit()
+            if tests_task is not None:
+                if not tests_task.done():
+                    tests_task.cancel()
+                await asyncio.gather(tests_task, return_exceptions=True)
+            with stage("persist", artifact_type):
+                from ritesmith.core.generation_budget import current_budget
+
+                budget = current_budget.get()
+                if budget is not None and budget.remaining <= 0:
+                    await self.db.rollback()
+                else:
+                    await self.db.commit()
 
         # 7. Monta resposta (mesmo sem salvar, retorna o artifact transitório)
         if artifact_orm and artifact_version_orm:
@@ -366,6 +476,9 @@ class GenerationService:
                 certification=certification,
             )
 
+        outcome(artifact_type, accepted)
+        artifact_schema._input_schema = req.input_schema
+        artifact_schema._output_schema = req.output_schema
         return GeneratedArtifactResponse(
             artifact=artifact_schema,
             validation=last_validation,
@@ -395,6 +508,7 @@ class GenerationService:
             output_schema=req.output_schema,
             constraints=req.constraints.model_dump() if req.constraints else None,
             plan_id=plan_id,
+            created_at=datetime.now(UTC),
         )
         self.db.add(job)
         await self.db.flush()
@@ -412,6 +526,7 @@ class GenerationService:
             attempt_number=attempt_number,
             content=content,
             validation_result=validation.model_dump(),
+            created_at=datetime.now(UTC),
         )
         self.db.add(attempt)
         await self.db.flush()

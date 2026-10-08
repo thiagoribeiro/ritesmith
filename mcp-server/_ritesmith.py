@@ -12,7 +12,7 @@ _TIMEOUT = 60.0
 
 async def _post(path: str, body: dict) -> dict:
     async with httpx.AsyncClient(base_url=_BASE, timeout=_TIMEOUT) as c:
-        r = await c.post(path, json=body)
+        r = await c.post(path, json=body, headers={"X-Ritesmith-Interface": "mcp"})
         r.raise_for_status()
         return r.json()
 
@@ -24,8 +24,12 @@ async def _get(path: str, params: dict | None = None) -> dict | list:
         return r.json()
 
 
-async def plan(intent: str, constraints: dict | None = None) -> dict:
-    return await _post("/plans", {"intent": intent, "constraints": constraints or {}})
+async def plan(
+    intent: str, constraints: dict | None = None, *, context: dict | None = None
+) -> dict:
+    return await _post(
+        "/plans", {"intent": intent, "constraints": constraints or {}, "context": context}
+    )
 
 
 async def generate(intent: str, **kwargs) -> dict:

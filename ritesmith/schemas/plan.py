@@ -1,9 +1,10 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ritesmith.schemas.artifact import Artifact, ValidationResult
+from ritesmith.workflows.examples import WORKFLOW_CONTEXT_SCHEMA, validate_examples
 
 
 class PlanStatus(StrEnum):
@@ -91,7 +92,9 @@ class CreatePlanRequest(BaseModel):
     mode: GenerationMode = GenerationMode.propose
     reuse_policy: ReusePolicy = ReusePolicy.prefer_reuse
     constraints: PlanConstraints | None = None
-    context: dict | None = None
+    context: dict | None = Field(default=None, json_schema_extra=WORKFLOW_CONTEXT_SCHEMA)
+
+    _validate_examples = field_validator("context")(validate_examples)
     replan_budget: int = Field(default=2, ge=0, le=5)
     callback_url: str | None = None
 

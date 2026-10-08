@@ -82,6 +82,63 @@ class StatProvider(ToolProvider):
             },
         }
         return {
+            "stat.collect": HostFunctionDef(
+                "stat.collect",
+                "transform_only",
+                _collect,
+                description="Append a sample to the previous list; initial_samples seeds continuation state.",
+                input_schema={
+                    "type": "object",
+                    "required": ["current"],
+                    "properties": {
+                        "current": {},
+                        "previous_samples": {"type": ["array", "null"]},
+                        "initial_samples": {"type": ["array", "null"]},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "required": ["samples"],
+                    "properties": {"samples": {"type": "array", "items": {}}},
+                },
+            ),
+            "stat.chain_step": HostFunctionDef(
+                "stat.chain_step",
+                "transform_only",
+                _chain_step,
+                description="Advance compiled monitor chains; decrement remaining work, preserve state, stop on deadline.",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "iteration": {"type": ["integer", "null"]},
+                        "remaining_iterations": {"type": ["integer", "null"]},
+                        "initial_remaining": {"type": ["integer", "null"]},
+                        "deadline_unix": {"type": ["number", "null"]},
+                        "duration_seconds": {"type": ["number", "null"]},
+                        "initial_deadline": {"type": ["number", "null"]},
+                        "state": {"type": ["object", "null"]},
+                        "previous_state": {"type": ["object", "null"]},
+                        "initial_state": {"type": ["object", "null"]},
+                    },
+                },
+                output_schema={
+                    "type": "object",
+                    "required": [
+                        "iteration",
+                        "remaining_iterations",
+                        "state",
+                        "done",
+                        "deadline_unix",
+                    ],
+                    "properties": {
+                        "iteration": {"type": "integer"},
+                        "remaining_iterations": {"type": ["integer", "null"]},
+                        "deadline_unix": {"type": ["number", "null"]},
+                        "state": {"type": "object"},
+                        "done": {"type": "boolean"},
+                    },
+                },
+            ),
             "stat.min_value": HostFunctionDef(
                 "stat.min_value",
                 "transform_only",
@@ -202,3 +259,47 @@ class StatProvider(ToolProvider):
 
     def mcp_tools(self) -> list[MCPToolDef]:
         return []
+
+
+def _advance_chain(
+    iteration=0,
+    remaining_iterations=None,
+    initial_remaining=None,
+    deadline_unix=None,
+    duration_seconds=None,
+    initial_deadline=None,
+    state=None,
+    previous_state=None,
+    initial_state=None,
+    *,
+    now,
+):
+    """Progress a finite or indefinite chain; keep state without resetting counters."""
+    deadline_unix = deadline_unix if deadline_unix is not None else initial_deadline
+    if deadline_unix is None and duration_seconds is not None:
+        deadline_unix = now + float(duration_seconds)
+    current = int(iteration or 0) + 1
+    remaining = remaining_iterations if remaining_iterations is not None else initial_remaining
+    remaining = max(0, int(remaining) - 1) if remaining is not None else None
+    effective_state = state if state is not None else previous_state
+    if effective_state is None:
+        effective_state = initial_state or {}
+    return {
+        "iteration": current,
+        "deadline_unix": deadline_unix,
+        "remaining_iterations": remaining,
+        "state": effective_state,
+        "done": remaining == 0 or (deadline_unix is not None and now >= float(deadline_unix)),
+    }
+
+
+def _chain_step(**kwargs):
+    """Use server time for real execution; tests supply a virtual clock to _advance_chain."""
+    import time
+
+    return _advance_chain(now=time.time(), **kwargs)
+
+
+def _collect(current, previous_samples=None, initial_samples=None):
+    previous = previous_samples if previous_samples is not None else initial_samples
+    return {"samples": list(previous or []) + [current]}

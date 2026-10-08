@@ -411,6 +411,25 @@ def run_luau(
     return None, f"Runtime error: {message}", False, peak
 
 
+def normalize_output(value, schema):
+    """Disambiguate empty Luau tables only where the JSON contract requires an array."""
+    if not isinstance(schema, dict):
+        return value
+    schema_type = schema.get("type")
+    is_array = schema_type == "array" or (
+        isinstance(schema_type, list) and "array" in schema_type and "object" not in schema_type
+    )
+    if is_array:
+        if value == {}:
+            return []
+        if isinstance(value, list):
+            return [normalize_output(item, schema.get("items")) for item in value]
+    if isinstance(value, dict):
+        properties = schema.get("properties", {})
+        return {key: normalize_output(item, properties.get(key)) for key, item in value.items()}
+    return value
+
+
 class LuauScriptRuntime:
     """Same interface as LuaScriptRuntime, for luau_script artifacts."""
 
@@ -472,6 +491,7 @@ class LuauScriptRuntime:
                 timed_out=timed_out,
             )
         if output_schema and output is not None:
+            output = normalize_output(output, output_schema)
             try:
                 jsonschema.validate(instance=output, schema=output_schema)
             except jsonschema.ValidationError as e:

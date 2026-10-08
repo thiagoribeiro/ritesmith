@@ -1,0 +1,17 @@
+[
+  {
+    "phase": "full",
+    "model": "gpt-5.4-mini",
+    "kind": "trama_workflow",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "requests": 1,
+    "p95_s": 0.61130274401512,
+    "valid_fraction": 0.0,
+    "valid_under_5s_fraction": 0.0,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 0,
+    "cached_tokens": 0,
+    "completion_tokens": 0
+  }
+]

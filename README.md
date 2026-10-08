@@ -675,3 +675,71 @@ per-resource access control.
 ## License
 
 Apache License 2.0
+
+## One-shot arrival reminders
+
+`POST /plans` can select `requested_artifact_types: ["trama_workflow"]` and
+provide `context.presence_reminder` with `person_alias`, `message`, and
+`channel: "telegram"`. Workflow generation uses a dedicated recipe and skips
+artifact reuse for this contract. The same context is accepted by
+`POST /generate/trama-workflow` with `save: false` for validation.
+
+The recipe reads LoomHarbor through `home.execute` with `presence.read`, checks
+`output.success` and the boolean `output.result.present`, waits for departure
+first if the person is already home, then waits for arrival, calls
+`telegram.send` once, and ends. Missing, failed, or non-boolean readings do not
+count as departure or arrival. Polls sleep for 30 seconds in Trama and do not
+call the LLM. The `max_iterations` metadata permits back-edges in validation;
+there is no twenty-poll completion counter. Existing plan cancellation,
+completion callbacks, and persistence remain in use.
+
+This contract requires the configured home and Telegram providers. It does
+not add GPS tracking, a second phone scanner, or an independent scheduler.
+
+## Generation latency
+
+Generation uses a process-scoped OpenAI client, configurable script/workflow
+models and effort, locally selected Trama examples, and an internal typed graph
+that Python expands into the existing Trama JSON. Automatic requests can combine
+intent analysis with the first candidate; explicit artifact types skip analysis.
+Tests derived independently from intent/schemas run alongside generation. Reuse,
+validation, certification, policy, approval and persistence remain in their services.
+
+`context.workflow_examples` accepts `linear`, `bounded_polling`, `fixed_samples`,
+`continuation`, `parallel`, `state_tracking`, `content_monitor`, `async_callback`,
+and `compensation`. Omit it for local selection, pass a list to select examples,
+or pass `[]` for essential rules only. Unknown identifiers return HTTP 422.
+Examples guide generation without restricting allowed node kinds. The option is
+documented in HTTP and MCP schemas.
+
+Set `RITESMITH_LLM_SCRIPT_MODEL` and `RITESMITH_LLM_WORKFLOW_MODEL` separately;
+generation and repair inherit `RITESMITH_LLM_REASONING_EFFORT=low`. Classification
+and reuse judgment use `RITESMITH_LLM_MODEL_FAST`. The original
+`RITESMITH_LLM_MODEL` remains the fallback. Independent switches are documented in
+[the latency evaluation guide](benchmarks/generation_latency/README.md).
+
+An experimental `RITESMITH_GENERATION_MERMAID_WORKFLOWS=true` generates annotated
+Mermaid graphs and compiles them deterministically to the same Trama format.
+The option is disabled by default; the benchmark's `mermaid` phase compares it
+with compact JSON, including validation, repairs and persistence.
+
+The **95% valid and complete within 10 seconds, with at least 50% lower estimated
+cost per valid artifact than baseline** target is an acceptance gate,
+not a guaranteed property of these defaults. HTTP timing includes searches,
+test generation, repairs, fallback and requested persistence. Provider cache
+tokens are recorded separately. Qualification and promotion require measured
+latency, quality and cost; seven-day monitoring follows a successful promotion.
+The current validation uses a bounded representative subset and preserved
+baseline results. It does not establish a full-corpus SLO.
+
+### Generation improvements and controlled validation
+
+See [generation improvements](docs/generation-improvements.md) for independent
+fixture tests, bounded recovery, optional Luau body assembly and semantic Trama
+plans. [The staging overlay](deploy/generation-staging.env.example) enables the
+new formats on an isolated instance. Performance/cost targets remain unqualified;
+no new paid benchmark campaign or production promotion accompanies these changes.
+
+For the owner's direct r2d2 update and the executable image/configuration rollback,
+see [generation deployment on r2d2](docs/generation-deployment-r2d2.md). The rollback
+retains current application data; a separate database backup is available for recovery.

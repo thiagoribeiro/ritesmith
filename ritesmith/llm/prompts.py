@@ -126,7 +126,7 @@ def lua_generation_user(
             parts.append(f"--- Example {i + 1}: {art.get('name', 'unknown')} ---")
             content = art.get("content", "")
             if content:
-                parts.append(content[:800])
+                parts.append(content)
 
     parts.append(f"\nRespond with JSON matching this schema exactly:\n{response_schema}")
     return "\n\n".join(parts)
@@ -271,7 +271,7 @@ def luau_generation_user(
             parts.append(f"--- Example {i + 1}: {art.get('name', 'unknown')} ---")
             content = art.get("content", "")
             if content:
-                parts.append(content[:800])
+                parts.append(content)
 
     parts.append(f"\nRespond with JSON matching this schema exactly:\n{response_schema}")
     return "\n\n".join(parts)
@@ -1093,19 +1093,16 @@ def workflow_generation_user(
     response_schema: str,
     context: dict | None = None,
 ) -> str:
-    caps_json = json.dumps(
-        [
-            {
-                "capability_name": c.get("capability_name") or c.get("capability_id"),
-                "description": c.get("description", ""),
-                "input_schema": c.get("input_schema") or {},
-                "output_schema": c.get("output_schema") or {},
+    unique = {}
+    for c in available_capabilities:
+        name = c.get("capability_name") or c.get("capability_id")
+        if name and name not in unique:
+            unique[name] = {
+                "name": name,
+                "in": c.get("input_schema") or {},
+                "out": c.get("output_schema") or {},
             }
-            for c in available_capabilities[:25]
-            if c.get("capability_name") or c.get("capability_id")
-        ],
-        indent=2,
-    )
+    caps_json = json.dumps(list(unique.values()), separators=(",", ":"), ensure_ascii=False)
 
     parts = [
         f"GOAL: {_sanitize_goal(goal)}",
@@ -1163,8 +1160,25 @@ def workflow_generation_user(
         for wf in similar_workflows[:2]:
             parts.append(f"--- {wf.get('name', 'unknown')}: {wf.get('description', '')} ---")
             if wf.get("content"):
-                parts.append(wf["content"][:1200])
+                parts.append(wf["content"])
 
+    extra_context = {
+        k: v
+        for k, v in (context or {}).items()
+        if k
+        not in (
+            *_mon_keys,
+            "available_lua_artifacts",
+            "workflow_examples",
+            "test_cases",
+            "test_fixtures",
+        )
+    }
+    if extra_context:
+        parts.append(
+            "ADDITIONAL USER CONTEXT: "
+            + json.dumps(extra_context, separators=(",", ":"), ensure_ascii=False)
+        )
     parts.append(f"\nRespond with JSON matching this schema exactly:\n{response_schema}")
     return "\n\n".join(parts)
 

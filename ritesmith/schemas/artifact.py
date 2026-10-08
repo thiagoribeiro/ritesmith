@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 
 class ArtifactType(StrEnum):
@@ -65,6 +65,8 @@ class ArtifactVersion(BaseModel):
 
 class Artifact(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    _input_schema: dict | None = PrivateAttr(default=None)
+    _output_schema: dict | None = PrivateAttr(default=None)
 
     artifact_id: str
     artifact_type: ArtifactType

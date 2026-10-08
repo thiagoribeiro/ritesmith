@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.config import Settings, get_settings
@@ -22,8 +22,10 @@ def get_idempotency(db: AsyncSession = Depends(get_db)) -> IdempotencyService:
     return IdempotencyService(db)
 
 
-def get_llm_provider(settings: Settings = Depends(get_settings)) -> LLMProvider:
-    return OpenAIProvider(settings)
+def get_llm_provider(request: Request, settings: Settings = Depends(get_settings)) -> LLMProvider:
+    if not hasattr(request.app.state, "llm_provider"):
+        request.app.state.llm_provider = OpenAIProvider(settings)
+    return request.app.state.llm_provider
 
 
 def get_generation_service(

@@ -1,0 +1,32 @@
+[
+  {
+    "phase": "filtered",
+    "model": "gpt-5",
+    "kind": "luau_script",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "requests": 9,
+    "p95_s": 49.25796940596774,
+    "valid_fraction": 0.0,
+    "valid_under_5s_fraction": 0.0,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 0,
+    "cached_tokens": 0,
+    "completion_tokens": 0
+  },
+  {
+    "phase": "filtered",
+    "model": "gpt-5",
+    "kind": "trama_workflow",
+    "entrypoint": "specialized",
+    "concurrency": 1,
+    "requests": 9,
+    "p95_s": 51.76141611201456,
+    "valid_fraction": 0.0,
+    "valid_under_5s_fraction": 0.0,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 0,
+    "cached_tokens": 0,
+    "completion_tokens": 0
+  }
+]

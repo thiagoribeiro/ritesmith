@@ -1,0 +1,5473 @@
+{
+  "status": "superseded",
+  "blocker": "User replaced the full matrix with subset validation: 95% valid within 10s and >=50% lower cost per valid artifact",
+  "finalists": {},
+  "groups": [
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 50,
+      "p95_s": 52.434667799971066,
+      "valid_fraction": 0.92,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.36,
+      "prompt_tokens": 151097,
+      "cached_tokens": 26624,
+      "estimated_usd": 0.27423549999999997,
+      "completion_tokens": 128716
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 49,
+      "p95_s": 46.428255879029166,
+      "valid_fraction": 0.9795918367346939,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.3877551020408163,
+      "prompt_tokens": 134241,
+      "cached_tokens": 2176,
+      "estimated_usd": 0.2726119,
+      "completion_tokens": 127414
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 59,
+      "p95_s": 44.8391260849894,
+      "valid_fraction": 0.9830508474576272,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.22033898305084745,
+      "prompt_tokens": 99586,
+      "cached_tokens": 23424,
+      "estimated_usd": 0.26648610000000006,
+      "completion_tokens": 123430
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 27,
+      "p95_s": 98.74550758599071,
+      "valid_fraction": 0.4444444444444444,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.48148148148148145,
+      "prompt_tokens": 258215,
+      "cached_tokens": 98432,
+      "estimated_usd": 0.4199355999999999,
+      "completion_tokens": 192735
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 27,
+      "p95_s": 88.13129086000845,
+      "valid_fraction": 0.6296296296296297,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.25925925925925924,
+      "prompt_tokens": 273672,
+      "cached_tokens": 104704,
+      "estimated_usd": 0.2938830500000001,
+      "completion_tokens": 128579
+    },
+    {
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 35,
+      "p95_s": 44.139331985032186,
+      "valid_fraction": 0.9428571428571428,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.02857142857142857,
+      "prompt_tokens": 343176,
+      "cached_tokens": 194048,
+      "estimated_usd": 0.2330552,
+      "completion_tokens": 95461
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 28.9936806979822,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 16233,
+      "cached_tokens": 4608,
+      "estimated_usd": 0.09355325000000002,
+      "completion_tokens": 10403
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 43.36744526703842,
+      "valid_fraction": 0.5555555555555556,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 39894,
+      "cached_tokens": 12928,
+      "estimated_usd": 0.20123350000000004,
+      "completion_tokens": 16591
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 8.195627726963721,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11384,
+      "cached_tokens": 3328,
+      "estimated_usd": 0.012819200000000001,
+      "completion_tokens": 5361
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 15.79175320500508,
+      "valid_fraction": 0.7777777777777778,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 39893,
+      "cached_tokens": 12928,
+      "estimated_usd": 0.03146045,
+      "completion_tokens": 12198
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 15.784260165004525,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.3333333333333333,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.3333333333333333,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11339,
+      "cached_tokens": 0,
+      "estimated_usd": 0.06550825,
+      "completion_tokens": 4180
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 119.1000506169512,
+      "valid_fraction": 0.5555555555555556,
+      "valid_under_5s_fraction": 0.1111111111111111,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.1111111111111111,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 44889,
+      "cached_tokens": 12160,
+      "estimated_usd": 0.28426925000000003,
+      "completion_tokens": 18484
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.951822594972327,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.5555555555555556,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.5555555555555556,
+      "fallback_fraction": 0.4444444444444444,
+      "prompt_tokens": 17715,
+      "cached_tokens": 0,
+      "estimated_usd": 0.03133475,
+      "completion_tokens": 6688
+    },
+    {
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.33637491299305,
+      "valid_fraction": 0.6666666666666666,
+      "valid_under_5s_fraction": 0.2222222222222222,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.2222222222222222,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 60009,
+      "cached_tokens": 17408,
+      "estimated_usd": 0.08370965000000001,
+      "completion_tokens": 14578
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 30.610331082018092,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.4444444444444444,
+      "prompt_tokens": 15362,
+      "cached_tokens": 4608,
+      "estimated_usd": 0.09569649999999999,
+      "completion_tokens": 10715
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 66.41713054501452,
+      "valid_fraction": 0.6666666666666666,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 28726,
+      "cached_tokens": 9216,
+      "estimated_usd": 0.1525495,
+      "completion_tokens": 12701
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 6.5768532730289735,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.3333333333333333,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.3333333333333333,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 10564,
+      "cached_tokens": 2304,
+      "estimated_usd": 0.011412599999999998,
+      "completion_tokens": 4645
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 16.10286325600464,
+      "valid_fraction": 0.6666666666666666,
+      "valid_under_5s_fraction": 0.2222222222222222,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.2222222222222222,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 29936,
+      "cached_tokens": 9216,
+      "estimated_usd": 0.024214400000000004,
+      "completion_tokens": 9402
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.2",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 16.64209243800724,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.4444444444444444,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.4444444444444444,
+      "fallback_fraction": 0.2222222222222222,
+      "prompt_tokens": 12698,
+      "cached_tokens": 0,
+      "estimated_usd": 0.068594,
+      "completion_tokens": 4650
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.2",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 25.53534533001948,
+      "valid_fraction": 0.6666666666666666,
+      "valid_under_5s_fraction": 0.4444444444444444,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.4444444444444444,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 28735,
+      "cached_tokens": 8064,
+      "estimated_usd": 0.13292545,
+      "completion_tokens": 6810
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 17.77077006100444,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 16645,
+      "cached_tokens": 0,
+      "estimated_usd": 0.03128525,
+      "completion_tokens": 6967
+    },
+    {
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 13.314951381005812,
+      "valid_fraction": 0.6666666666666666,
+      "valid_under_5s_fraction": 0.5555555555555556,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.5555555555555556,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 29968,
+      "cached_tokens": 8960,
+      "estimated_usd": 0.04622850000000001,
+      "completion_tokens": 7162
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 26.017974299029447,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.1111111111111111,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.1111111111111111,
+      "fallback_fraction": 0.3333333333333333,
+      "prompt_tokens": 15264,
+      "cached_tokens": 1280,
+      "estimated_usd": 0.090174,
+      "completion_tokens": 9505
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 77.29104179603746,
+      "valid_fraction": 0.7777777777777778,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.2222222222222222,
+      "prompt_tokens": 100711,
+      "cached_tokens": 45696,
+      "estimated_usd": 0.26489835,
+      "completion_tokens": 22623
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 10.317977642989717,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11615,
+      "cached_tokens": 2304,
+      "estimated_usd": 0.012557349999999998,
+      "completion_tokens": 5086
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 20.265234481950756,
+      "valid_fraction": 0.7777777777777778,
+      "valid_under_5s_fraction": 0.0,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.0,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 86562,
+      "cached_tokens": 40320,
+      "estimated_usd": 0.0400485,
+      "completion_tokens": 13740
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.2",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 13.411066564032808,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.3333333333333333,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.3333333333333333,
+      "fallback_fraction": 0.1111111111111111,
+      "prompt_tokens": 11336,
+      "cached_tokens": 0,
+      "estimated_usd": 0.065278,
+      "completion_tokens": 4450
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.2",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 38.86994624196086,
+      "valid_fraction": 0.6666666666666666,
+      "valid_under_5s_fraction": 0.2222222222222222,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.2222222222222222,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 86556,
+      "cached_tokens": 35968,
+      "estimated_usd": 0.24851540000000003,
+      "completion_tokens": 10978
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "kind": "luau_script",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.654339674976654,
+      "valid_fraction": 1.0,
+      "valid_under_5s_fraction": 0.6666666666666666,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.6666666666666666,
+      "fallback_fraction": 0.4444444444444444,
+      "prompt_tokens": 17755,
+      "cached_tokens": 0,
+      "estimated_usd": 0.03334925,
+      "completion_tokens": 7109
+    },
+    {
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "kind": "trama_workflow",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "client_tests": true,
+      "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+      "requests": 9,
+      "p95_s": 18.50818494602572,
+      "valid_fraction": 0.8888888888888888,
+      "valid_under_5s_fraction": 0.4444444444444444,
+      "target_seconds": 5,
+      "valid_within_target_fraction": 0.4444444444444444,
+      "fallback_fraction": 0.0,
+      "prompt_tokens": 86554,
+      "cached_tokens": 40192,
+      "estimated_usd": 0.09098039999999999,
+      "completion_tokens": 11821
+    }
+  ],
+  "cache_groups": {
+    "uncached": [
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "generate",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 27,
+        "p95_s": 51.94162778701866,
+        "valid_fraction": 0.8888888888888888,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.3333333333333333,
+        "prompt_tokens": 82643,
+        "cached_tokens": 0,
+        "estimated_usd": 0.14493179999999997,
+        "completion_tokens": 66170
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "plans",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 47,
+        "p95_s": 46.428255879029166,
+        "valid_fraction": 0.9787234042553191,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.3617021276595745,
+        "prompt_tokens": 126826,
+        "cached_tokens": 0,
+        "estimated_usd": 0.2556367,
+        "completion_tokens": 119288
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 39,
+        "p95_s": 48.00174493301893,
+        "valid_fraction": 0.9743589743589743,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.1794871794871795,
+        "prompt_tokens": 63673,
+        "cached_tokens": 0,
+        "estimated_usd": 0.17872424999999997,
+        "completion_tokens": 81403
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "generate",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 15,
+        "p95_s": 99.2166836480028,
+        "valid_fraction": 0.2,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.8,
+        "prompt_tokens": 134359,
+        "cached_tokens": 0,
+        "estimated_usd": 0.32139209999999996,
+        "completion_tokens": 146108
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "plans",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 14,
+        "p95_s": 91.79021695599658,
+        "valid_fraction": 0.42857142857142855,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.5,
+        "prompt_tokens": 136015,
+        "cached_tokens": 0,
+        "estimated_usd": 0.2134918,
+        "completion_tokens": 91843
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 10,
+        "p95_s": 44.139331985032186,
+        "valid_fraction": 0.9,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 96276,
+        "cached_tokens": 0,
+        "estimated_usd": 0.076765,
+        "completion_tokens": 26348
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 5,
+        "p95_s": 28.9936806979822,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.2,
+        "prompt_tokens": 8354,
+        "cached_tokens": 0,
+        "estimated_usd": 0.043007500000000004,
+        "completion_tokens": 4494
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 43.36744526703842,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 26619,
+        "cached_tokens": 0,
+        "estimated_usd": 0.13487375000000001,
+        "completion_tokens": 10160
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 6.11634894204326,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.8333333333333334,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.8333333333333334,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 6910,
+        "cached_tokens": 0,
+        "estimated_usd": 0.007689499999999999,
+        "completion_tokens": 2981
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 12.713035863998812,
+        "valid_fraction": 0.8333333333333334,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 26618,
+        "cached_tokens": 0,
+        "estimated_usd": 0.0219225,
+        "completion_tokens": 7634
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5.2",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 9,
+        "p95_s": 15.784260165004525,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.1111111111111111,
+        "prompt_tokens": 11339,
+        "cached_tokens": 0,
+        "estimated_usd": 0.06550825,
+        "completion_tokens": 4180
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5.2",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 119.1000506169512,
+        "valid_fraction": 0.5,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.16666666666666666,
+        "prompt_tokens": 31614,
+        "cached_tokens": 0,
+        "estimated_usd": 0.23805,
+        "completion_tokens": 15474
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5.4-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 9,
+        "p95_s": 18.951822594972327,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.5555555555555556,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.5555555555555556,
+        "fallback_fraction": 0.4444444444444444,
+        "prompt_tokens": 17715,
+        "cached_tokens": 0,
+        "estimated_usd": 0.03133475,
+        "completion_tokens": 6688
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5.4-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 18.33637491299305,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.16666666666666666,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.16666666666666666,
+        "fallback_fraction": 0.3333333333333333,
+        "prompt_tokens": 40059,
+        "cached_tokens": 0,
+        "estimated_usd": 0.06422625,
+        "completion_tokens": 10143
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 5,
+        "p95_s": 26.411995435948484,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.4,
+        "prompt_tokens": 7514,
+        "cached_tokens": 0,
+        "estimated_usd": 0.046924499999999994,
+        "completion_tokens": 4809
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 66.41713054501452,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 19171,
+        "cached_tokens": 0,
+        "estimated_usd": 0.11837375,
+        "completion_tokens": 9441
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 7,
+        "p95_s": 6.5768532730289735,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.42857142857142855,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.42857142857142855,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 8053,
+        "cached_tokens": 0,
+        "estimated_usd": 0.00899125,
+        "completion_tokens": 3489
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 16.10286325600464,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.16666666666666666,
+        "prompt_tokens": 20381,
+        "cached_tokens": 0,
+        "estimated_usd": 0.01803725,
+        "completion_tokens": 6471
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5.2",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 9,
+        "p95_s": 16.64209243800724,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.4444444444444444,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.4444444444444444,
+        "fallback_fraction": 0.2222222222222222,
+        "prompt_tokens": 12698,
+        "cached_tokens": 0,
+        "estimated_usd": 0.068594,
+        "completion_tokens": 4650
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5.2",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 25.53534533001948,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.5,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.5,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 19180,
+        "cached_tokens": 0,
+        "estimated_usd": 0.101073,
+        "completion_tokens": 4822
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5.4-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 9,
+        "p95_s": 17.77077006100444,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.6666666666666666,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.6666666666666666,
+        "fallback_fraction": 0.3333333333333333,
+        "prompt_tokens": 16645,
+        "cached_tokens": 0,
+        "estimated_usd": 0.03128525,
+        "completion_tokens": 6967
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5.4-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 6,
+        "p95_s": 7.147875338036101,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.6666666666666666,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.6666666666666666,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 19171,
+        "cached_tokens": 0,
+        "estimated_usd": 0.03073125,
+        "completion_tokens": 3634
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 8,
+        "p95_s": 22.132010249013547,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.125,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.125,
+        "fallback_fraction": 0.25,
+        "prompt_tokens": 12101,
+        "cached_tokens": 0,
+        "estimated_usd": 0.07595025,
+        "completion_tokens": 7523
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 4,
+        "p95_s": 52.67895412800135,
+        "valid_fraction": 0.75,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 38477,
+        "cached_tokens": 0,
+        "estimated_usd": 0.11285624999999999,
+        "completion_tokens": 6476
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 7,
+        "p95_s": 6.376307051978074,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.7142857142857143,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.7142857142857143,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 8055,
+        "cached_tokens": 0,
+        "estimated_usd": 0.008539749999999999,
+        "completion_tokens": 3263
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 4,
+        "p95_s": 18.10686237300979,
+        "valid_fraction": 0.75,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 38486,
+        "cached_tokens": 0,
+        "estimated_usd": 0.020417499999999998,
+        "completion_tokens": 5398
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5.2",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 9,
+        "p95_s": 13.411066564032808,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.1111111111111111,
+        "prompt_tokens": 11336,
+        "cached_tokens": 0,
+        "estimated_usd": 0.065278,
+        "completion_tokens": 4450
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5.2",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 4,
+        "p95_s": 29.72343773097964,
+        "valid_fraction": 0.75,
+        "valid_under_5s_fraction": 0.25,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.25,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 38480,
+        "cached_tokens": 0,
+        "estimated_usd": 0.119238,
+        "completion_tokens": 3707
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5.4-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 9,
+        "p95_s": 18.654339674976654,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.6666666666666666,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.6666666666666666,
+        "fallback_fraction": 0.4444444444444444,
+        "prompt_tokens": 17755,
+        "cached_tokens": 0,
+        "estimated_usd": 0.03334925,
+        "completion_tokens": 7109
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5.4-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 4,
+        "p95_s": 18.50818494602572,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.5,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.5,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 38478,
+        "cached_tokens": 0,
+        "estimated_usd": 0.052253999999999995,
+        "completion_tokens": 5199
+      }
+    ],
+    "cached": [
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "generate",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 23,
+        "p95_s": 53.05906777904602,
+        "valid_fraction": 0.9565217391304348,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.391304347826087,
+        "prompt_tokens": 68454,
+        "cached_tokens": 26624,
+        "estimated_usd": 0.1293037,
+        "completion_tokens": 62546
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "plans",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 2,
+        "p95_s": 33.12233234103769,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 1.0,
+        "prompt_tokens": 7415,
+        "cached_tokens": 2176,
+        "estimated_usd": 0.0169752,
+        "completion_tokens": 8126
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 20,
+        "p95_s": 35.35882428399054,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.3,
+        "prompt_tokens": 35913,
+        "cached_tokens": 23424,
+        "estimated_usd": 0.08776185,
+        "completion_tokens": 42027
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "generate",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 12,
+        "p95_s": 90.67809478897834,
+        "valid_fraction": 0.75,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.08333333333333333,
+        "prompt_tokens": 123856,
+        "cached_tokens": 98432,
+        "estimated_usd": 0.09854350000000002,
+        "completion_tokens": 46627
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "plans",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 13,
+        "p95_s": 44.42652984900633,
+        "valid_fraction": 0.8461538461538461,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 137657,
+        "cached_tokens": 104704,
+        "estimated_usd": 0.08039125000000001,
+        "completion_tokens": 36736
+      },
+      {
+        "phase": "baseline",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 25,
+        "p95_s": 42.01012579200324,
+        "valid_fraction": 0.96,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.04,
+        "prompt_tokens": 246900,
+        "cached_tokens": 194048,
+        "estimated_usd": 0.15629020000000002,
+        "completion_tokens": 69113
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 4,
+        "p95_s": 23.685408411023673,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.5,
+        "prompt_tokens": 7879,
+        "cached_tokens": 4608,
+        "estimated_usd": 0.05054575,
+        "completion_tokens": 5909
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 41.15248509700177,
+        "valid_fraction": 0.3333333333333333,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 13275,
+        "cached_tokens": 12928,
+        "estimated_usd": 0.06635975,
+        "completion_tokens": 6431
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 8.195627726963721,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.3333333333333333,
+        "prompt_tokens": 4474,
+        "cached_tokens": 3328,
+        "estimated_usd": 0.0051297,
+        "completion_tokens": 2380
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 15.79175320500508,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 13275,
+        "cached_tokens": 12928,
+        "estimated_usd": 0.00953795,
+        "completion_tokens": 4564
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5.2",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 31.1143013429828,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 13275,
+        "cached_tokens": 12160,
+        "estimated_usd": 0.04621925,
+        "completion_tokens": 3010
+      },
+      {
+        "phase": "filtered",
+        "model": "gpt-5.4-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 16.618196581956,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.3333333333333333,
+        "prompt_tokens": 19950,
+        "cached_tokens": 17408,
+        "estimated_usd": 0.019483399999999998,
+        "completion_tokens": 4435
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 4,
+        "p95_s": 30.610331082018092,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.5,
+        "prompt_tokens": 7848,
+        "cached_tokens": 4608,
+        "estimated_usd": 0.048772,
+        "completion_tokens": 5906
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 24.170485171023756,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 9555,
+        "cached_tokens": 9216,
+        "estimated_usd": 0.03417575,
+        "completion_tokens": 3260
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 2,
+        "p95_s": 5.941118894028477,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 2511,
+        "cached_tokens": 2304,
+        "estimated_usd": 0.00242135,
+        "completion_tokens": 1156
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 13.909877715981565,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 9555,
+        "cached_tokens": 9216,
+        "estimated_usd": 0.006177149999999999,
+        "completion_tokens": 2931
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5.2",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 18.16948813199997,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 9555,
+        "cached_tokens": 8064,
+        "estimated_usd": 0.031852450000000004,
+        "completion_tokens": 1988
+      },
+      {
+        "phase": "full",
+        "model": "gpt-5.4-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 3,
+        "p95_s": 13.314951381005812,
+        "valid_fraction": 0.6666666666666666,
+        "valid_under_5s_fraction": 0.3333333333333333,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.3333333333333333,
+        "fallback_fraction": 0.3333333333333333,
+        "prompt_tokens": 10797,
+        "cached_tokens": 8960,
+        "estimated_usd": 0.015497249999999999,
+        "completion_tokens": 3528
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 1,
+        "p95_s": 26.017974299029447,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 1.0,
+        "prompt_tokens": 3163,
+        "cached_tokens": 1280,
+        "estimated_usd": 0.01422375,
+        "completion_tokens": 1982
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 5,
+        "p95_s": 77.29104179603746,
+        "valid_fraction": 0.8,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.4,
+        "prompt_tokens": 62234,
+        "cached_tokens": 45696,
+        "estimated_usd": 0.15204209999999999,
+        "completion_tokens": 16147
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5-mini",
+        "kind": "luau_script",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 2,
+        "p95_s": 10.317977642989717,
+        "valid_fraction": 1.0,
+        "valid_under_5s_fraction": 0.5,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.5,
+        "fallback_fraction": 0.5,
+        "prompt_tokens": 3560,
+        "cached_tokens": 2304,
+        "estimated_usd": 0.0040176,
+        "completion_tokens": 1823
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 5,
+        "p95_s": 20.265234481950756,
+        "valid_fraction": 0.8,
+        "valid_under_5s_fraction": 0.0,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.0,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 48076,
+        "cached_tokens": 40320,
+        "estimated_usd": 0.019631,
+        "completion_tokens": 8342
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5.2",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 5,
+        "p95_s": 38.86994624196086,
+        "valid_fraction": 0.6,
+        "valid_under_5s_fraction": 0.2,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.2,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 48076,
+        "cached_tokens": 35968,
+        "estimated_usd": 0.12927740000000001,
+        "completion_tokens": 7271
+      },
+      {
+        "phase": "model",
+        "model": "gpt-5.4-mini",
+        "kind": "trama_workflow",
+        "entrypoint": "specialized",
+        "concurrency": 1,
+        "client_tests": true,
+        "software_sha256": "a31b5e5911fff3c1064370d2ddaed44a0eaf9f260979659a908dcd744f8ed087",
+        "requests": 5,
+        "p95_s": 11.069220792036504,
+        "valid_fraction": 0.8,
+        "valid_under_5s_fraction": 0.4,
+        "target_seconds": 5,
+        "valid_within_target_fraction": 0.4,
+        "fallback_fraction": 0.0,
+        "prompt_tokens": 48076,
+        "cached_tokens": 40192,
+        "estimated_usd": 0.0387264,
+        "completion_tokens": 6622
+      }
+    ]
+  },
+  "failures": [
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.372710600029677,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 8.511800083972048,
+      "errors": []
+    },
+    {
+      "task": "t1_slugify",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 22.892640671983827,
+      "errors": []
+    },
+    {
+      "task": "t1_group_totals",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.456312311987858,
+      "errors": []
+    },
+    {
+      "task": "t1_dedupe_sort",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.469122219015844,
+      "errors": []
+    },
+    {
+      "task": "t1_parse_iso_date",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 14.15661813999759,
+      "errors": []
+    },
+    {
+      "task": "t1_word_frequency",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 25.742953034990933,
+      "errors": []
+    },
+    {
+      "task": "t1_split_emails",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 52.434667799971066,
+      "errors": [
+        "validation failed or absent",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t1_moving_average",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 23.012418341008015,
+      "errors": []
+    },
+    {
+      "task": "t1_format_duration",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.921761530975346,
+      "errors": []
+    },
+    {
+      "task": "t2_price_label",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.70879609201802,
+      "errors": []
+    },
+    {
+      "task": "t2_customer_summary",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 15.635696092969738,
+      "errors": []
+    },
+    {
+      "task": "t2_weather_alert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.491061648994219,
+      "errors": []
+    },
+    {
+      "task": "t2_open_bugs",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.177742696017958,
+      "errors": []
+    },
+    {
+      "task": "t2_fx_convert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 20.2612575799576,
+      "errors": []
+    },
+    {
+      "task": "t2_low_stock",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.717477753001731,
+      "errors": []
+    },
+    {
+      "task": "t2_free_slots",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 31.77644946600776,
+      "errors": []
+    },
+    {
+      "task": "t2_url_health",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 46.428255879029166,
+      "errors": []
+    },
+    {
+      "task": "t2_config_resolve",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.141680756001733,
+      "errors": []
+    },
+    {
+      "task": "t2_unread_digest",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 44.35962493304396,
+      "errors": [
+        "validation failed or absent",
+        "missing strict certification",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 18.875312811986078,
+      "errors": []
+    },
+    {
+      "task": "t3_price_drop_watch",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 20.365066579019185,
+      "errors": []
+    },
+    {
+      "task": "t3_budgeted_sync",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 26.068205370975193,
+      "errors": []
+    },
+    {
+      "task": "t3_ticket_triage",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 12.728864513046574,
+      "errors": []
+    },
+    {
+      "task": "t3_order_fulfillment",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 30.80715482699452,
+      "errors": []
+    },
+    {
+      "task": "t4_roman_numeral",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 11.60129257204244,
+      "errors": []
+    },
+    {
+      "task": "t4_median",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 12.301197856024373,
+      "errors": []
+    },
+    {
+      "task": "t4_rle_encode",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.182024378038477,
+      "errors": []
+    },
+    {
+      "task": "t4_balanced_brackets",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 8.74375861696899,
+      "errors": []
+    },
+    {
+      "task": "t4_caesar_cipher",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 8.69258778099902,
+      "errors": []
+    },
+    {
+      "task": "t4_inventory_reorder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.053125582984649,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 86.22635132598225,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_two_reminders",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.372555858979467,
+      "errors": []
+    },
+    {
+      "task": "wf_quote",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.689212093013339,
+      "errors": []
+    },
+    {
+      "task": "wf_three_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 56.40032895002514,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_four_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 16.53111441602232,
+      "errors": []
+    },
+    {
+      "task": "wf_threshold",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 22.140134043002035,
+      "errors": []
+    },
+    {
+      "task": "wf_minimum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 16.302774020994548,
+      "errors": []
+    },
+    {
+      "task": "wf_maximum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 17.65993815998081,
+      "errors": []
+    },
+    {
+      "task": "wf_chain",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.016792091948446,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 43.10522565804422,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 19.071157225000206,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_sources",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 19.427682795969304,
+      "errors": []
+    },
+    {
+      "task": "wf_news",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 79.6811631009914,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_conditional",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 18.13208965800004,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_artifact",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.713892507948913,
+      "errors": []
+    },
+    {
+      "task": "wf_continuation_seed",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 68.82307854597457,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_held_delay_parallel",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 18.896049648988992,
+      "errors": []
+    },
+    {
+      "task": "wf_held_chain_content",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 31.239435105002485,
+      "errors": []
+    },
+    {
+      "task": "wf_held_callback",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 17.7315904420102,
+      "errors": []
+    },
+    {
+      "task": "wf_held_compensation",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 15.57632948202081,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 8.620140896004159,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 31.684220833994914,
+      "errors": []
+    },
+    {
+      "task": "t1_slugify",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.27278323302744,
+      "errors": []
+    },
+    {
+      "task": "t1_group_totals",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.841645665990654,
+      "errors": []
+    },
+    {
+      "task": "t1_dedupe_sort",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.969073262996972,
+      "errors": []
+    },
+    {
+      "task": "t1_parse_iso_date",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.854194088024087,
+      "errors": []
+    },
+    {
+      "task": "t1_word_frequency",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 11.784839970991015,
+      "errors": []
+    },
+    {
+      "task": "t1_split_emails",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 15.285295218985993,
+      "errors": []
+    },
+    {
+      "task": "t1_moving_average",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.42875013302546,
+      "errors": []
+    },
+    {
+      "task": "t1_format_duration",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 21.16370429599192,
+      "errors": []
+    },
+    {
+      "task": "t2_price_label",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.869847627007402,
+      "errors": []
+    },
+    {
+      "task": "t2_customer_summary",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.527357585029677,
+      "errors": []
+    },
+    {
+      "task": "t2_weather_alert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 9.411417056981008,
+      "errors": []
+    },
+    {
+      "task": "t2_open_bugs",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 25.303142942022532,
+      "errors": []
+    },
+    {
+      "task": "t2_fx_convert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.71164241299266,
+      "errors": []
+    },
+    {
+      "task": "t2_low_stock",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 13.214295540994499,
+      "errors": []
+    },
+    {
+      "task": "t2_free_slots",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 19.08585639699595,
+      "errors": []
+    },
+    {
+      "task": "t2_url_health",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.429260373988654,
+      "errors": []
+    },
+    {
+      "task": "t2_config_resolve",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 19.397054279979784,
+      "errors": []
+    },
+    {
+      "task": "t2_unread_digest",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 61.57494131301064,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 30.654964159009978,
+      "errors": []
+    },
+    {
+      "task": "t3_price_drop_watch",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 30.966723949997686,
+      "errors": []
+    },
+    {
+      "task": "t3_budgeted_sync",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 14.118560102011543,
+      "errors": []
+    },
+    {
+      "task": "t3_ticket_triage",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.922202174959239,
+      "errors": []
+    },
+    {
+      "task": "t3_order_fulfillment",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 25.744900593999773,
+      "errors": []
+    },
+    {
+      "task": "t4_roman_numeral",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 12.132674508029595,
+      "errors": []
+    },
+    {
+      "task": "t4_median",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 44.8391260849894,
+      "errors": []
+    },
+    {
+      "task": "t4_rle_encode",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 13.750381821999326,
+      "errors": []
+    },
+    {
+      "task": "t4_balanced_brackets",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.99962672602851,
+      "errors": []
+    },
+    {
+      "task": "t4_caesar_cipher",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.816339696000796,
+      "errors": []
+    },
+    {
+      "task": "t4_inventory_reorder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 9.067282580013853,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 58.569866362027824,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_two_reminders",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.674516901024617,
+      "errors": []
+    },
+    {
+      "task": "wf_quote",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 90.67809478897834,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_three_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 81.34013717900962,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_four_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.511799402011093,
+      "errors": []
+    },
+    {
+      "task": "wf_threshold",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 80.22073545004241,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_minimum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 69.66623284900561,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_maximum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.830754884984344,
+      "errors": []
+    },
+    {
+      "task": "wf_chain",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 83.46174652600894,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 44.42652984900633,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.894031837990042,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_sources",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 20.123807226016652,
+      "errors": []
+    },
+    {
+      "task": "wf_news",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 22.98849129496375,
+      "errors": []
+    },
+    {
+      "task": "wf_conditional",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.515130951011088,
+      "errors": []
+    },
+    {
+      "task": "wf_artifact",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 99.2166836480028,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_continuation_seed",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 88.13129086000845,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_held_delay_parallel",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.971345552010462,
+      "errors": []
+    },
+    {
+      "task": "wf_held_chain_content",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 28.841099260025658,
+      "errors": []
+    },
+    {
+      "task": "wf_held_callback",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 15.152219741954468,
+      "errors": []
+    },
+    {
+      "task": "wf_held_compensation",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.467062789015472,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 10.038985004008282,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.306763959000818,
+      "errors": []
+    },
+    {
+      "task": "t1_slugify",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 14.034058641002048,
+      "errors": []
+    },
+    {
+      "task": "t1_group_totals",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 26.245713703974616,
+      "errors": []
+    },
+    {
+      "task": "t1_dedupe_sort",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.664282313955482,
+      "errors": []
+    },
+    {
+      "task": "t1_parse_iso_date",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 39.299004615982994,
+      "errors": []
+    },
+    {
+      "task": "t1_word_frequency",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 16.065063020971138,
+      "errors": []
+    },
+    {
+      "task": "t1_split_emails",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.663298851985019,
+      "errors": []
+    },
+    {
+      "task": "t1_moving_average",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 11.389925726049114,
+      "errors": []
+    },
+    {
+      "task": "t1_format_duration",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 22.166800675040577,
+      "errors": []
+    },
+    {
+      "task": "t2_price_label",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.240182274021208,
+      "errors": []
+    },
+    {
+      "task": "t2_customer_summary",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 19.790804199990816,
+      "errors": []
+    },
+    {
+      "task": "t2_weather_alert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 13.851584871998057,
+      "errors": []
+    },
+    {
+      "task": "t2_open_bugs",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.889556568989065,
+      "errors": []
+    },
+    {
+      "task": "t2_fx_convert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 12.129150216002017,
+      "errors": []
+    },
+    {
+      "task": "t2_low_stock",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.947818899003323,
+      "errors": []
+    },
+    {
+      "task": "t2_free_slots",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 56.24053178500617,
+      "errors": []
+    },
+    {
+      "task": "t2_url_health",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 30.136082698998507,
+      "errors": []
+    },
+    {
+      "task": "t2_config_resolve",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 14.26447575603379,
+      "errors": []
+    },
+    {
+      "task": "t2_unread_digest",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 48.00174493301893,
+      "errors": [
+        "validation failed or absent",
+        "missing strict certification",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 15.14414300804492,
+      "errors": []
+    },
+    {
+      "task": "t3_price_drop_watch",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 20.797878006007522,
+      "errors": []
+    },
+    {
+      "task": "t3_budgeted_sync",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 25.85457059496548,
+      "errors": []
+    },
+    {
+      "task": "t3_ticket_triage",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 12.611515722004697,
+      "errors": []
+    },
+    {
+      "task": "t3_order_fulfillment",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 29.47359950101236,
+      "errors": []
+    },
+    {
+      "task": "t4_roman_numeral",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.049633196962532,
+      "errors": []
+    },
+    {
+      "task": "t4_median",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.965339961985592,
+      "errors": []
+    },
+    {
+      "task": "t4_rle_encode",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 10.148992871982045,
+      "errors": []
+    },
+    {
+      "task": "t4_balanced_brackets",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.659594878030475,
+      "errors": []
+    },
+    {
+      "task": "t4_caesar_cipher",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 12.727984396973625,
+      "errors": []
+    },
+    {
+      "task": "t4_inventory_reorder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.854191867052577,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.022345203033183,
+      "errors": []
+    },
+    {
+      "task": "wf_two_reminders",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.478445560031105,
+      "errors": []
+    },
+    {
+      "task": "wf_quote",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 13.43660422594985,
+      "errors": []
+    },
+    {
+      "task": "wf_three_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.418249442998786,
+      "errors": []
+    },
+    {
+      "task": "wf_four_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 17.823069157020655,
+      "errors": []
+    },
+    {
+      "task": "wf_threshold",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 17.623975188995246,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_minimum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.044339072017465,
+      "errors": []
+    },
+    {
+      "task": "wf_maximum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 15.408016177010722,
+      "errors": []
+    },
+    {
+      "task": "wf_chain",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 16.111581571982242,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 40.31743054703111,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 21.160499790974427,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_sources",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 22.60057632700773,
+      "errors": []
+    },
+    {
+      "task": "wf_news",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 23.697776888962835,
+      "errors": []
+    },
+    {
+      "task": "wf_conditional",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 70.36738470301498,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_artifact",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 84.64253082702635,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_continuation_seed",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 16.234099316992797,
+      "errors": []
+    },
+    {
+      "task": "wf_held_delay_parallel",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 23.87982098397333,
+      "errors": []
+    },
+    {
+      "task": "wf_held_chain_content",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 28.739264164003544,
+      "errors": []
+    },
+    {
+      "task": "wf_held_callback",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.65137874003267,
+      "errors": []
+    },
+    {
+      "task": "wf_held_compensation",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 19.591911243041977,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.328754331043456,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 11.601286681019701,
+      "errors": []
+    },
+    {
+      "task": "t1_slugify",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 10.522284650010988,
+      "errors": []
+    },
+    {
+      "task": "t1_group_totals",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.024585510022007,
+      "errors": []
+    },
+    {
+      "task": "t1_dedupe_sort",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.274769201001618,
+      "errors": []
+    },
+    {
+      "task": "t1_parse_iso_date",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 15.235888829978649,
+      "errors": []
+    },
+    {
+      "task": "t1_word_frequency",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 19.98719463701127,
+      "errors": []
+    },
+    {
+      "task": "t1_split_emails",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 15.06557288998738,
+      "errors": []
+    },
+    {
+      "task": "t1_moving_average",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 24.608911094022915,
+      "errors": []
+    },
+    {
+      "task": "t1_format_duration",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.824435582966544,
+      "errors": []
+    },
+    {
+      "task": "t2_price_label",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 22.808679738023784,
+      "errors": []
+    },
+    {
+      "task": "t2_customer_summary",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 12.637477063050028,
+      "errors": []
+    },
+    {
+      "task": "t2_weather_alert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.797901749960147,
+      "errors": []
+    },
+    {
+      "task": "t2_open_bugs",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 29.00815802096622,
+      "errors": []
+    },
+    {
+      "task": "t2_fx_convert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 25.441521250002552,
+      "errors": []
+    },
+    {
+      "task": "t2_low_stock",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.982526594947558,
+      "errors": []
+    },
+    {
+      "task": "t2_free_slots",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 14.816515462007374,
+      "errors": []
+    },
+    {
+      "task": "t2_url_health",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 54.882504642999265,
+      "errors": []
+    },
+    {
+      "task": "t2_config_resolve",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 23.511426504002884,
+      "errors": []
+    },
+    {
+      "task": "t2_unread_digest",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 53.05906777904602,
+      "errors": [
+        "validation failed or absent",
+        "missing strict certification",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 27.20855241100071,
+      "errors": []
+    },
+    {
+      "task": "t3_price_drop_watch",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 35.35882428399054,
+      "errors": []
+    },
+    {
+      "task": "t3_budgeted_sync",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 56.714995875023305,
+      "errors": []
+    },
+    {
+      "task": "t3_ticket_triage",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 14.592303063021973,
+      "errors": []
+    },
+    {
+      "task": "t3_order_fulfillment",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 35.563870376034174,
+      "errors": []
+    },
+    {
+      "task": "t4_roman_numeral",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.927075290994253,
+      "errors": []
+    },
+    {
+      "task": "t4_median",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 12.302701381035149,
+      "errors": []
+    },
+    {
+      "task": "t4_rle_encode",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.327094162988942,
+      "errors": []
+    },
+    {
+      "task": "t4_balanced_brackets",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 11.11638388701249,
+      "errors": []
+    },
+    {
+      "task": "t4_caesar_cipher",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 10.75260409101611,
+      "errors": []
+    },
+    {
+      "task": "t4_inventory_reorder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.595086743007414,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 93.7569076140062,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_two_reminders",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.295420348993503,
+      "errors": []
+    },
+    {
+      "task": "wf_quote",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.540995852963533,
+      "errors": []
+    },
+    {
+      "task": "wf_three_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 98.74550758599071,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_four_samples",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 23.104236132989172,
+      "errors": []
+    },
+    {
+      "task": "wf_threshold",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 25.185245124972425,
+      "errors": []
+    },
+    {
+      "task": "wf_minimum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 31.22685844800435,
+      "errors": [
+        "missing capability stat.min_value"
+      ]
+    },
+    {
+      "task": "wf_maximum",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 18.8803592119948,
+      "errors": []
+    },
+    {
+      "task": "wf_chain",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.472279657027684,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 36.67432758701034,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 20.686310012009926,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_sources",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 20.263266940019093,
+      "errors": []
+    },
+    {
+      "task": "wf_news",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 98.64455991401337,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_conditional",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 91.79021695599658,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_artifact",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.694071531004738,
+      "errors": []
+    },
+    {
+      "task": "wf_continuation_seed",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 67.2347130929702,
+      "errors": [
+        "validation failed or absent",
+        "wrong artifact kind",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "wf_held_delay_parallel",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 19.861611317959614,
+      "errors": []
+    },
+    {
+      "task": "wf_held_chain_content",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 39.91172422998352,
+      "errors": []
+    },
+    {
+      "task": "wf_held_callback",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 17.236731073004194,
+      "errors": []
+    },
+    {
+      "task": "wf_held_compensation",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 82.85749297699658,
+      "errors": [
+        "no completed artifact",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 8.999347081989981,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 11.192249745014124,
+      "errors": []
+    },
+    {
+      "task": "t1_slugify",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.783881647977978,
+      "errors": []
+    },
+    {
+      "task": "t1_group_totals",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 10.429416863014922,
+      "errors": []
+    },
+    {
+      "task": "t1_dedupe_sort",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 8.520879236981273,
+      "errors": []
+    },
+    {
+      "task": "t1_parse_iso_date",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 20.718637896992732,
+      "errors": []
+    },
+    {
+      "task": "t1_word_frequency",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 16.609585808007978,
+      "errors": []
+    },
+    {
+      "task": "t1_split_emails",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 17.900623636029195,
+      "errors": []
+    },
+    {
+      "task": "t1_moving_average",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.696990669006482,
+      "errors": []
+    },
+    {
+      "task": "t1_format_duration",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 51.94162778701866,
+      "errors": [
+        "validation failed or absent",
+        "missing strict certification",
+        "generation acceptance gate failed"
+      ]
+    },
+    {
+      "task": "t2_price_label",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 12.161847660026979,
+      "errors": []
+    },
+    {
+      "task": "t2_customer_summary",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 19.42371090000961,
+      "errors": []
+    },
+    {
+      "task": "t2_weather_alert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 11.41300683497684,
+      "errors": []
+    },
+    {
+      "task": "t2_open_bugs",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 23.65733400901081,
+      "errors": []
+    },
+    {
+      "task": "t2_fx_convert",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.134172739984933,
+      "errors": []
+    },
+    {
+      "task": "t2_low_stock",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 14.768847594968975,
+      "errors": []
+    },
+    {
+      "task": "t2_free_slots",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 33.12233234103769,
+      "errors": []
+    },
+    {
+      "task": "t2_url_health",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.369208859978244,
+      "errors": []
+    },
+    {
+      "task": "t2_config_resolve",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 12.626916865992825,
+      "errors": []
+    },
+    {
+      "task": "t2_unread_digest",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 24.549956585047767,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.620788420026656,
+      "errors": []
+    },
+    {
+      "task": "t3_price_drop_watch",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 28.59612306096824,
+      "errors": []
+    },
+    {
+      "task": "t3_budgeted_sync",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "plans",
+      "concurrency": 1,
+      "duration_s": 26.792108097986784,
+      "errors": []
+    },
+    {
+      "task": "t3_ticket_triage",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.6049823089852,
+      "errors": []
+    },
+    {
+      "task": "t3_order_fulfillment",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "generate",
+      "concurrency": 1,
+      "duration_s": 35.02040187397506,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.81038083403837,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.0720715590287,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 25.894827992015053,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.879510393016972,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 44.139331985032186,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 20.041597242001444,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.544339302985463,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.411572055018041,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 21.892130575957708,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.545649792009499,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 44.949658834026195,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 19.181820351979695,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.812635342997964,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.417582058988046,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 21.91498312499607,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.35650746698957,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 42.01012579200324,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "baseline",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 32.069799510994926,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.11634894204326,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.417392590024974,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.713035863998812,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.62488271901384,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.195627726963721,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.844692144950386,
+      "errors": [
+        "missing capability telegram.send",
+        "explicit schedule not preserved"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.935690816026181,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.439987615973223,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.166594775975682,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.912482417013962,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.79175320500508,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.751756455982104,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.929879050992895,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.90861061704345,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 28.9936806979822,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 17.05848133104155,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 43.36744526703842,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 19.188346198992804,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.669903284986503,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.589354909025133,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 21.62472278397763,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.743725103035104,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 29.08326887601288,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.634791181015316,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.50721639796393,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.715614901972003,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 23.685408411023673,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.357831070024986,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 41.15248509700177,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 24.000940844998695,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.525561655987985,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.385849891987164,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.770659341011196,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 36.13457190495683,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.595610945019871,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.0864053789991885,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.293581863981672,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.33233508199919,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 119.1000506169512,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.066441437986214,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 15.784260165004525,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.613922354998067,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 31.1143013429828,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.488722259004135,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.309308627038263,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.332171972026117,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.086821882985532,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.612952373048756,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.33637491299305,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.370694749988616,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.509085890022106,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.978639594977722,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.951822594972327,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.328450086992234,
+      "errors": [
+        "missing capability telegram.send"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "filtered",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 16.618196581956,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.405816417012829,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.208517608989496,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.995255668007303,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.944199796998873,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.5768532730289735,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.47851469903253,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.379723049001768,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 16.10286325600464,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.941118894028477,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.649409658974037,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.1980375470011495,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.909877715981565,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.685614443034865,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.833361496042926,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 16.52825060498435,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 26.411995435948484,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.02997997001512,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 66.41713054501452,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.362935871991795,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.369066528044641,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.976566590950824,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 25.424294980010018,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.1534913160139695,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 50.14953435602365,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.324430227046832,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.27014420798514,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.06902330199955,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 30.610331082018092,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.072486419056077,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 24.170485171023756,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.41464759298833,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.595195312984288,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 16.64209243800724,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 23.45297763502458,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.860036264988594,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.56067041202914,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.722189344000071,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 25.53534533001948,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.437987915007398,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.16948813199997,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.763584581029136,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.02722837595502,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.147875338036101,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.256361867010128,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.9733556199935265,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 17.77077006100444,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.314951381005812,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "full",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.584994787990581,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.566984000033699,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.817364011018071,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.10686237300979,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.485628395050298,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.376307051978074,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.014059214969166,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.051709310966544,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.148882128996775,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.317977642989717,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.185830556962173,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 20.265234481950756,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.545587084954605,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.660517459968105,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 22.132010249013547,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.010728391003795,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 52.67895412800135,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 19.23853476694785,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.359471370000392,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.036508053017315,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 21.911459574010223,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.800849724037107,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 77.29104179603746,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.037143268971704,
+      "errors": []
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.937683225958608,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 14.264583682001103,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 26.017974299029447,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 12.308679944020696,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 71.23107609699946,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 16.694219766999595,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.077123062044848,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.157093366025947,
+      "errors": []
+    },
+    {
+      "task": "wf_reminder",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.188492254004814,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 29.72343773097964,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.946850068983622,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 5.187725354975555,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.425220793986227,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 38.86994624196086,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.526080874027684,
+      "errors": []
+    },
+    {
+      "task": "t1_percent_change",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 13.411066564032808,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 7.906906909018289,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 35.035540667013265,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5.2",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 10.004294223035686,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.654339674976654,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 18.50818494602572,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.173729304980952,
+      "errors": []
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.889512351015583,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 9.968233838968445,
+      "errors": [
+        "missing capability market.coin_price"
+      ]
+    },
+    {
+      "task": "t3_notify_inactive",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 8.885350060008932,
+      "errors": []
+    },
+    {
+      "task": "wf_week",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 11.069220792036504,
+      "errors": []
+    },
+    {
+      "task": "wf_parallel_prices",
+      "phase": "model",
+      "model": "gpt-5.4-mini",
+      "entrypoint": "specialized",
+      "concurrency": 1,
+      "duration_s": 6.372243444027845,
+      "errors": []
+    }
+  ],
+  "promotion": false,
+  "qualification": "Separate staging; no artifact reuse/few-shot reuse. Production HTTP services and LunarDyson with substituted tools. Workflow graph/semantic checks; external effects are not executed. Caller test inputs and independent model-generated tests are reported in separate groups. Rotation distributes five repetitions across interfaces, not five per interface. Blocked/triage-only reports cannot qualify a model or establish quality against the full baseline. No seven-day production monitoring or execution of external workflow effects is claimed."
+}

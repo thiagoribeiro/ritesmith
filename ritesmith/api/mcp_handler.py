@@ -23,6 +23,7 @@ from starlette.routing import get_route_path
 
 from ritesmith.runtime.providers import PROVIDERS
 from ritesmith.runtime.providers.base import MCPToolDef
+from ritesmith.workflows.examples import WORKFLOW_CONTEXT_SCHEMA
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ _tool_registry: dict[str, MCPToolDef] = {}
 
 async def _post(path: str, body: dict) -> dict:
     async with httpx.AsyncClient(base_url=_BASE, timeout=_TIMEOUT) as c:
-        r = await c.post(path, json=body)
+        r = await c.post(path, json=body, headers={"X-Ritesmith-Interface": "mcp"})
         r.raise_for_status()
         return r.json()
 
@@ -82,6 +83,31 @@ def _build_tools() -> list[Tool]:
                         "default": "execute",
                     },
                     "callback_url": {"type": "string"},
+                    "context": {
+                        "type": "object",
+                        "properties": {
+                            **WORKFLOW_CONTEXT_SCHEMA["properties"],
+                            "workflow_examples": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "linear",
+                                        "bounded_polling",
+                                        "fixed_samples",
+                                        "continuation",
+                                        "parallel",
+                                        "state_tracking",
+                                        "content_monitor",
+                                        "async_callback",
+                                        "compensation",
+                                    ],
+                                },
+                                "description": "Omit for automatic selection; [] for essential rules only.",
+                            },
+                        },
+                    },
+                    "constraints": {"type": "object"},
                 },
                 "required": ["intent"],
             },
@@ -94,7 +120,30 @@ def _build_tools() -> list[Tool]:
                 "properties": {
                     "intent": {"type": "string"},
                     "save": {"type": "boolean"},
-                    "context": {"type": "object"},
+                    "context": {
+                        "type": "object",
+                        "properties": {
+                            **WORKFLOW_CONTEXT_SCHEMA["properties"],
+                            "workflow_examples": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": [
+                                        "linear",
+                                        "bounded_polling",
+                                        "fixed_samples",
+                                        "continuation",
+                                        "parallel",
+                                        "state_tracking",
+                                        "content_monitor",
+                                        "async_callback",
+                                        "compensation",
+                                    ],
+                                },
+                                "description": "Omit for automatic selection; [] for essential rules only.",
+                            },
+                        },
+                    },
                     "constraints": {"type": "object"},
                 },
                 "required": ["intent"],
@@ -182,6 +231,9 @@ async def _call_tool(name: str, arguments: dict | None) -> list[TextContent]:
             body: dict = {"intent": intent, "mode": mode, "replan_budget": 1}
             if cb := args.get("callback_url"):
                 body["callback_url"] = cb
+            for key in ("context", "constraints"):
+                if key in args:
+                    body[key] = args[key]
             result = await _post("/plans", body)
         case "ritesmith_generate":
             result = await _post(

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ritesmith.observability.generation import current_trace
 from ritesmith.observability.metrics import fts_search_duration, fts_search_results
 from ritesmith.registry.models import Artifact, ArtifactVersion
 
@@ -30,6 +31,30 @@ async def fts_search(
 
     Uses a single JOIN to fetch the current artifact version, avoiding N+1 queries.
     """
+    trace = current_trace.get()
+    if trace is not None:
+        for (
+            session_id,
+            cached_query,
+            cached_types,
+            cached_tags,
+            cached_status,
+            cached_limit,
+            cached_results,
+        ) in trace.recalls:
+            if (
+                session_id == id(db)
+                and cached_query == query
+                and cached_tags == tags
+                and cached_status == status
+                and cached_limit >= limit
+                and cached_types == artifact_types
+            ):
+                return [
+                    r
+                    for r in cached_results
+                    if not artifact_types or r.artifact.artifact_type in artifact_types
+                ][:limit]
     tsquery = func.plainto_tsquery("english", query)
     rank_col = func.ts_rank(Artifact.search_vector, tsquery).label("rank")
 
@@ -71,4 +96,6 @@ async def fts_search(
         for artifact, version, score in rows
     ]
     fts_search_results.observe(len(results))
+    if trace is not None:
+        trace.recalls.append((id(db), query, artifact_types, tags, status, limit, results))
     return results

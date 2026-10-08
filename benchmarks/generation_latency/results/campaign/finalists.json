@@ -1,0 +1,10 @@
+{
+  "luau_script": [
+    "gpt-5.4-mini",
+    "gpt-5"
+  ],
+  "trama_workflow": [
+    "gpt-5.4-mini",
+    "gpt-5-mini"
+  ]
+}

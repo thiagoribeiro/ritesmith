@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ritesmith.schemas.artifact import Artifact, ValidationResult
+from ritesmith.schemas.test_spec import TestSpec, inline_schema
+from ritesmith.workflows.examples import WORKFLOW_CONTEXT_SCHEMA, validate_examples
 
 
 class ScriptConstraints(BaseModel):
@@ -18,7 +20,9 @@ class GenerateScriptRequest(BaseModel):
     language: str | None = None  # "lua" | "luau"; None → settings.script_language
     required_capabilities: list[str] | None = None
     constraints: ScriptConstraints | None = None
-    context: dict | None = None
+    context: dict | None = Field(default=None, json_schema_extra=WORKFLOW_CONTEXT_SCHEMA)
+
+    _validate_examples = field_validator("context")(validate_examples)
     save: bool = False
     input_schema: dict | None = None
     output_schema: dict | None = None
@@ -29,7 +33,9 @@ class GenerateWorkflowRequest(BaseModel):
     target_runtime: str = "trama"
     required_capabilities: list[str] | None = None
     constraints: dict | None = None
-    context: dict | None = None
+    context: dict | None = Field(default=None, json_schema_extra=WORKFLOW_CONTEXT_SCHEMA)
+
+    _validate_examples = field_validator("context")(validate_examples)
     save: bool = False
 
 
@@ -38,7 +44,9 @@ class GenerateRequest(BaseModel):
 
     intent: str = Field(..., min_length=1)
     save: bool = False
-    context: dict | None = None
+    context: dict | None = Field(default=None, json_schema_extra=WORKFLOW_CONTEXT_SCHEMA)
+
+    _validate_examples = field_validator("context")(validate_examples)
     constraints: dict | None = None
     input_schema: dict | None = None
     output_schema: dict | None = None
@@ -56,5 +64,7 @@ class ValidateArtifactRequest(BaseModel):
     artifact_type: str
     input_schema: dict | None = None
     output_schema: dict | None = None
-    test_cases: list[dict] | None = None
+    test_cases: list[dict] | None = Field(
+        default=None, json_schema_extra={"items": inline_schema(TestSpec)}
+    )
     constraints: dict | None = None

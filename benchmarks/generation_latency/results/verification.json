@@ -1,0 +1,45 @@
+{
+  "pytest": {
+    "passed": 759,
+    "skipped": 3,
+    "deselected": 14,
+    "xfailed": 5,
+    "failed": 0,
+    "command": "pytest -m 'not e2e' -q --tb=short",
+    "database": "isolated r2d2 test database"
+  },
+  "lint": "ruff check . passed",
+  "format": "ruff format --check . passed (186 Python files)",
+  "native_references": {
+    "passed": 31,
+    "local": true,
+    "r2d2": true
+  },
+  "production_promoted": false,
+  "targeted_final_mermaid_and_generation": {
+    "passed": 90,
+    "failed": 0
+  },
+  "mermaid_official_parser": {
+    "version": "11.12.0",
+    "patterns_passed": 9
+  },
+  "targeted_final_cost_mermaid_and_generation": {
+    "passed": 95,
+    "failed": 0
+  },
+  "final_cost_tests": {
+    "passed": 6,
+    "failed": 0
+  },
+  "staging_stopped": true,
+  "wide_matrix_superseded_by_user": true,
+  "subset": {
+    "http_requests": 43,
+    "llm_calls": 65,
+    "estimated_usd": 0.26735465,
+    "target_seconds": 10,
+    "required_cost_reduction": 0.5,
+    "all_groups_qualified": false
+  }
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "phase": "baseline",
+    "model": "gpt-5-mini",
+    "kind": "luau_script",
+    "entrypoint": "generate",
+    "concurrency": 1,
+    "client_tests": false,
+    "software_sha256": "b559629b15b0b7a91acfdd1901d09f6f55973953435d198d8ddc04f5914cae5e",
+    "requests": 1,
+    "p95_s": 12.240185871021822,
+    "valid_fraction": 1.0,
+    "valid_under_5s_fraction": 0.0,
+    "target_seconds": 10,
+    "valid_within_target_fraction": 0.0,
+    "fallback_fraction": 0.0,
+    "prompt_tokens": 2262,
+    "cached_tokens": 0,
+    "estimated_usd": 0.0032383,
+    "completion_tokens": 1487
+  }
+]
