@@ -145,7 +145,7 @@ class StatProvider(ToolProvider):
                 _min_value,
                 description=(
                     "Track a running minimum across loop iterations. "
-                    "previous_min: self-referential output from previous iteration (null on first). "
+                    "previous_min: prior minimum, explicitly null for the first observation. "
                     "initial_min: seed value from payload.continuation.previous_min for cron chains."
                 ),
                 input_schema={
@@ -157,11 +157,11 @@ class StatProvider(ToolProvider):
                             "description": "Value observed this iteration",
                         },
                         "previous_min": {
-                            "type": "number",
-                            "description": "min_value from self-referential previous output",
+                            "type": ["number", "null"],
+                            "description": "min_value from the completed previous observation",
                         },
                         "initial_min": {
-                            "type": "number",
+                            "type": ["number", "null"],
                             "description": "Seed min for cron chain continuation (from payload)",
                         },
                         "iteration": {
@@ -185,9 +185,9 @@ class StatProvider(ToolProvider):
                     "required": ["current"],
                     "properties": {
                         "current": {"type": "number"},
-                        "previous_max": {"type": "number"},
+                        "previous_max": {"type": ["number", "null"]},
                         "initial_max": {
-                            "type": "number",
+                            "type": ["number", "null"],
                             "description": "Seed max for cron chain continuation",
                         },
                         "iteration": {"type": "integer"},

@@ -1,0 +1,1687 @@
+diff --git a/benchmarks/generation_latency/RESULTS.md b/benchmarks/generation_latency/RESULTS.md
+index c907737..05a78d3 100644
+--- a/benchmarks/generation_latency/RESULTS.md
++++ b/benchmarks/generation_latency/RESULTS.md
+@@ -120,3 +120,14 @@ functional workflow execution in Trama. Typical prompts below 3,000 tokens are
+ not demonstrated for automatic interfaces with the full catalog. At this stage,
+ required groups failed the combined target and quality preservation, so no
+ promotion or seven-day production observation began as part of this evaluation.
++
++## Subsequent typed-decisions experiment
++
++The separate [typed-decisions comparison](results/typed-decisions-20261008/RESULTS.md)
++tested current JSON mode, strict schemas and parameterized constructors after
++offline verification. It stopped at 8 of 12 authorized requests when cancellation
++left one independent test call's usage unknown. One parameterized parallel
++workflow was valid in 6.65 seconds; the other seven requests failed. Known usage
++was US$0.067389, with US$0.003147 still reserved for the unknown call. Neither
++feature was promoted. These results do not replace the historical measurements
++above or qualify the general latency/cost target.
+diff --git a/mcp-server/server.py b/mcp-server/server.py
+index 51e66c1..036c85d 100644
+--- a/mcp-server/server.py
++++ b/mcp-server/server.py
+@@ -8,9 +8,10 @@ import os
+ import sys
+ from typing import Any
+ 
++import httpx
+ from mcp.server import Server
+ from mcp.server.stdio import stdio_server
+-from mcp.types import TextContent, Tool
++from mcp.types import CallToolResult, TextContent, Tool
+ 
+ # Ensure the ritesmith package is importable when server.py is run directly
+ _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+@@ -203,7 +204,20 @@ async def list_tools() -> list[Tool]:
+ 
+ 
+ @server.call_tool()
+-async def call_tool(name: str, arguments: dict | None) -> list[TextContent]:
++async def call_tool(name: str, arguments: dict | None) -> list[TextContent] | CallToolResult:
++    try:
++        return await invoke_tool(name, arguments)
++    except httpx.HTTPStatusError as exc:
++        if exc.response.status_code == 422:
++            body = exc.response.json()
++            if body.get("error") == "generation_failed":
++                return CallToolResult(
++                    isError=True, content=[TextContent(type="text", text=json.dumps(body))]
++                )
++        raise
++
++
++async def invoke_tool(name: str, arguments: dict | None) -> list[TextContent]:
+     args: dict[str, Any] = arguments or {}
+ 
+     # Domain tools from providers
+diff --git a/ritesmith/api/mcp_handler.py b/ritesmith/api/mcp_handler.py
+index 55b37ae..40d3a7f 100644
+--- a/ritesmith/api/mcp_handler.py
++++ b/ritesmith/api/mcp_handler.py
+@@ -17,7 +17,7 @@ from typing import Any
+ import httpx
+ from mcp.server import Server
+ from mcp.server.sse import SseServerTransport
+-from mcp.types import TextContent, Tool
++from mcp.types import CallToolResult, TextContent, Tool
+ from starlette.responses import Response
+ from starlette.routing import get_route_path
+ 
+@@ -214,7 +214,20 @@ async def _list_tools() -> list[Tool]:
+ 
+ 
+ @_mcp_server.call_tool()
+-async def _call_tool(name: str, arguments: dict | None) -> list[TextContent]:
++async def _call_tool(name: str, arguments: dict | None) -> list[TextContent] | CallToolResult:
++    try:
++        return await _invoke_tool(name, arguments)
++    except httpx.HTTPStatusError as exc:
++        if exc.response.status_code == 422:
++            body = exc.response.json()
++            if body.get("error") == "generation_failed":
++                return CallToolResult(
++                    isError=True, content=[TextContent(type="text", text=json.dumps(body))]
++                )
++        raise
++
++
++async def _invoke_tool(name: str, arguments: dict | None) -> list[TextContent]:
+     args: dict[str, Any] = arguments or {}
+ 
+     if name in _tool_registry:
+diff --git a/ritesmith/config.py b/ritesmith/config.py
+index afa5621..67ce185 100644
+--- a/ritesmith/config.py
++++ b/ritesmith/config.py
+@@ -48,6 +48,10 @@ class Settings(BaseSettings):
+     generation_typed_prompts: bool = True
+     generation_luau_assembly: bool = False
+     generation_semantic_workflows: bool = False
++    generation_structured_outputs: bool = False
++    generation_structured_output_operations: list[str] | None = None
++    generation_pattern_parameters: bool = False
++    generation_pattern_parameter_operations: list[str] | None = None
+     generation_bounded_recovery: bool = True
+     generation_deadline_seconds: float = Field(default=30, gt=0)
+     generation_recovery_min_seconds: float = Field(default=3, ge=0)
+diff --git a/ritesmith/core/generation.py b/ritesmith/core/generation.py
+index 184d82d..355d3da 100644
+--- a/ritesmith/core/generation.py
++++ b/ritesmith/core/generation.py
+@@ -1,22 +1,4 @@
+-"""GenerationService — orquestra o loop: busca → reuso → gera → valida → repara.
+-
+-O idioma do script vem de req.language ou settings.script_language ("luau" por
+-padrão, gerando luau_script executado pelo LunarDyson; cai para "lua" se a lib ou
+-o provider de LLM não suportarem Luau). Em Luau, o type check strict é bloqueante
+-em todas as tentativas menos a última, onde erros só-strict viram warnings.
+-
+-Fluxo principal (generate_lua):
+-1. Busca FTS por artifacts similares
+-2. Se match suficientemente bom e reuse_policy != force_new → retorna existente
+-3. Cria GenerationJob
+-4. Loop de até max_attempts:
+-   a. Chama LLM.generate_lua()
+-   b. Valida com ValidationPipeline
+-   c. Se válido → break
+-   d. Senão → chama LLM.repair_lua() e tenta de novo
+-5. Se save=True e válido → persiste artifact
+-6. Retorna GeneratedArtifactResponse
+-"""
++"""Generate, validate and certify scripts with bounded recovery and truthful acceptance."""
+ 
+ import asyncio
+ import logging
+@@ -28,9 +10,10 @@ from ritesmith.api.routes.artifacts import _build_artifact
+ from ritesmith.config import Settings
+ from ritesmith.core.audit import AuditLogger
+ from ritesmith.core.diagnostics import validation_diagnostics
+-from ritesmith.core.exceptions import LLMError
++from ritesmith.core.exceptions import GenerationFailedError, LLMError
+ from ritesmith.core.generation_budget import bounded_generation
+ from ritesmith.core.ids import generate_id
++from ritesmith.core.pending_tests import finish_pending_tests
+ from ritesmith.core.repair import run_repair_loop
+ from ritesmith.core.reuse import check_reuse
+ from ritesmith.core.validation import ValidationPipeline
+@@ -61,12 +44,10 @@ log = logging.getLogger(__name__)
+ 
+ 
+ def _is_strict_clean(validation) -> bool:
+-    """True when no strict-mode type errors remain (luau); always true for lua/trama."""
++    """True only when the Luau strict checker explicitly passed."""
+     if validation is None:
+         return False
+-    return not any(
+-        c.name == "strict_type_check" and c.status == "warning" for c in validation.checks
+-    )
++    return any(c.name == "strict_type_check" and c.status == "passed" for c in validation.checks)
+ 
+ 
+ def _certification(language: str, strict_clean: bool) -> str:
+@@ -163,7 +144,7 @@ class GenerationService:
+         # Similar artifacts for few-shot prompt context (same language only)
+         search_results = [r for r in recall if r.artifact.artifact_type == artifact_type][:5]
+ 
+-        # 3. Registra GenerationJob
++        # 3. Record the generation job
+         job = await self._create_job(req, plan_id, artifact_type)
+         log.info(
+             "generation job created",
+@@ -191,6 +172,7 @@ class GenerationService:
+         active_llm = self.llm
+         tests_task = None
+         test_failure = None
++        candidate_failure = None
+         if (
+             self.settings.generation_parallel_tests
+             and not effective_tests
+@@ -210,23 +192,46 @@ class GenerationService:
+         async def attempt_fn(attempt: int) -> bool:
+             nonlocal last_script, last_validation, final_response
+             nonlocal effective_tests, tests_attempted, active_llm, test_failure
++            nonlocal candidate_failure
+             job.attempts = attempt
+-            if attempt > 1 and last_script is None:
++            if attempt > 1 and last_script is None and candidate_failure is None:
+                 active_llm = self.llm.fallback()
+ 
+             if attempt == 1 and initial is not None:
+                 llm_response, stats = initial
+                 script = llm_response.script
+             elif language == "luau" and (attempt == 1 or last_script is None):
+-                llm_response, stats = await active_llm.generate_luau(
+-                    goal=req.intent,
+-                    input_schema=req.input_schema,
+-                    output_schema=req.output_schema,
+-                    tool_descriptions=tool_descriptions,
+-                    type_declarations=type_declarations,
+-                    similar_artifacts=similar_dicts,
+-                    constraints=constraints,
+-                )
++                try:
++                    llm_response, stats = await active_llm.generate_luau(
++                        goal=req.intent,
++                        input_schema=req.input_schema,
++                        output_schema=req.output_schema,
++                        tool_descriptions=tool_descriptions,
++                        type_declarations=type_declarations,
++                        similar_artifacts=similar_dicts,
++                        constraints={
++                            **constraints,
++                            **(
++                                {"generation_repair": candidate_failure}
++                                if candidate_failure
++                                else {}
++                            ),
++                        },
++                    )
++                except LLMError as exc:
++                    if exc.details.get("candidate") is not None:
++                        candidate_failure = {
++                            "candidate": exc.details["candidate"],
++                            "diagnostic": str(exc),
++                            "location": exc.details.get("location"),
++                        }
++                        await self._record_attempt(
++                            job.generation_id,
++                            attempt,
++                            str(exc.details["candidate"]),
++                            ValidationResult(valid=False, errors=[str(exc)], checks=[]),
++                        )
++                    raise
+                 script = llm_response.script
+             elif attempt == 1 or last_script is None:
+                 llm_response, stats = await active_llm.generate_lua(
+@@ -400,9 +405,25 @@ class GenerationService:
+                 and not (require_strict and not strict_clean)
+                 and tests_ok
+             )
++            outcome(artifact_type, accepted)
+             job.status = "completed" if accepted else "failed"
+             job.finished_at = datetime.now(UTC)
+             job.attempts = performed
++            if not accepted:
++                diagnostics = list(last_validation.errors) if last_validation else []
++                if candidate_failure:
++                    diagnostics.append(candidate_failure["diagnostic"])
++                if require_strict and not strict_clean:
++                    diagnostics.append("Strict certification required")
++                if not tests_ok:
++                    diagnostics.append("Functional tests required")
++                raise GenerationFailedError(
++                    "No acceptable script after bounded recovery",
++                    details={
++                        "diagnostics": diagnostics,
++                        "category": "response" if last_validation is None else "functional",
++                    },
++                )
+             log.info(
+                 "generation job finished status=%s",
+                 job.status,
+@@ -450,10 +471,7 @@ class GenerationService:
+             )
+             raise
+         finally:
+-            if tests_task is not None:
+-                if not tests_task.done():
+-                    tests_task.cancel()
+-                await asyncio.gather(tests_task, return_exceptions=True)
++            await finish_pending_tests(tests_task)
+             with stage("persist", artifact_type):
+                 from ritesmith.core.generation_budget import current_budget
+ 
+diff --git a/ritesmith/core/proposal.py b/ritesmith/core/proposal.py
+index 1dee60d..db2e658 100644
+--- a/ritesmith/core/proposal.py
++++ b/ritesmith/core/proposal.py
+@@ -3,7 +3,8 @@
+ import asyncio
+ import re
+ 
+-from ritesmith.core.exceptions import LLMError
++from ritesmith.core.exceptions import GenerationFailedError, LLMError
++from ritesmith.core.pending_tests import finish_pending_tests
+ from ritesmith.core.repair import claim_recovery
+ from ritesmith.core.reuse import check_reuse
+ from ritesmith.observability.generation import stage
+@@ -107,10 +108,26 @@ async def prepare_proposal(
+             with stage("proposal", "mixed"):
+                 proposal, stats = await llm.propose(**kwargs)
+         except LLMError as exc:
++            if audit:
++                await audit.log_event(
++                    "generation.candidate_rejected",
++                    "proposal",
++                    payload={"candidate": exc.details.get("candidate"), "diagnostic": str(exc)},
++                )
+             if exc.details.get("retryable") is False:
+                 raise
+-            fallback = llm.fallback()
+-            if fallback is llm or not claim_recovery(
++            candidate = exc.details.get("candidate")
++            fallback = llm if candidate is not None else llm.fallback()
++            if candidate is not None:
++                kwargs["context"] = {
++                    **(context or {}),
++                    "generation_repair": {
++                        "candidate": candidate,
++                        "diagnostic": str(exc),
++                        "location": exc.details.get("location"),
++                    },
++                }
++            if (fallback is llm and candidate is None) or not claim_recovery(
+                 "proposal", settings.generation_recovery_attempts
+             ):
+                 raise
+@@ -123,9 +140,18 @@ async def prepare_proposal(
+                 proposal._tests_attempted = True
+             except NotImplementedError:
+                 proposal._tests_attempted = True
++    except LLMError as exc:
++        if audit:
++            await audit.log_event("generation.failed", "proposal", payload={"diagnostic": str(exc)})
++            await db.commit()
++        raise GenerationFailedError(
++            "No acceptable generation proposal",
++            details={
++                "category": exc.details.get("category", "response"),
++                "diagnostics": [str(exc)],
++                "location": exc.details.get("location"),
++            },
++        ) from exc
+     finally:
+-        if tests_task is not None:
+-            if not tests_task.done():
+-                tests_task.cancel()
+-            await asyncio.gather(tests_task, return_exceptions=True)
++        await finish_pending_tests(tests_task)
+     return (proposal, stats), recall, None
+diff --git a/ritesmith/core/validation.py b/ritesmith/core/validation.py
+index c049f9b..915d8ef 100644
+--- a/ritesmith/core/validation.py
++++ b/ritesmith/core/validation.py
+@@ -51,7 +51,6 @@ _FORBIDDEN_PATTERNS = [
+     (re.compile(r"\bnewproxy\s*\("), "função 'newproxy' é proibida"),
+ ]
+ 
+-_RUN_SIGNATURE = re.compile(r"\bfunction\s+run\s*\(")
+ _HOST_FN_CALL = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(")
+ _LUAU_TOOL_REF = re.compile(r"\btools\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)")
+ 
+@@ -92,7 +91,7 @@ class ValidationPipeline:
+             checks.extend(self._check_schema_presence(content))
+             checks.extend(self._check_allowed_primitives(content, profile))
+ 
+-            if test_cases:
++            if test_cases and not any(c.status == "failed" for c in checks):
+                 exec_checks = await self._check_test_execution(content, test_cases, profile)
+                 checks.extend(exec_checks)
+ 
+@@ -101,11 +100,12 @@ class ValidationPipeline:
+             checks.extend(self._check_forbidden_tokens(content, extra=_LUAU_EXTRA_FORBIDDEN))
+             checks.extend(self._check_size(content, constraints, factor=_LUAU_SIZE_FACTOR))
+             checks.extend(self._check_schema_presence(content))
+-            checks.extend(
+-                await self._check_luau_session(
+-                    content, profile, input_schema, output_schema, test_cases or []
++            if not any(c.status == "failed" for c in checks):
++                checks.extend(
++                    await self._check_luau_session(
++                        content, profile, input_schema, output_schema, test_cases or []
++                    )
+                 )
+-            )
+ 
+         elif artifact_type in ("trama_workflow", "workflow_template"):
+             checks.extend(self._check_json_syntax(content))
+@@ -309,12 +309,14 @@ class ValidationPipeline:
+         return [ValidationCheck(name="size_limit", status="passed")]
+ 
+     def _check_schema_presence(self, content: str) -> list[ValidationCheck]:
+-        if not _RUN_SIGNATURE.search(content):
++        from ritesmith.llm.script_candidate import run_declarations
++
++        if run_declarations(content) != 1:
+             return [
+                 ValidationCheck(
+                     name="run_function",
+                     status="failed",
+-                    message="Script deve definir exatamente uma função 'run(input, ...)'",
++                    message="script: define exactly one run(input, ...) function",
+                 )
+             ]
+         return [ValidationCheck(name="run_function", status="passed")]
+diff --git a/ritesmith/core/workflow_generation.py b/ritesmith/core/workflow_generation.py
+index 9269acf..91513d6 100644
+--- a/ritesmith/core/workflow_generation.py
++++ b/ritesmith/core/workflow_generation.py
+@@ -1,14 +1,4 @@
+-"""WorkflowGenerationService — gera Trama workflow definitions via LLM + repair loop.
+-
+-Fluxo:
+-1. Lista capabilities disponíveis no registry
+-2. Busca FTS por workflows similares (artifacts tipo trama_workflow)
+-3. Gera workflow via LLM.generate_workflow()
+-4. Valida com WorkflowValidator (Layer 1 + Layer 2)
+-5. Se inválido → LLM.repair_workflow() e tenta de novo (até max_attempts)
+-6. Persiste se save=True e válido
+-7. Retorna GeneratedArtifactResponse
+-"""
++"""Generate native Trama workflows; exhausted validation returns generation_failed."""
+ 
+ import json
+ import logging
+@@ -22,7 +12,7 @@ from ritesmith.api.routes.artifacts import _build_artifact
+ from ritesmith.config import Settings
+ from ritesmith.core.audit import AuditLogger
+ from ritesmith.core.diagnostics import Diagnostic
+-from ritesmith.core.exceptions import LLMError
++from ritesmith.core.exceptions import GenerationFailedError, LLMError
+ from ritesmith.core.generation_budget import bounded_generation, current_budget
+ from ritesmith.core.ids import generate_id
+ from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_workflow
+@@ -32,7 +22,7 @@ from ritesmith.llm.base import LLMCallStats, LLMProvider, WorkflowGenerationResp
+ from ritesmith.llm.generation_context import prepare_catalog
+ from ritesmith.observability.generation import current_trace, outcome, stage
+ from ritesmith.registry.models import Artifact as ArtifactORM
+-from ritesmith.registry.models import ArtifactVersion
++from ritesmith.registry.models import ArtifactVersion, GenerationAttempt, GenerationJob
+ from ritesmith.registry.search import SearchResult, fts_search
+ from ritesmith.registry.service import RegistryService
+ from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, ValidationResult
+@@ -227,6 +217,7 @@ class WorkflowGenerationService:
+         last_errors: list[str] = []
+         final_response: WorkflowGenerationResponse | None = None
+         active_llm = self.llm
++        attempts = []
+ 
+         async def attempt_fn(attempt: int) -> bool:
+             nonlocal last_definition, last_errors, final_response, active_llm
+@@ -282,10 +273,11 @@ class WorkflowGenerationService:
+                         context=req.context,
+                     )
+                 except LLMError as exc:
++                    last_errors = [str(exc)]
+                     candidate = exc.details.get("candidate")
+                     if isinstance(candidate, (dict, str)):
+                         last_definition = candidate
+-                        last_errors = [str(exc)]
++                    attempts.append((attempt, candidate, [str(exc)]))
+                     raise
+                 definition = llm_resp.definition
+             else:
+@@ -362,6 +354,7 @@ class WorkflowGenerationService:
+                         )
+             last_definition = definition
+             last_errors = errors
++            attempts.append((attempt, definition, errors))
+             log.info(
+                 "workflow generation attempt %d valid=%s",
+                 attempt,
+@@ -395,6 +388,15 @@ class WorkflowGenerationService:
+                 warnings=[],
+                 checks=[],
+             )
++            if not valid:
++                outcome("trama_workflow", False)
++                raise GenerationFailedError(
++                    "No acceptable workflow after bounded recovery",
++                    details={
++                        "category": "graph",
++                        "diagnostics": last_errors or ["Missing workflow candidate"],
++                    },
++                )
+ 
+             # 6. Persist if requested and valid
+             if req.save and valid and final_response:
+@@ -418,6 +420,35 @@ class WorkflowGenerationService:
+                     )
+         except Exception:
+             await self.db.rollback()
++            job = GenerationJob(
++                generation_id=generate_id("gen"),
++                goal=req.intent,
++                target_type="trama_workflow",
++                status="failed",
++                constraints=constraints,
++                plan_id=plan_id,
++                attempts=len(attempts),
++                finished_at=datetime.now(UTC),
++            )
++            self.db.add(job)
++            await self.db.flush()
++            for number, candidate, errors in attempts:
++                self.db.add(
++                    GenerationAttempt(
++                        generation_id=job.generation_id,
++                        attempt_number=number,
++                        content=candidate if isinstance(candidate, str) else json.dumps(candidate),
++                        validation_result={"valid": False, "errors": errors},
++                    )
++                )
++            if self.audit:
++                await self.audit.log_event(
++                    "generation.failed",
++                    "workflow_generation",
++                    plan_id,
++                    payload={"candidate": last_definition, "diagnostics": last_errors},
++                )
++            await self.db.commit()
+             log.error("workflow generation failed with exception", exc_info=True)
+             raise
+         else:
+diff --git a/ritesmith/llm/base.py b/ritesmith/llm/base.py
+index c598dfb..7541fb0 100644
+--- a/ritesmith/llm/base.py
++++ b/ritesmith/llm/base.py
+@@ -71,6 +71,14 @@ class LLMCallStats(BaseModel):
+     prompt_version: str = ""
+     contract_version: str = ""
+     format_version: str = ""
++    variant: str = "A"
++    response_schema_version: str = ""
++    constructor_version: str = ""
++    response_mode: str = "json_object"
++    schema_fallback_reason: str | None = None
++    locally_validated_json: bool = False
++    representation: str = ""
++    representation_fallback: bool = False
+ 
+ 
+ class LLMProvider(ABC):
+diff --git a/ritesmith/llm/generation_context.py b/ritesmith/llm/generation_context.py
+index 7e1a4a1..936f3a0 100644
+--- a/ritesmith/llm/generation_context.py
++++ b/ritesmith/llm/generation_context.py
+@@ -6,7 +6,7 @@ import re
+ import unicodedata
+ from dataclasses import dataclass
+ 
+-PROMPT_VERSION = "generation-v3"
++PROMPT_VERSION = "generation-v4"
+ 
+ 
+ def normalized(text):
+diff --git a/ritesmith/llm/openai_provider.py b/ritesmith/llm/openai_provider.py
+index 93d9113..ae72163 100644
+--- a/ritesmith/llm/openai_provider.py
++++ b/ritesmith/llm/openai_provider.py
+@@ -21,10 +21,20 @@ from ritesmith.llm.base import (
+     WorkflowRepairResponse,
+ )
+ from ritesmith.llm.generation_context import PROMPT_VERSION, prepare_catalog, proposal_kind
++from ritesmith.llm.response_contracts import (
++    SCHEMA_VERSION,
++    TRANSPORT_RULES,
++    decode_response,
++    packed,
++    response_model,
++)
+ from ritesmith.llm.script_candidate import ASSEMBLY_RULES, expand_script
++from ritesmith.llm.spend_budget import current_spend_budget
++from ritesmith.llm.structured_output import strict_schema, supports_schema, unsupported_reason
+ from ritesmith.observability.generation import current_trace
+ from ritesmith.observability.metrics import llm_errors_total, llm_request_duration, llm_tokens_total
+ from ritesmith.workflows.compact import compact_workflow, compile_workflow
++from ritesmith.workflows.constructors import CONSTRUCTOR_VERSION, PATTERN_RULES, compile_parameters
+ from ritesmith.workflows.examples import workflow_system
+ from ritesmith.workflows.mermaid import compile_mermaid, render_mermaid
+ from ritesmith.workflows.semantic import compile_plan
+@@ -33,7 +43,7 @@ from ritesmith.workflows.semantic import compile_plan
+ # `max_completion_tokens` in place of `max_tokens`.
+ _REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+ 
+-# JSON schemas como string para injetar nos prompts
++# Legacy JSON-mode response examples; experimental contracts are generated from types.
+ _LUA_RESPONSE_SCHEMA = json.dumps(
+     {
+         "script": "<lua code string>",
+@@ -171,6 +181,16 @@ class OpenAIProvider(LLMProvider):
+             return self
+         return OpenAIProvider(self.settings, client=self.client, use_fallback=True)
+ 
++    def _enabled(self, feature, method):
++        enabled = getattr(self.settings, f"generation_{feature}")
++        option = (
++            "structured_output_operations"
++            if feature == "structured_outputs"
++            else "pattern_parameter_operations"
++        )
++        operations = getattr(self.settings, f"generation_{option}")
++        return enabled and (operations is None or method in operations)
++
+     @staticmethod
+     def _examples(stats, selected, contract_version="", format_version=""):
+         stats.examples = selected
+@@ -202,15 +222,33 @@ class OpenAIProvider(LLMProvider):
+                     call.update(
+                         error="invalid_response",
+                         error_type=type(exc).__name__,
+-                        category="response"
+-                        if isinstance(exc, json.JSONDecodeError)
+-                        else "graph"
+-                        if isinstance(exc, ValueError)
+-                        else "response",
+-                        location=getattr(exc, "line", getattr(exc, "lineno", None)),
++                        category=getattr(exc, "category", None)
++                        or (
++                            "response"
++                            if isinstance(exc, json.JSONDecodeError)
++                            else "graph"
++                            if isinstance(exc, ValueError)
++                            else "response"
++                        ),
++                        location=getattr(
++                            exc, "location", getattr(exc, "line", getattr(exc, "lineno", None))
++                        ),
+                     )
+                     break
+ 
++    @staticmethod
++    def _candidate_failure(raw, stats, exc):
++        return LLMError(
++            "Invalid generation candidate: " + str(exc),
++            details={
++                "candidate": raw,
++                "category": getattr(exc, "category", "response"),
++                "location": getattr(exc, "location", None),
++                "stats": stats.model_dump(),
++                "api_attempts": stats.api_attempts,
++            },
++        )
++
+     def operation_config(self, model: str, method: str) -> tuple[str, str | None]:
+         if method in ("intent", "reuse_judge", "test_gen", "llm.evaluate"):
+             return model, None
+@@ -334,7 +372,9 @@ class OpenAIProvider(LLMProvider):
+                     "method": method,
+                     "model": model,
+                     "duration_s": time.perf_counter() - started,
+-                    "api_attempts": 1,
++                    "api_attempts": 0
++                    if getattr(last_exc, "details", {}).get("stats", {}).get("dispatched") is False
++                    else 1,
+                     "operation_api_attempts": attempt,
+                     "error": type(last_exc).__name__,
+                     "provider_code": getattr(last_exc, "details", {}).get("provider_code"),
+@@ -357,6 +397,42 @@ class OpenAIProvider(LLMProvider):
+         method: str = "unknown",
+     ) -> tuple[str, LLMCallStats]:
+         _start = time.perf_counter()
++        structured = self._enabled("structured_outputs", method)
++        patterns = self._enabled("pattern_parameters", method) and method in (
++            "workflow_gen",
++            "workflow_repair",
++            "proposal_workflow",
++            "proposal_script",
++        )
++        model_type = response_model(method, patterns) if structured or patterns else None
++        schema = strict_schema(model_type) if model_type else None
++        reason = None
++        if schema is not None:
++            reason = unsupported_reason(schema)
++            if not supports_schema(model):
++                reason = "model_schema_support_not_declared"
++            if self.settings.generation_mermaid_workflows and "workflow" in method:
++                reason = "mermaid_keeps_legacy_transport"
++                model_type = None
++            if model_type is not None:
++                system += TRANSPORT_RULES
++                if patterns and PATTERN_RULES not in system:
++                    system += PATTERN_RULES
++                # The API carries the strict schema; avoid duplicating it in prompts.
++                if reason or not structured:
++                    system += "\nTRANSPORT SCHEMA: " + packed(schema)
++        elif structured:
++            reason = "operation_has_no_typed_contract"
++        response_format = {"type": "json_object"}
++        if structured and schema is not None and reason is None:
++            response_format = {
++                "type": "json_schema",
++                "json_schema": {
++                    "name": method + "_v1",
++                    "strict": True,
++                    "schema": schema,
++                },
++            }
+         system += "\nWrite code comments and documentation in English. Preserve explicitly requested message text and data.\n"
+         try:
+             create_kwargs: dict = {
+@@ -365,7 +441,7 @@ class OpenAIProvider(LLMProvider):
+                     {"role": "system", "content": system},
+                     {"role": "user", "content": user},
+                 ],
+-                "response_format": {"type": "json_object"},
++                "response_format": response_format,
+             }
+             if model.startswith(_REASONING_PREFIXES):
+                 create_kwargs["max_completion_tokens"] = max_tokens
+@@ -380,7 +456,12 @@ class OpenAIProvider(LLMProvider):
+                 create_kwargs["timeout"] = max(
+                     0.01, min(self.settings.llm_timeout_seconds, budget.remaining)
+                 )
+-            response = await self.client.chat.completions.create(**create_kwargs)
++            spending = current_spend_budget.get()
++            if spending is None:
++                response = await self.client.chat.completions.create(**create_kwargs)
++            else:
++                create_kwargs["service_tier"] = "default"
++                response = await spending.dispatch(self.client, create_kwargs, method)
+         except APITimeoutError as e:
+             llm_errors_total.labels(provider="openai", error_type="LLMTimeoutError").inc()
+             raise LLMTimeoutError(
+@@ -434,6 +515,12 @@ class OpenAIProvider(LLMProvider):
+             or 0,
+             cached_tokens=getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0)
+             or 0,
++            variant="C" if patterns else "B" if structured else "A",
++            response_schema_version=SCHEMA_VERSION if model_type else "",
++            constructor_version=CONSTRUCTOR_VERSION if patterns else "",
++            response_mode=response_format["type"],
++            schema_fallback_reason=reason,
++            locally_validated_json=model_type is not None,
+         )
+         elapsed = time.perf_counter() - _start
+         llm_request_duration.labels(provider="openai", method=method).observe(elapsed)
+@@ -448,7 +535,40 @@ class OpenAIProvider(LLMProvider):
+                 "LLM completion truncated (finish_reason=length)",
+                 details={"stats": stats.model_dump(), "category": "truncated"},
+             )
++        if (
++            getattr(response.choices[0].message, "refusal", None)
++            or response.choices[0].finish_reason == "content_filter"
++        ):
++            raise LLMError(
++                "Provider refused the generation",
++                details={
++                    "stats": stats.model_dump(),
++                    "category": "refusal",
++                    "retryable": False,
++                },
++            )
+         content = response.choices[0].message.content or "{}"
++        if model_type is not None:
++            try:
++                content = decode_response(content, model_type)
++                data = json.loads(content)
++                definition = data.get("definition") or (data.get("workflow") or {}).get(
++                    "definition"
++                )
++                if isinstance(definition, dict):
++                    stats.representation = definition.get("format", "native_graph")
++                    stats.representation_fallback = (
++                        patterns and stats.representation != "pattern_parameters"
++                    )
++            except (ValueError, TypeError) as exc:
++                raise LLMError(
++                    "Invalid typed response: " + str(exc),
++                    details={
++                        "stats": stats.model_dump(),
++                        "category": "response",
++                        "candidate": content,
++                    },
++                ) from exc
+         return content, stats
+ 
+     async def generate_lua(
+@@ -541,10 +661,11 @@ class OpenAIProvider(LLMProvider):
+             response_schema=_script_schema(
+                 _LUA_RESPONSE_SCHEMA, self.settings.generation_luau_assembly
+             ),
++            assembled=self.settings.generation_luau_assembly,
+         )
+         raw, stats = await self._chat_with_retry(
+             model=self.model,
+-            system=prompts.luau_generation_system()
++            system=prompts.luau_generation_system(self.settings.generation_luau_assembly)
+             + (ASSEMBLY_RULES if self.settings.generation_luau_assembly else ""),
+             user=user_msg,
+             max_tokens=_MAX_TOKENS["lua_gen"],
+@@ -556,14 +677,14 @@ class OpenAIProvider(LLMProvider):
+             self._examples(
+                 stats,
+                 [],
+-                format_version="luau-body-v1"
++                format_version="luau-body-v2"
+                 if isinstance(data.get("script"), dict)
+                 else "script-full-v1",
+             )
+             return LuaGenerationResponse(**expand_script(data)), stats
+         except Exception as e:
+             self._invalid_response(stats, e)
+-            raise LLMError(f"Failed to parse LLM response: {e}\nRaw: {raw[:200]}") from e
++            raise self._candidate_failure(raw, stats, e) from e
+ 
+     async def repair_luau(
+         self,
+@@ -733,6 +854,17 @@ Return source="intent". The implementation is intentionally unavailable.
+         constraints=None,
+         context=None,
+     ):
++        if isinstance(definition, dict) and definition.get("format") == "pattern_parameters":
++            if not self.settings.generation_pattern_parameters:
++                raise ValueError("pattern parameters disabled")
++            return compile_parameters(
++                definition,
++                base_url,
++                contract_version=contract_version,
++                intent=goal,
++                constraints=constraints,
++                continuation=(context or {}).get("continuation"),
++            )
+         if isinstance(definition, dict) and definition.get("format") == "semantic_plan":
+             if not self.settings.generation_semantic_workflows:
+                 raise ValueError("semantic workflows disabled")
+@@ -795,6 +927,7 @@ Return source="intent". The implementation is intentionally unavailable.
+                 filtered=self.settings.generation_specialized_prompts,
+                 mermaid=self.settings.generation_mermaid_workflows,
+                 semantic=self.settings.generation_semantic_workflows,
++                patterns=self._enabled("pattern_parameters", "workflow_gen"),
+             )
+         raw, stats = await self._chat_with_retry(
+             model=self.model,
+@@ -850,7 +983,11 @@ Return source="intent". The implementation is intentionally unavailable.
+             except ValueError:
+                 # Keep an invalid candidate as repair evidence; output is Mermaid.
+                 pass
+-        elif self.settings.generation_compact_workflows and isinstance(current_definition, dict):
++        elif (
++            self.settings.generation_compact_workflows
++            and isinstance(current_definition, dict)
++            and "nodes" in current_definition
++        ):
+             current_definition = compact_workflow(current_definition, base_url)
+         user_msg = prompts.workflow_repair_user(
+             original_goal=original_goal,
+@@ -876,6 +1013,7 @@ Return source="intent". The implementation is intentionally unavailable.
+                 filtered=True,
+                 mermaid=self.settings.generation_mermaid_workflows,
+                 semantic=self.settings.generation_semantic_workflows,
++                patterns=self._enabled("pattern_parameters", "workflow_repair"),
+             )
+             system += "\nRepair the definition from the errors; return definition and changes_made."
+         raw, stats = await self._chat_with_retry(
+@@ -946,6 +1084,7 @@ Return source="intent". The implementation is intentionally unavailable.
+                 filtered=self.settings.generation_specialized_prompts,
+                 mermaid=self.settings.generation_mermaid_workflows,
+                 semantic=self.settings.generation_semantic_workflows,
++                patterns=self._enabled("pattern_parameters", "proposal_workflow"),
+             )
+             system_parts.append(wf_system)
+             user_parts.append(
+@@ -965,7 +1104,7 @@ Return source="intent". The implementation is intentionally unavailable.
+             )
+         if kind != "workflow":
+             system_parts.append(
+-                prompts.luau_generation_system()
++                prompts.luau_generation_system(self.settings.generation_luau_assembly)
+                 if language == "luau"
+                 else prompts.lua_generation_system()
+             )
+@@ -1034,6 +1173,10 @@ Return source="intent". The implementation is intentionally unavailable.
+             )
+         system = "\n".join(system_parts)
+         user = "\n".join(user_parts)
++        if (context or {}).get("generation_repair"):
++            user += "\nCORRECT THIS ORIGINAL CANDIDATE AND DIAGNOSTIC: " + json.dumps(
++                context["generation_repair"], separators=(",", ":")
++            )
+         method = "proposal_script" if kind == "script" else "proposal_workflow"
+         raw, stats = await self._chat_with_retry(
+             self.model, system, user, 10000, 0.2, method, examples=selected
+@@ -1092,4 +1235,4 @@ Return source="intent". The implementation is intentionally unavailable.
+             return proposal, stats
+         except Exception as e:
+             self._invalid_response(stats, e)
+-            raise LLMError(f"Failed to parse unified proposal: {e}") from e
++            raise self._candidate_failure(raw, stats, e) from e
+diff --git a/ritesmith/llm/prompts.py b/ritesmith/llm/prompts.py
+index 019ff71..e5d983c 100644
+--- a/ritesmith/llm/prompts.py
++++ b/ritesmith/llm/prompts.py
+@@ -197,12 +197,25 @@ LANGUAGE: Luau (the typed Lua dialect from Roblox) — NOT Lua 5.x
+       * the predeclared types are already in scope — do NOT redeclare them"""
+ 
+ 
+-def luau_generation_system() -> str:
++def luau_generation_system(assembled: bool = False) -> str:
++    entry = (
++        "For luau_body, provide statements only; Python supplies the typed run function. "
++        "Helpers must be local. For a complete script string, define exactly ONE global "
++        "function run(input: Input, context: Context): Output."
++        if assembled
++        else "Define exactly ONE global function: run(input, context) — helpers must be local functions"
++    )
++    notes = _LUAU_LANGUAGE_NOTES
++    if assembled:
++        notes = notes.replace(
++            "annotate the entry point exactly as: function run(input: Input, context: Context): Output",
++            "the assembled entry point is already typed; do not declare run inside body",
++        )
+     return f"""\
+ You are a Luau script generator for RiteSmith, a sandboxed execution runtime (LunarDyson).
+ 
+ MANDATORY RULES
+-- Define exactly ONE global function: run(input, context) — helpers must be local functions
++- {entry}
+ - Maximum ~90 lines, maximum 6 KB
+ - No recursion, no infinite loops
+ - External effects happen ONLY through the tools.* functions listed in the user message —
+@@ -221,7 +234,7 @@ OUTPUT CONTRACT
+   The return value must be a plain table (no functions). If an output schema is given,
+   every required field must be present and typed correctly.
+ 
+-{_LUAU_LANGUAGE_NOTES}
++{notes}
+ 
+ STYLE GUIDE
+   - Prefer local variables
+@@ -240,6 +253,7 @@ def luau_generation_user(
+     similar_artifacts: list[dict],
+     constraints: dict,
+     response_schema: str,
++    assembled: bool = False,
+ ) -> str:
+     parts = [f"GOAL: {_sanitize_goal(goal)}"]
+     if input_schema:
+@@ -251,7 +265,12 @@ def luau_generation_user(
+     parts.append(
+         "PREDECLARED TYPES (already in scope — use them, do NOT redeclare them):\n"
+         f"{type_declarations.strip()}\n\n"
+-        "Annotate the entry point exactly as: function run(input: Input, context: Context): Output"
++        + (
++            "For luau_body return statements only: do not declare run inside body. "
++            "For a complete script string use function run(input: Input, context: Context): Output."
++            if assembled
++            else "Annotate the entry point exactly as: function run(input: Input, context: Context): Output"
++        )
+     )
+     if tool_descriptions:
+         tools = "\n".join(f"  - {line}" for line in tool_descriptions)
+diff --git a/ritesmith/llm/script_candidate.py b/ritesmith/llm/script_candidate.py
+index d2ff83b..587b1d2 100644
+--- a/ritesmith/llm/script_candidate.py
++++ b/ritesmith/llm/script_candidate.py
+@@ -5,7 +5,22 @@ from typing import Literal
+ 
+ from pydantic import BaseModel, ConfigDict, Field
+ 
+-FORMAT_VERSION = "luau-body-v1"
++FORMAT_VERSION = "luau-body-v2"
++
++_NON_CODE = re.compile(
++    r'--\[(=*)\[.*?\]\1\]|--[^\n]*|\[(=*)\[.*?\]\2\]|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'',
++    re.DOTALL,
++)
++
++
++def run_declarations(source):
++    """Count entry point declarations without treating literals as executable code."""
++    return len(re.findall(r"\bfunction\s+run\s*\(", _NON_CODE.sub(" ", source)))
++
++
++class ScriptCandidateError(ValueError):
++    location = "script.body"
++    category = "response"
+ 
+ 
+ class LuauBody(BaseModel):
+@@ -15,8 +30,11 @@ class LuauBody(BaseModel):
+     body: str = Field(min_length=1)
+ 
+     def compile(self):
+-        if re.search(r"\bfunction\s+run\s*\(", self.helpers + "\n" + self.body):
+-            raise ValueError("luau_body must not redeclare run")
++        if run_declarations(self.helpers + "\n" + self.body):
++            raise ScriptCandidateError(
++                "script.body: luau_body must not redeclare run; return statements only, "
++                "or put the complete function in the script string"
++            )
+         return (self.helpers.rstrip() + "\n" if self.helpers.strip() else "") + (
+             "function run(input: Input, context: Context): Output\n"
+             + self.body.rstrip()
+@@ -37,4 +55,5 @@ RiteSmith supplies exactly function run(input: Input, context: Context): Output
+ Input, Output and Context are predeclared; do not redeclare them or the run function.
+ Helpers must be local. Return full script text for code incompatible with body assembly.
+ Return essential metadata only, short descriptions, no explanations.
++Complete example: {"script":{"format":"luau_body","helpers":"local function convert(c: number): number return c * 9 / 5 + 32 end","body":"return {fahrenheit = convert(input.celsius)}"},"name":"celsius_to_fahrenheit","description":"Convert Celsius to Fahrenheit","usage_description":"Temperature conversion","tags":["conversion"],"risk_assessment":"low","runtime_profile":"transform_only"}.
+ """
+diff --git a/ritesmith/runtime/lua.py b/ritesmith/runtime/lua.py
+index 096c3c7..d6e1d3e 100644
+--- a/ritesmith/runtime/lua.py
++++ b/ritesmith/runtime/lua.py
+@@ -63,12 +63,12 @@ class LuaScriptRuntime(BaseRuntime):
+         )
+ 
+     def validate_syntax(self, content: str) -> list[str]:
+-        """Tenta carregar o script em Lua e retorna erros de sintaxe."""
++        """Compile without executing top-level statements or external effects."""
+         try:
+             from lupa import LuaRuntime
+ 
+             lua = LuaRuntime(unpack_returned_tuples=False)
+-            lua.execute(content)
++            lua.compile(content)
+             return []
+         except Exception as e:
+             return [str(e)]
+diff --git a/ritesmith/tests/unit/test_generation.py b/ritesmith/tests/unit/test_generation.py
+index be3270d..bd55faa 100644
+--- a/ritesmith/tests/unit/test_generation.py
++++ b/ritesmith/tests/unit/test_generation.py
+@@ -31,7 +31,7 @@ def _valid_response(name="test_script") -> LuaGenerationResponse:
+ 
+ def _invalid_response() -> LuaGenerationResponse:
+     return LuaGenerationResponse(
+-        script="os.execute('rm -rf /')",  # will fail forbidden token check
++        script="os.execute('forbidden-command')",  # Rejected before any execution.
+         name="evil_script",
+         description="Bad script",
+         tags=[],
+@@ -208,6 +208,7 @@ async def test_generate_lua_repair_loop(mock_client_repair, repair_llm):
+         json={
+             "intent": "return the input value",
+             "save": False,
++            "context": {"test_cases": [{"input": {"value": 3}, "expected_output": {"result": 3}}]},
+         },
+     )
+     assert resp.status_code == 200
+@@ -372,11 +373,12 @@ async def test_medium_risk_without_tests_is_not_accepted(db_session):
+ 
+     intent = unique("double the value")
+     llm = _MediumRiskLLM([])  # no sanity cases could be produced
+-    resp = await _generate_direct(db_session, llm, intent)
++    from ritesmith.core.exceptions import GenerationFailedError
++
++    with pytest.raises(GenerationFailedError, match="No acceptable script"):
++        await _generate_direct(db_session, llm, intent)
+     assert llm.gen_tests_called
+-    # Validated (the script is fine), but the risk gate blocks acceptance/persistence.
+-    assert resp.validation.valid
+-    assert await _artifact_count(db_session, resp.artifact.name) == 0
++    assert await _artifact_count(db_session, intent[:40].lower().replace(" ", "_")) == 0
+ 
+ 
+ @pytest.mark.asyncio
+diff --git a/ritesmith/tests/unit/test_generation_improvements.py b/ritesmith/tests/unit/test_generation_improvements.py
+index accea4d..328c844 100644
+--- a/ritesmith/tests/unit/test_generation_improvements.py
++++ b/ritesmith/tests/unit/test_generation_improvements.py
+@@ -611,16 +611,18 @@ async def test_fixture_failure_does_not_repair_the_generated_script(db_session,
+         "generate_luau", script_response(SCRIPT, risk_assessment="medium")
+     )
+     invalid = {**case(), "tool_fixtures": [], "source": "client"}
+-    response = await GenerationService(db_session, llm, Settings()).generate_lua(
+-        GenerateScriptRequest(
+-            intent="Notify dormant customers",
+-            input_schema=INPUT,
+-            output_schema=OUTPUT,
+-            constraints=ScriptConstraints(runtime_profile="notification", reuse_policy="force_new"),
+-            context={"test_cases": [invalid]},
++    with pytest.raises(GenerationFailedError, match="No acceptable script"):
++        await GenerationService(db_session, llm, Settings()).generate_lua(
++            GenerateScriptRequest(
++                intent="Notify dormant customers",
++                input_schema=INPUT,
++                output_schema=OUTPUT,
++                constraints=ScriptConstraints(
++                    runtime_profile="notification", reuse_policy="force_new"
++                ),
++                context={"test_cases": [invalid]},
++            )
+         )
+-    )
+-    assert not response.validation.valid
+     assert [method for method, _ in llm.calls] == ["generate_luau"]
+ 
+ 
+diff --git a/ritesmith/tests/unit/test_generation_latency.py b/ritesmith/tests/unit/test_generation_latency.py
+index 2b6ee33..739b984 100644
+--- a/ritesmith/tests/unit/test_generation_latency.py
++++ b/ritesmith/tests/unit/test_generation_latency.py
+@@ -9,6 +9,7 @@ from pydantic import ValidationError
+ from sqlalchemy import select
+ 
+ from ritesmith.config import Settings
++from ritesmith.core.exceptions import GenerationFailedError
+ from ritesmith.core.generation import GenerationService
+ from ritesmith.core.generation_dispatcher import GenerationDispatcher
+ from ritesmith.core.planning import PlanBuilder
+@@ -287,7 +288,7 @@ async def test_exhausted_credit_is_not_retried_or_sent_to_fallback():
+             "ritesmith.core.workflow_generation.WorkflowGenerationService._get_capabilities",
+             AsyncMock(return_value=[]),
+         ),
+-        pytest.raises(LLMError),
++        pytest.raises(GenerationFailedError),
+     ):
+         await prepare_proposal(None, provider, settings, goal="test", constraints={})
+     provider.fallback.assert_not_called()
+@@ -574,16 +575,18 @@ async def test_failed_primary_generation_uses_fallback_and_counts_attempts(db_se
+ 
+ @pytest.mark.asyncio
+ async def test_all_failed_workflow_calls_are_invalid(db_session):
+-    from ritesmith.core.exceptions import LLMError
++    from ritesmith.core.exceptions import GenerationFailedError, LLMError
+     from ritesmith.core.workflow_generation import WorkflowGenerationService
+ 
+     llm = ScriptedLLM().queue("generate_workflow", *[LLMError("invalid JSON") for _ in range(2)])
+-    response = await WorkflowGenerationService(db_session, llm, Settings()).generate_workflow(
+-        GenerateWorkflowRequest(
+-            intent="failed workflow unique", constraints={"reuse_policy": "force_new"}, save=True
++    with pytest.raises(GenerationFailedError):
++        await WorkflowGenerationService(db_session, llm, Settings()).generate_workflow(
++            GenerateWorkflowRequest(
++                intent="failed workflow unique",
++                constraints={"reuse_policy": "force_new"},
++                save=True,
++            )
+         )
+-    )
+-    assert not response.validation.valid
+     assert len(llm.calls) == 2
+ 
+ 
+diff --git a/ritesmith/tests/unit/test_luau.py b/ritesmith/tests/unit/test_luau.py
+index a3b473c..9f3dc6f 100644
+--- a/ritesmith/tests/unit/test_luau.py
++++ b/ritesmith/tests/unit/test_luau.py
+@@ -193,7 +193,7 @@ async def test_strict_only_errors_are_warnings_not_blocking():
+ async def test_nonstrict_type_errors_always_block():
+     result = await _validate("function run() return { t = os.time() } end")
+     assert not result.valid
+-    assert any("Unknown global 'os'" in e for e in result.errors)
++    assert any(c.name == "forbidden_tokens" and c.status == "failed" for c in result.checks)
+ 
+ 
+ async def test_tool_outside_profile_is_a_type_error():
+@@ -324,6 +324,7 @@ async def test_require_strict_typecheck_fails_generation(db_session):
+     # generation failure: validated but not accepted, so nothing is persisted.
+     from sqlalchemy import func, select
+ 
++    from ritesmith.core.exceptions import GenerationFailedError
+     from ritesmith.core.generation import GenerationService
+     from ritesmith.registry.models import Artifact as ArtifactORM
+     from ritesmith.schemas.generation import GenerateScriptRequest
+@@ -339,12 +340,9 @@ async def test_require_strict_typecheck_fails_generation(db_session):
+         output_schema=OUTPUT_SCHEMA,
+         constraints={"reuse_policy": "force_new"},
+     )
+-    resp = await svc.generate_lua(req)
+-    assert resp.validation.valid
+-    assert resp.artifact.metadata["certification"] == "nonstrict"
+-    count = await db_session.scalar(
+-        select(func.count()).select_from(ArtifactORM).where(ArtifactORM.name == resp.artifact.name)
+-    )
++    with pytest.raises(GenerationFailedError, match="No acceptable script"):
++        await svc.generate_lua(req)
++    count = await db_session.scalar(select(func.count()).select_from(ArtifactORM))
+     assert count == 0
+ 
+ 
+diff --git a/ritesmith/tests/unit/test_plans_api.py b/ritesmith/tests/unit/test_plans_api.py
+index 3e592b0..8d33a5b 100644
+--- a/ritesmith/tests/unit/test_plans_api.py
++++ b/ritesmith/tests/unit/test_plans_api.py
+@@ -58,6 +58,9 @@ class MockPlanLLM(LLMProvider):
+ class MockHighRiskLLM(MockPlanLLM):
+     """Returns high-risk artifact to trigger require_approval policy."""
+ 
++    async def generate_validation_tests(self, *args, **kwargs):
++        return [{"input": {}, "expected_output": {"ok": True}, "source": "intent"}], _stats()
++
+     async def generate_lua(
+         self, goal: str = "", **kwargs
+     ) -> tuple[LuaGenerationResponse, LLMCallStats]:
+diff --git a/ritesmith/workflows/constructors.py b/ritesmith/workflows/constructors.py
+index 4948bad..71bcd05 100644
+--- a/ritesmith/workflows/constructors.py
++++ b/ritesmith/workflows/constructors.py
+@@ -2,6 +2,8 @@
+ 
+ from ritesmith.workflows.semantic import WorkflowPlan
+ 
++CONSTRUCTOR_VERSION = "pattern-parameters-v1"
++
+ 
+ def construct(
+     pattern,
+@@ -14,6 +16,8 @@ def construct(
+     state=None,
+     action=None,
+     compensation=None,
++    termination=None,
++    after=None,
+ ):
+     steps = steps or []
+     if pattern == "linear":
+@@ -31,10 +35,21 @@ def construct(
+             "steps": steps,
+             "interval_seconds": interval_seconds,
+         }
+-        operation.update({"continuous": True} if pattern == "continuation" else {"count": count})
++        if termination is not None:
++            from pydantic import TypeAdapter
++
++            from ritesmith.llm.response_contracts import Termination, termination_fields
++
++            operation.update(
++                termination_fields(TypeAdapter(Termination).validate_python(termination))
++            )
++        else:
++            operation.update(
++                {"continuous": True} if pattern == "continuation" else {"count": count}
++            )
+         if state is not None:
+             operation["state"] = state
+-        operations = [operation]
++        operations = [operation, *(after or [])]
+     elif pattern == "parallel":
+         operations = [{"kind": "parallel", "id": "parallel", "branches": branches or []}, *steps]
+     elif pattern == "async_callback":
+@@ -50,6 +65,68 @@ def construct(
+     )
+ 
+ 
++def compile_parameters(candidate, base_url, **kwargs):
++    from ritesmith.workflows.semantic import compile_plan
++
++    parameters = dict(candidate["parameters"])
++    pattern = parameters.pop("pattern")
++    after = parameters.pop("after", [])
++    if pattern == "parallel" or pattern == "async_callback":
++        parameters["steps"] = after
++    else:
++        parameters["after"] = after
++    plan = construct(pattern, name=candidate["name"], **parameters)
++    return compile_plan(plan, base_url, **kwargs)
++
++
++PATTERN_RULES = """
++Prefer definition {format:"pattern_parameters",name,parameters:{pattern,...}} for
++supported compositions. Patterns: linear(steps); parallel(branches,after);
++bounded_polling/fixed_samples/continuation/state_tracking/content_monitor
++(steps,interval_seconds,termination,state,after); async_callback(action,after);
++compensation(steps,compensation). Preserve conditions, tool arguments and data references.
++Repeat termination is exactly {kind:"samples",count}, {kind:"duration",seconds},
++{kind:"deadline",unix}, or {kind:"continuous"}; finite requests never use continuous.
++The constructor creates monitor/monitor_tick/parallel/parallel_join mechanical IDs.
++Business operations still use semantic kinds and IDs for data references.
++Use after for final aggregation/notification after a finite repeat or parallel join.
++Nested/multiple/branch repeats and pre-repeat actions needing continuation use
++semantic_plan or compact_graph instead. Choose the escape in this SAME response.
++"""
++
++
++def pattern_example(pattern):
++    from ritesmith.llm.response_contracts import PatternCandidate, operation_transport, packed
++
++    plan = semantic_example(pattern)
++    parameters = {"pattern": pattern}
++    if pattern in ("linear", "compensation"):
++        steps = [dict(item) for item in plan["steps"]]
++        if pattern == "compensation":
++            parameters["compensation_json"] = packed(steps[0].pop("compensation"))
++        parameters["steps"] = [operation_transport(item) for item in steps]
++    elif pattern == "parallel":
++        parameters["branches"] = [
++            operation_transport(item) for item in plan["steps"][0]["branches"]
++        ]
++        parameters["after"] = [operation_transport(item) for item in plan["steps"][1:]]
++    elif pattern == "async_callback":
++        parameters["action_json"] = packed(plan["steps"][0]["action"])
++        parameters["after"] = [operation_transport(item) for item in plan["steps"][1:]]
++    else:
++        repeat = operation_transport(plan["steps"][0])
++        parameters.update(
++            {key: value for key, value in repeat.items() if key not in ("kind", "id")}
++        )
++    return PatternCandidate.model_validate(
++        {
++            "format": "pattern_parameters",
++            "name": pattern,
++            "parameters": parameters,
++        }
++    ).model_dump(exclude_none=True)
++
++
+ def semantic_example(pattern):
+     fetch = {
+         "kind": "call",
+@@ -61,10 +138,13 @@ def semantic_example(pattern):
+         "kind": "call",
+         "id": "notify",
+         "capability_name": "telegram.send",
+-        "args": {"text": {"ref": "fetch", "path": "price"}},
++        "args": {
++            "text": {"type": "template", "parts": ["BTC: ", {"ref": "fetch", "path": "price"}]}
++        },
+     }
+     if pattern == "parallel":
+         eth = {**fetch, "id": "eth", "args": {"symbol": "eth"}}
++        notify["args"]["text"]["parts"].extend([" ETH: ", {"ref": "eth", "path": "price"}])
+         return construct(pattern, name=pattern, branches=[fetch, eth], steps=[notify])
+     if pattern in ("async_callback", "compensation"):
+         action = {
+diff --git a/ritesmith/workflows/examples.py b/ritesmith/workflows/examples.py
+index 7464c41..446b94c 100644
+--- a/ritesmith/workflows/examples.py
++++ b/ritesmith/workflows/examples.py
+@@ -388,6 +388,7 @@ def workflow_system(
+     filtered: bool,
+     mermaid: bool = False,
+     semantic: bool = False,
++    patterns: bool = False,
+ ) -> tuple[str, list[str]]:
+     selected = (
+         select_examples(goal, context)
+@@ -403,6 +404,20 @@ def workflow_system(
+         else f"Task action is sync POST {base_url.rstrip('/')}/trama/execute, headers Authorization=Bearer __TRAMA_TOKEN__ and Content-Type=application/json; body has capability_name OR artifact_id and input; successStatusCodes=[200]."
+     )
+     rendered = []
++    if patterns and not mermaid:
++        from ritesmith.workflows.constructors import PATTERN_RULES, pattern_example
++
++        return (
++            "You generate Trama workflows. Return JSON only.\n"
++            + ESSENTIAL_RULES
++            + PATTERN_RULES
++            + "\nEXAMPLES:\n"
++            + "\n".join(
++                identifier + ":" + json.dumps(pattern_example(identifier), separators=(",", ":"))
++                for identifier in selected
++            ),
++            selected,
++        )
+     if semantic and not mermaid:
+         from ritesmith.workflows.constructors import semantic_example
+         from ritesmith.workflows.semantic import SEMANTIC_RULES
+diff --git a/ritesmith/workflows/semantic.py b/ritesmith/workflows/semantic.py
+index 8a59144..a3c004b 100644
+--- a/ritesmith/workflows/semantic.py
++++ b/ritesmith/workflows/semantic.py
+@@ -8,6 +8,7 @@ from typing import Literal
+ from pydantic import BaseModel, ConfigDict, Field, model_validator
+ 
+ from ritesmith.workflows.compact import compile_workflow
++from ritesmith.workflows.expressions import expression_errors
+ 
+ FORMAT_VERSION = "workflow-plan-v1"
+ 
+@@ -70,6 +71,20 @@ class Operation(BaseModel):
+             raise ValueError("wait requires seconds")
+         if self.kind == "condition" and self.when is None:
+             raise ValueError("condition requires when")
++        if self.kind == "condition":
++            # Business references are literals resolved by the compiler, not operators.
++            def refs(value):
++                if isinstance(value, dict):
++                    if "ref" in value:
++                        return {"var": "payload.placeholder"}
++                    return {key: refs(item) for key, item in value.items()}
++                if isinstance(value, list):
++                    return [refs(item) for item in value]
++                return value
++
++            errors = expression_errors(refs(self.when), f"Node '{self.id or 'condition'}'.when")
++            if errors:
++                raise ValueError("; ".join(errors))
+         if self.kind == "parallel" and len(self.branches) < 2:
+             raise ValueError("parallel needs at least two branches")
+         if self.kind == "repeat":
+@@ -158,6 +173,23 @@ class PlanCompiler:
+         if isinstance(value, list):
+             return [self.reference(v, node, scope, condition) for v in value]
+         if isinstance(value, dict):
++            if set(value) == {"type", "parts"} and value["type"] == "template":
++                if condition or not isinstance(value["parts"], list):
++                    raise ValueError(f"Node {node}: template parts require a string argument")
++                return {"__rs_template": self.reference(value["parts"], node, scope)}
++            if condition and "var" in value:
++                path = value["var"]
++                path = path[0] if isinstance(path, list) and path else path
++                if isinstance(path, str) and path.split(".", 1)[0] not in (
++                    "payload",
++                    "runtime",
++                    "callback",
++                    "nodes",
++                    "",
++                ):
++                    raise ValueError(
++                        f"Node {node}: condition path '{path}' needs a structured {{ref,path}} reference"
++                    )
+             if "ref" in value:
+                 if set(value) - {"ref", "path"}:
+                     raise ValueError("reference only accepts ref/path")
+@@ -169,6 +201,11 @@ class PlanCompiler:
+         if isinstance(value, list):
+             return [self.resolve(v, node, scope) for v in value]
+         if isinstance(value, dict):
++            if "__rs_template" in value:
++                parts = self.resolve(value["__rs_template"], node, scope)
++                if not all(isinstance(part, str) for part in parts):
++                    raise ValueError(f"Node {node}: template parts must be literals or references")
++                return "".join(parts)
+             if "__rs_reference" in value:
+                 reference = value["__rs_reference"]
+                 ref, suffix = reference["ref"], reference.get("path", "")
+@@ -465,10 +502,16 @@ Operations: call/state {id,capability_name OR artifact_id,args}; sequence {steps
+ condition {when:JSONLogic,steps,otherwise}; parallel {id,branches:[operations]};
+ repeat {id,steps,interval_seconds, exactly ONE of count,duration_seconds,continuous:true,deadline_unix}.
+ References are {ref:"operation_id",path:"output_field"} or {ref:"payload",path:"field"}.
++For text combining references use {type:"template",parts:["BTC: ",{ref:"fetch",path:"price"}]};
++the compiler emits a native string, never a template object passed to a tool.
+ After parallel, only the last result of each branch is available through its terminal operation id.
+ State across repeat chunks: repeat.state; initial values from payload.continuation.state.
+ Callback {id,kind:"callback",action} uses native async-http-callback contract.
+ Calls may carry native compensation. Conditions use references for variables.
++Example: condition {when:{">": [{ref:"fetch",path:"price"},100000]},steps:[...]};
++do not use raw var paths, "greater", inline Mustache paths or mechanical counter IDs.
++Specify TOTAL work: seven days at four samples/day means count:28 and interval_seconds:21600.
++Do not cap count at 20, add manual advance_chain actions or build continuation yourself.
+ Compiler constructs counters, scopes, joins, HTTP fields and continuation in blocks of 20.
+ For nested/multiple repetitions, complex actions or unsupported topology return
+ {format:"compact_graph",graph:{name,entrypoint,nodes,...}} using compact graph rules.
+diff --git a/ritesmith/workflows/semantic_validation.py b/ritesmith/workflows/semantic_validation.py
+index 018c538..ecb4747 100644
+--- a/ritesmith/workflows/semantic_validation.py
++++ b/ritesmith/workflows/semantic_validation.py
+@@ -5,12 +5,90 @@ import re
+ 
+ import jsonschema
+ 
+-from ritesmith.workflows.validator import _v2_successors
++from ritesmith.workflows.validator import _branch_sets, _v2_successors
+ 
+ 
+-def validate_semantics(definition, registry, *, check_graph=True):
++def reference_contract_errors(definition, registry):
+     nodes = {node["id"]: node for node in definition.get("nodes", [])}
++    branches = _branch_sets(list(nodes.values()))
+     errors = []
++
++    def contract(node):
++        body = node.get("action", {}).get("request", {}).get("body", {})
++        return (
++            registry.get(body.get("capability_name") or body.get("artifact_id"), {})
++            if isinstance(body, dict)
++            else {}
++        )
++
++    def paths(value):
++        if isinstance(value, str):
++            yield from re.findall(r"\{\{\s*(nodes\.[^{}\s]+)\s*\}\}", value)
++        elif isinstance(value, list):
++            for item in value:
++                yield from paths(item)
++        elif isinstance(value, dict):
++            if "var" in value:
++                path = value["var"]
++                if isinstance(path, list) and path:
++                    path = path[0]
++                if isinstance(path, str) and path.startswith("nodes."):
++                    yield path
++            for item in value.values():
++                yield from paths(item)
++
++    for nid, node in nodes.items():
++        for path in set(paths(node)):
++            parts = re.sub(r"\[(\d+)\]", r".\1", path).split(".")
++            target = nodes.get(parts[1])
++            if target is None:
++                errors.append(f"Node '{nid}': undefined data reference '{parts[1]}'")
++                continue
++            suffix = parts[2:]
++            if suffix[:3] != ["response", "body", "output"]:
++                if target.get("kind") != "join" or suffix[:3] != ["response", "body", "branches"]:
++                    continue
++                split = next(
++                    (item for item in nodes.values() if item.get("join") == target["id"]), None
++                )
++                if not split or len(suffix) < 6 or not suffix[3].isdigit():
++                    errors.append(f"Node '{nid}': invalid joined reference '{path}'")
++                    continue
++                index = int(suffix[3])
++                if index >= len(split["branches"]):
++                    errors.append(f"Node '{nid}': joined branch index outside contract in '{path}'")
++                    continue
++                members = branches[split["branches"][index]]
++                terminal = next(
++                    (nodes[key] for key in members if nodes[key].get("next") == "end"), None
++                )
++                if terminal is None:
++                    continue
++                if contract(terminal) and suffix[4:6] != ["result", "output"]:
++                    errors.append(
++                        f"Node '{nid}': capability branch result requires result.output in '{path}'"
++                    )
++                    continue
++                target, suffix = terminal, suffix[3:]
++            schema = contract(target).get("output_schema")
++            for part in suffix[3:]:
++                if not isinstance(schema, dict):
++                    break
++                if schema.get("type") == "array" and part.isdigit():
++                    schema = schema.get("items")
++                    continue
++                properties = schema.get("properties", {})
++                if part not in properties:
++                    if schema.get("additionalProperties") is False:
++                        errors.append(f"Node '{nid}': unknown output field '{part}' in '{path}'")
++                    break
++                schema = properties[part]
++    return errors
++
++
++def validate_semantics(definition, registry, *, check_graph=True):
++    nodes = {node["id"]: node for node in definition.get("nodes", [])}
++    errors = reference_contract_errors(definition, registry)
+     reachable = set()
+     stack = [definition.get("entrypoint")]
+     while stack:
+@@ -54,7 +132,10 @@ def validate_semantics(definition, registry, *, check_graph=True):
+                             errors.append(f"Node '{nid}': missing required input '{key}'")
+                     for key, value in args.items():
+                         field_schema = schema.get("properties", {}).get(key)
+-                        if field_schema is not None and not templated(value):
++                        if field_schema is not None and (
++                            not templated(value)
++                            or (field_schema.get("type") == "string" and not isinstance(value, str))
++                        ):
+                             try:
+                                 jsonschema.validate(value, field_schema)
+                             except jsonschema.ValidationError as exc:
+diff --git a/ritesmith/workflows/simulation.py b/ritesmith/workflows/simulation.py
+index faf86c1..7adb87b 100644
+--- a/ritesmith/workflows/simulation.py
++++ b/ritesmith/workflows/simulation.py
+@@ -12,6 +12,10 @@ from dataclasses import dataclass, field
+ _TEMPLATE = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
+ 
+ 
++class UnsupportedSimulation(ValueError):
++    """An engine-supported expression outside the controlled simulator subset."""
++
++
+ def lookup(data, path):
+     value = data
+     for part in path.split("."):
+@@ -27,15 +31,41 @@ def lookup(data, path):
+     return value
+ 
+ 
+-def render(value, context):
++def render(value, context, native_templates=False):
+     if isinstance(value, dict):
+-        return {key: render(item, context) for key, item in value.items()}
++        return {key: render(item, context, native_templates) for key, item in value.items()}
+     if isinstance(value, list):
+-        return [render(item, context) for item in value]
++        return [render(item, context, native_templates) for item in value]
+     if isinstance(value, str):
+         match = _TEMPLATE.fullmatch(value)
+         if match:
++            if native_templates:
++                path = match[1]
++                data = context
++                for part in path.split("."):
++                    if isinstance(data, list):
++                        raise UnsupportedSimulation(
++                            f"Trama Mustache does not support indexed list reference '{path}'"
++                        )
++                    data = data.get(part) if isinstance(data, dict) else None
++                if isinstance(data, (dict, list)):
++                    raise UnsupportedSimulation(
++                        f"Trama renders '{path}' as collection text, not typed JSON"
++                    )
++                return (
++                    ""
++                    if data is None
++                    else str(data).lower()
++                    if isinstance(data, bool)
++                    else str(data)
++                )
+             return deepcopy(lookup(context, match[1]))
++        if native_templates:
++
++            def substitute(match):
++                return render(match[0], context, native_templates=True)
++
++            return _TEMPLATE.sub(substitute, value)
+         return _TEMPLATE.sub(lambda match: str(lookup(context, match[1]) or ""), value)
+     return value
+ 
+@@ -57,6 +87,15 @@ def logic(expression, context):
+         return any(values)
+     if operator == "!":
+         return not values[0]
++    if operator == "in":
++        return values[0] in values[1]
++    from ritesmith.workflows.expressions import OPERATORS
++
++    supported = {"==", "===", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/"}
++    if operator not in supported:
++        if operator in OPERATORS:
++            raise UnsupportedSimulation(f"Engine-supported operator '{operator}' is not simulated")
++        raise ValueError(f"Unsupported JSONLogic operator: {operator}")
+     a, b = values
+     operations = {
+         "==": lambda: a == b,
+@@ -88,12 +127,22 @@ class SimulationResult:
+ 
+ 
+ class WorkflowSimulator:
+-    def __init__(self, definition, fixtures=None, *, payload=None, now=0, max_steps=10000):
++    def __init__(
++        self,
++        definition,
++        fixtures=None,
++        *,
++        payload=None,
++        now=0,
++        max_steps=10000,
++        native_templates=False,
++    ):
+         self.definition = definition
+         self.fixtures = deepcopy(fixtures or {})
+         self.payload = payload or {}
+         self.result = SimulationResult(clock=now)
+         self.max_steps = max_steps
++        self.native_templates = native_templates
+         self.node_map = {node["id"]: node for node in definition["nodes"]}
+         self.fixture_offsets = Counter()
+ 
+@@ -137,7 +186,7 @@ class WorkflowSimulator:
+             }
+             kind = node["kind"]
+             if kind == "task":
+-                action = render(node["action"], context)
++                action = render(node["action"], context, self.native_templates)
+                 body = action["request"].get("body", {})
+                 capability = body.get("capability_name") or body.get("artifact_id")
+                 args = body.get("input", {})
+@@ -170,7 +219,9 @@ class WorkflowSimulator:
+                         raise ValueError("Callback fixture does not satisfy successWhen")
+                 if isinstance(last, dict) and last.get("error"):
+                     if node.get("compensation"):
+-                        self.result.compensations.append(render(node["compensation"], context))
++                        self.result.compensations.append(
++                            render(node["compensation"], context, self.native_templates)
++                        )
+                     raise ValueError(f"Task failed: {current}")
+                 nodes[current] = {"response": {"body": last}}
+                 current = node.get("next", "end")
+diff --git a/ritesmith/workflows/validator.py b/ritesmith/workflows/validator.py
+index f4a3767..f0de24c 100644
+--- a/ritesmith/workflows/validator.py
++++ b/ritesmith/workflows/validator.py
+@@ -23,6 +23,8 @@ from __future__ import annotations
+ import json
+ import re
+ 
++from ritesmith.workflows.expressions import expression_errors
++
+ _V1_STEP_TYPES = {"capability", "sleep", "condition", "notification", "callback"}
+ _V2_NODE_KINDS = {"task", "switch", "sleep", "split", "join"}
+ _NODE_REF = re.compile(r"\bnodes\.([A-Za-z0-9_\-]+)")
+@@ -132,6 +134,19 @@ class WorkflowValidator:
+ 
+         for node in nodes_list:
+             errors.extend(self._validate_v2_node(node, node_ids))
++            if node.get("kind") == "switch":
++                for index, case in enumerate(node.get("cases", []) or []):
++                    errors.extend(
++                        expression_errors(
++                            case.get("when"), f"Node '{node['id']}'.cases[{index}].when"
++                        )
++                    )
++            callback = (node.get("action") or {}).get("callback", {})
++            for key in ("successWhen", "failureWhen"):
++                if key in callback:
++                    errors.extend(
++                        expression_errors(callback[key], f"Node '{node['id']}'.callback.{key}")
++                    )
+ 
+         if not errors:
+             errors.extend(self._validate_split_join(nodes_list))

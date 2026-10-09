@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:26.085Z" hostname="c3po" time="0.006">
+  <properties/>
+  <testcase name="valid split and join definition passes validation()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="join next referencing unknown node produces error()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.001"/>
+  <testcase name="cyclic workflow with compensation is rejected()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="nested split inside a branch is valid()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.001"/>
+  <testcase name="cyclic workflow via switch default is detected()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="split join must reference an actual join node()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="two splits cannot share the same join()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="only the owning split may reference a join node()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.001"/>
+  <testcase name="split join referencing unknown node produces error()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="cyclic workflow without compensation is valid()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="split with fewer than two branches is rejected()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.001"/>
+  <testcase name="split branch referencing unknown node produces error()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <testcase name="non-cyclic workflow with compensation is valid()" classname="run.trama.saga.workflow.WorkflowDefinitionValidatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

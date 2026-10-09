@@ -1,0 +1,104 @@
+............................................................x....xx..... [  7%]
+........................................................................ [ 15%]
+..............................................................s......... [ 22%]
+........................................................................ [ 30%]
+........................................................................ [ 37%]
+...............................s.....s.................................. [ 45%]
+........................................................................ [ 52%]
+........................................................................ [ 60%]
+........................................................................ [ 67%]
+.....................xx................................................. [ 75%]
+........................................................................ [ 82%]
+........................................................................ [ 90%]
+........................................................................ [ 97%]
+......................F                                                  [100%]
+=================================== FAILURES ===================================
+_______ test_seeded_structures_are_data_even_with_compiler_reserved_keys _______
+
+native = <benchmarks.generation_latency.native_transport.TramaTransportOracle object at 0x7f72419db340>
+
+    def test_seeded_structures_are_data_even_with_compiler_reserved_keys(native):
+        plan = semantic_example("continuation")
+        value = {"__rs_reference": {"ref": "not_a_node", "path": "value"}, "ref": "plain data"}
+        plan["steps"][0]["initial_state"] = {"opaque": value}
+        first = WorkflowSimulator(
+>           graph(plan), {"market.coin_price": {"price": 7}}, transport=native
+            ^^^^^^^^^^^
+        ).run()
+
+ritesmith/tests/unit/test_workflow_initialization.py:378: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ritesmith/tests/unit/test_workflow_initialization.py:26: in graph
+    result = typed_json_workflow(compile_plan(plan, "http://candidate", **kwargs))
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:749: in compile_plan
+    ).compile()
+      ^^^^^^^^^
+ritesmith/workflows/semantic.py:730: in compile
+    self.resolve(node, node["id"], self.scopes[node["id"]]) for node in self.nodes
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:207: in resolve
+    return [self.resolve(v, node, scope) for v in value]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/workflows/semantic.py:236: in resolve
+    return {k: self.resolve(v, node, scope) for k, v in value.items()}
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <ritesmith.workflows.semantic.PlanCompiler object at 0x7f7241b33ad0>
+value = {'__rs_reference': {'ref': 'not_a_node', 'path': 'value'}, 'ref': 'plain data'}
+node = 'monitor_continue', scope = ''
+
+    def resolve(self, value, node, scope):
+        if isinstance(value, list):
+            return [self.resolve(v, node, scope) for v in value]
+        if isinstance(value, dict):
+            if set(value) == {"__trama_literal_json__"}:
+                return deepcopy(value)
+            if "__rs_template" in value:
+                parts = self.resolve(value["__rs_template"], node, scope)
+                if not all(isinstance(part, str) for part in parts):
+                    raise ValueError(f"Node {node}: template parts must be literals or references")
+                return "".join(parts)
+            if "__rs_reference" in value:
+                reference = value["__rs_reference"]
+                ref, suffix = reference["ref"], reference.get("path", "")
+                if not isinstance(ref, str) or not isinstance(suffix, str):
+                    raise ValueError("reference ref/path must be strings")
+                if ref in ("payload", "runtime", "callback"):
+                    path = ref
+                else:
+                    if ref not in self.scopes:
+>                       raise ValueError(f"Node {node}: unknown reference {ref}")
+E                       ValueError: Node monitor_continue: unknown reference not_a_node
+
+ritesmith/workflows/semantic.py:225: ValueError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+  /home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py:720: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ritesmith/tests/unit/test_workflow_initialization.py::test_seeded_structures_are_data_even_with_compiler_reserved_keys
+1 failed, 950 passed, 3 skipped, 14 deselected, 5 xfailed, 3 warnings in 11.80s

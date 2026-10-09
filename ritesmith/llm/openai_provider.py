@@ -21,10 +21,20 @@ from ritesmith.llm.base import (
     WorkflowRepairResponse,
 )
 from ritesmith.llm.generation_context import PROMPT_VERSION, prepare_catalog, proposal_kind
+from ritesmith.llm.response_contracts import (
+    SCHEMA_VERSION,
+    TRANSPORT_RULES,
+    decode_response,
+    packed,
+    response_model,
+)
 from ritesmith.llm.script_candidate import ASSEMBLY_RULES, expand_script
+from ritesmith.llm.spend_budget import current_spend_budget
+from ritesmith.llm.structured_output import strict_schema, supports_schema, unsupported_reason
 from ritesmith.observability.generation import current_trace
 from ritesmith.observability.metrics import llm_errors_total, llm_request_duration, llm_tokens_total
 from ritesmith.workflows.compact import compact_workflow, compile_workflow
+from ritesmith.workflows.constructors import CONSTRUCTOR_VERSION, PATTERN_RULES, compile_parameters
 from ritesmith.workflows.examples import workflow_system
 from ritesmith.workflows.mermaid import compile_mermaid, render_mermaid
 from ritesmith.workflows.semantic import compile_plan
@@ -33,7 +43,7 @@ from ritesmith.workflows.semantic import compile_plan
 # `max_completion_tokens` in place of `max_tokens`.
 _REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
 
-# JSON schemas como string para injetar nos prompts
+# Legacy JSON-mode response examples; experimental contracts are generated from types.
 _LUA_RESPONSE_SCHEMA = json.dumps(
     {
         "script": "<lua code string>",
@@ -171,6 +181,16 @@ class OpenAIProvider(LLMProvider):
             return self
         return OpenAIProvider(self.settings, client=self.client, use_fallback=True)
 
+    def _enabled(self, feature, method):
+        enabled = getattr(self.settings, f"generation_{feature}")
+        option = (
+            "structured_output_operations"
+            if feature == "structured_outputs"
+            else "pattern_parameter_operations"
+        )
+        operations = getattr(self.settings, f"generation_{option}")
+        return enabled and (operations is None or method in operations)
+
     @staticmethod
     def _examples(stats, selected, contract_version="", format_version=""):
         stats.examples = selected
@@ -202,14 +222,32 @@ class OpenAIProvider(LLMProvider):
                     call.update(
                         error="invalid_response",
                         error_type=type(exc).__name__,
-                        category="response"
-                        if isinstance(exc, json.JSONDecodeError)
-                        else "graph"
-                        if isinstance(exc, ValueError)
-                        else "response",
-                        location=getattr(exc, "line", getattr(exc, "lineno", None)),
+                        category=getattr(exc, "category", None)
+                        or (
+                            "response"
+                            if isinstance(exc, json.JSONDecodeError)
+                            else "graph"
+                            if isinstance(exc, ValueError)
+                            else "response"
+                        ),
+                        location=getattr(
+                            exc, "location", getattr(exc, "line", getattr(exc, "lineno", None))
+                        ),
                     )
                     break
+
+    @staticmethod
+    def _candidate_failure(raw, stats, exc):
+        return LLMError(
+            "Invalid generation candidate: " + str(exc),
+            details={
+                "candidate": raw,
+                "category": getattr(exc, "category", "response"),
+                "location": getattr(exc, "location", None),
+                "stats": stats.model_dump(),
+                "api_attempts": stats.api_attempts,
+            },
+        )
 
     def operation_config(self, model: str, method: str) -> tuple[str, str | None]:
         if method in ("intent", "reuse_judge", "test_gen", "llm.evaluate"):
@@ -334,7 +372,9 @@ class OpenAIProvider(LLMProvider):
                     "method": method,
                     "model": model,
                     "duration_s": time.perf_counter() - started,
-                    "api_attempts": 1,
+                    "api_attempts": 0
+                    if getattr(last_exc, "details", {}).get("stats", {}).get("dispatched") is False
+                    else 1,
                     "operation_api_attempts": attempt,
                     "error": type(last_exc).__name__,
                     "provider_code": getattr(last_exc, "details", {}).get("provider_code"),
@@ -357,6 +397,42 @@ class OpenAIProvider(LLMProvider):
         method: str = "unknown",
     ) -> tuple[str, LLMCallStats]:
         _start = time.perf_counter()
+        structured = self._enabled("structured_outputs", method)
+        patterns = self._enabled("pattern_parameters", method) and method in (
+            "workflow_gen",
+            "workflow_repair",
+            "proposal_workflow",
+            "proposal_script",
+        )
+        model_type = response_model(method, patterns) if structured or patterns else None
+        schema = strict_schema(model_type) if model_type else None
+        reason = None
+        if schema is not None:
+            reason = unsupported_reason(schema)
+            if not supports_schema(model):
+                reason = "model_schema_support_not_declared"
+            if self.settings.generation_mermaid_workflows and "workflow" in method:
+                reason = "mermaid_keeps_legacy_transport"
+                model_type = None
+            if model_type is not None:
+                system += TRANSPORT_RULES
+                if patterns and PATTERN_RULES not in system:
+                    system += PATTERN_RULES
+                # The API carries the strict schema; avoid duplicating it in prompts.
+                if reason or not structured:
+                    system += "\nTRANSPORT SCHEMA: " + packed(schema)
+        elif structured:
+            reason = "operation_has_no_typed_contract"
+        response_format = {"type": "json_object"}
+        if structured and schema is not None and reason is None:
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": method + "_v1",
+                    "strict": True,
+                    "schema": schema,
+                },
+            }
         system += "\nWrite code comments and documentation in English. Preserve explicitly requested message text and data.\n"
         try:
             create_kwargs: dict = {
@@ -365,7 +441,7 @@ class OpenAIProvider(LLMProvider):
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ],
-                "response_format": {"type": "json_object"},
+                "response_format": response_format,
             }
             if model.startswith(_REASONING_PREFIXES):
                 create_kwargs["max_completion_tokens"] = max_tokens
@@ -380,7 +456,12 @@ class OpenAIProvider(LLMProvider):
                 create_kwargs["timeout"] = max(
                     0.01, min(self.settings.llm_timeout_seconds, budget.remaining)
                 )
-            response = await self.client.chat.completions.create(**create_kwargs)
+            spending = current_spend_budget.get()
+            if spending is None:
+                response = await self.client.chat.completions.create(**create_kwargs)
+            else:
+                create_kwargs["service_tier"] = "default"
+                response = await spending.dispatch(self.client, create_kwargs, method)
         except APITimeoutError as e:
             llm_errors_total.labels(provider="openai", error_type="LLMTimeoutError").inc()
             raise LLMTimeoutError(
@@ -434,6 +515,18 @@ class OpenAIProvider(LLMProvider):
             or 0,
             cached_tokens=getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0)
             or 0,
+            variant="C" if patterns else "B" if structured else "A",
+            response_schema_version=SCHEMA_VERSION if model_type else "",
+            constructor_version=CONSTRUCTOR_VERSION
+            if patterns
+            or (
+                self.settings.generation_semantic_workflows
+                and method in ("workflow_gen", "workflow_repair", "proposal_workflow")
+            )
+            else "",
+            response_mode=response_format["type"],
+            schema_fallback_reason=reason,
+            locally_validated_json=model_type is not None,
         )
         elapsed = time.perf_counter() - _start
         llm_request_duration.labels(provider="openai", method=method).observe(elapsed)
@@ -448,7 +541,40 @@ class OpenAIProvider(LLMProvider):
                 "LLM completion truncated (finish_reason=length)",
                 details={"stats": stats.model_dump(), "category": "truncated"},
             )
+        if (
+            getattr(response.choices[0].message, "refusal", None)
+            or response.choices[0].finish_reason == "content_filter"
+        ):
+            raise LLMError(
+                "Provider refused the generation",
+                details={
+                    "stats": stats.model_dump(),
+                    "category": "refusal",
+                    "retryable": False,
+                },
+            )
         content = response.choices[0].message.content or "{}"
+        if model_type is not None:
+            try:
+                content = decode_response(content, model_type)
+                data = json.loads(content)
+                definition = data.get("definition") or (data.get("workflow") or {}).get(
+                    "definition"
+                )
+                if isinstance(definition, dict):
+                    stats.representation = definition.get("format", "native_graph")
+                    stats.representation_fallback = (
+                        patterns and stats.representation != "pattern_parameters"
+                    )
+            except (ValueError, TypeError) as exc:
+                raise LLMError(
+                    "Invalid typed response: " + str(exc),
+                    details={
+                        "stats": stats.model_dump(),
+                        "category": "response",
+                        "candidate": content,
+                    },
+                ) from exc
         return content, stats
 
     async def generate_lua(
@@ -541,10 +667,11 @@ class OpenAIProvider(LLMProvider):
             response_schema=_script_schema(
                 _LUA_RESPONSE_SCHEMA, self.settings.generation_luau_assembly
             ),
+            assembled=self.settings.generation_luau_assembly,
         )
         raw, stats = await self._chat_with_retry(
             model=self.model,
-            system=prompts.luau_generation_system()
+            system=prompts.luau_generation_system(self.settings.generation_luau_assembly)
             + (ASSEMBLY_RULES if self.settings.generation_luau_assembly else ""),
             user=user_msg,
             max_tokens=_MAX_TOKENS["lua_gen"],
@@ -556,14 +683,14 @@ class OpenAIProvider(LLMProvider):
             self._examples(
                 stats,
                 [],
-                format_version="luau-body-v1"
+                format_version="luau-body-v2"
                 if isinstance(data.get("script"), dict)
                 else "script-full-v1",
             )
             return LuaGenerationResponse(**expand_script(data)), stats
         except Exception as e:
             self._invalid_response(stats, e)
-            raise LLMError(f"Failed to parse LLM response: {e}\nRaw: {raw[:200]}") from e
+            raise self._candidate_failure(raw, stats, e) from e
 
     async def repair_luau(
         self,
@@ -733,6 +860,17 @@ Return source="intent". The implementation is intentionally unavailable.
         constraints=None,
         context=None,
     ):
+        if isinstance(definition, dict) and definition.get("format") == "pattern_parameters":
+            if not self.settings.generation_pattern_parameters:
+                raise ValueError("pattern parameters disabled")
+            return compile_parameters(
+                definition,
+                base_url,
+                contract_version=contract_version,
+                intent=goal,
+                constraints=constraints,
+                continuation=(context or {}).get("continuation"),
+            )
         if isinstance(definition, dict) and definition.get("format") == "semantic_plan":
             if not self.settings.generation_semantic_workflows:
                 raise ValueError("semantic workflows disabled")
@@ -795,6 +933,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 filtered=self.settings.generation_specialized_prompts,
                 mermaid=self.settings.generation_mermaid_workflows,
                 semantic=self.settings.generation_semantic_workflows,
+                patterns=self._enabled("pattern_parameters", "workflow_gen"),
             )
         raw, stats = await self._chat_with_retry(
             model=self.model,
@@ -828,7 +967,11 @@ Return source="intent". The implementation is intentionally unavailable.
                 f"Failed to parse workflow response: {e}",
                 details={
                     "category": "graph",
-                    "candidate": locals().get("data", {}).get("definition"),
+                    "candidate": data.get("definition", raw)
+                    if isinstance(locals().get("data"), dict)
+                    else raw,
+                    "stats": stats.model_dump(),
+                    "api_attempts": stats.api_attempts,
                     "location": getattr(e, "line", None),
                     "node": getattr(e, "node", None),
                     "edge": getattr(e, "edge", None),
@@ -850,7 +993,11 @@ Return source="intent". The implementation is intentionally unavailable.
             except ValueError:
                 # Keep an invalid candidate as repair evidence; output is Mermaid.
                 pass
-        elif self.settings.generation_compact_workflows and isinstance(current_definition, dict):
+        elif (
+            self.settings.generation_compact_workflows
+            and isinstance(current_definition, dict)
+            and "nodes" in current_definition
+        ):
             current_definition = compact_workflow(current_definition, base_url)
         user_msg = prompts.workflow_repair_user(
             original_goal=original_goal,
@@ -876,6 +1023,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 filtered=True,
                 mermaid=self.settings.generation_mermaid_workflows,
                 semantic=self.settings.generation_semantic_workflows,
+                patterns=self._enabled("pattern_parameters", "workflow_repair"),
             )
             system += "\nRepair the definition from the errors; return definition and changes_made."
         raw, stats = await self._chat_with_retry(
@@ -898,7 +1046,11 @@ Return source="intent". The implementation is intentionally unavailable.
                 f"Failed to parse workflow repair response: {e}",
                 details={
                     "category": "graph",
-                    "candidate": locals().get("data", {}).get("definition"),
+                    "candidate": data.get("definition", raw)
+                    if isinstance(locals().get("data"), dict)
+                    else raw,
+                    "stats": stats.model_dump(),
+                    "api_attempts": stats.api_attempts,
                     "location": getattr(e, "line", None),
                     "node": getattr(e, "node", None),
                     "edge": getattr(e, "edge", None),
@@ -946,6 +1098,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 filtered=self.settings.generation_specialized_prompts,
                 mermaid=self.settings.generation_mermaid_workflows,
                 semantic=self.settings.generation_semantic_workflows,
+                patterns=self._enabled("pattern_parameters", "proposal_workflow"),
             )
             system_parts.append(wf_system)
             user_parts.append(
@@ -965,7 +1118,7 @@ Return source="intent". The implementation is intentionally unavailable.
             )
         if kind != "workflow":
             system_parts.append(
-                prompts.luau_generation_system()
+                prompts.luau_generation_system(self.settings.generation_luau_assembly)
                 if language == "luau"
                 else prompts.lua_generation_system()
             )
@@ -1034,6 +1187,10 @@ Return source="intent". The implementation is intentionally unavailable.
             )
         system = "\n".join(system_parts)
         user = "\n".join(user_parts)
+        if (context or {}).get("generation_repair"):
+            user += "\nCORRECT THIS ORIGINAL CANDIDATE AND DIAGNOSTIC: " + json.dumps(
+                context["generation_repair"], separators=(",", ":")
+            )
         method = "proposal_script" if kind == "script" else "proposal_workflow"
         raw, stats = await self._chat_with_retry(
             self.model, system, user, 10000, 0.2, method, examples=selected
@@ -1092,4 +1249,4 @@ Return source="intent". The implementation is intentionally unavailable.
             return proposal, stats
         except Exception as e:
             self._invalid_response(stats, e)
-            raise LLMError(f"Failed to parse unified proposal: {e}") from e
+            raise self._candidate_failure(raw, stats, e) from e

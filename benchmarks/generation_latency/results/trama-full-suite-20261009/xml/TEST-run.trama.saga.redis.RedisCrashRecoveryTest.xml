@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.redis.RedisCrashRecoveryTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:21.169Z" hostname="c3po" time="3.033">
+  <properties/>
+  <testcase name="the claim heartbeat keeps work that is still being processed from being re-delivered()" classname="run.trama.saga.redis.RedisCrashRecoveryTest" time="2.01"/>
+  <testcase name="a released claim stops being renewed and is re-delivered()" classname="run.trama.saga.redis.RedisCrashRecoveryTest" time="0.71"/>
+  <testcase name="work claimed by a crashed pod is re-delivered by the owner's claim pass()" classname="run.trama.saga.redis.RedisCrashRecoveryTest" time="0.313"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

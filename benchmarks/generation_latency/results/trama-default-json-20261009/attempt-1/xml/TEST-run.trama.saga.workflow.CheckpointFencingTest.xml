@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.CheckpointFencingTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:37.587Z" hostname="c3po" time="0.03">
+  <properties/>
+  <testcase name="each completed node advances the durable checkpoint()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.006"/>
+  <testcase name="a redelivered carrier resumes from the checkpoint its dead worker reached()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.004"/>
+  <testcase name="parking hands the execution to the enqueued item()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.005"/>
+  <testcase name="a worker overtaken mid-node cannot fail or compensate the execution()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.004"/>
+  <testcase name="a finished execution is never reopened by an old copy()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.001"/>
+  <testcase name="a lease marked lost by the heartbeat fences the worker at its next checkpoint()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.003"/>
+  <testcase name="a worker whose claim lease ran out stops before the next call()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.002"/>
+  <testcase name="a copy behind the checkpoint and not its carrier is dropped before any call()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

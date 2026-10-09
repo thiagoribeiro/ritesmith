@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.TemplateStringSerializerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:33.961Z" hostname="c3po" time="0.002">
+  <properties/>
+  <testcase name="TemplateString encoding remains wrapped with value()" classname="run.trama.saga.TemplateStringSerializerTest" time="0.0"/>
+  <testcase name="TemplateString accepts wrapped object()" classname="run.trama.saga.TemplateStringSerializerTest" time="0.001"/>
+  <testcase name="TemplateString accepts direct string()" classname="run.trama.saga.TemplateStringSerializerTest" time="0.0"/>
+  <testcase name="TemplateString accepts raw object and stores it as json string()" classname="run.trama.saga.TemplateStringSerializerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

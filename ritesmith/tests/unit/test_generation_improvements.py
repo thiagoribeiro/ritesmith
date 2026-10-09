@@ -440,18 +440,26 @@ def test_offline_duration_keeps_absolute_deadline_across_continuation():
 
 
 def test_callback_and_compensation_are_checked_with_controlled_responses():
-    from ritesmith.workflows.simulation import WorkflowSimulator
+    from ritesmith.workflows.simulation import HttpFailure, WorkflowSimulator
 
     callback = compile_plan(semantic_example("async_callback"), BASE)
     WorkflowSimulator(callback, {"callback": {"status": "APPROVED"}}).run()
     with pytest.raises(ValueError, match="successWhen"):
         WorkflowSimulator(callback, {"callback": {"status": "DENIED"}}).run()
+    plan = semantic_example("compensation")
+    plan["steps"].append(
+        {"kind": "call", "id": "next", "capability_name": "telegram.send", "args": {"text": "done"}}
+    )
     simulator = WorkflowSimulator(
-        compile_plan(semantic_example("compensation"), BASE), {"order": {"error": "failed"}}
+        compile_plan(plan, BASE), {"order": {"id": "created"}, "telegram.send": HttpFailure()}
     )
     with pytest.raises(ValueError, match="Task failed"):
         simulator.run()
     assert simulator.result.compensations[0]["url"].endswith("/rollback")
+    failed_first = WorkflowSimulator(compile_plan(plan, BASE), {"order": {"error": "failed"}})
+    with pytest.raises(ValueError, match="Task failed"):
+        failed_first.run()
+    assert not failed_first.result.compensations
 
 
 def test_content_monitor_notifies_only_changed_snapshots():
@@ -611,16 +619,18 @@ async def test_fixture_failure_does_not_repair_the_generated_script(db_session, 
         "generate_luau", script_response(SCRIPT, risk_assessment="medium")
     )
     invalid = {**case(), "tool_fixtures": [], "source": "client"}
-    response = await GenerationService(db_session, llm, Settings()).generate_lua(
-        GenerateScriptRequest(
-            intent="Notify dormant customers",
-            input_schema=INPUT,
-            output_schema=OUTPUT,
-            constraints=ScriptConstraints(runtime_profile="notification", reuse_policy="force_new"),
-            context={"test_cases": [invalid]},
+    with pytest.raises(GenerationFailedError, match="No acceptable script"):
+        await GenerationService(db_session, llm, Settings()).generate_lua(
+            GenerateScriptRequest(
+                intent="Notify dormant customers",
+                input_schema=INPUT,
+                output_schema=OUTPUT,
+                constraints=ScriptConstraints(
+                    runtime_profile="notification", reuse_policy="force_new"
+                ),
+                context={"test_cases": [invalid]},
+            )
         )
-    )
-    assert not response.validation.valid
     assert [method for method, _ in llm.calls] == ["generate_luau"]
 
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.CheckpointFencingTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:25.933Z" hostname="c3po" time="0.031">
+  <properties/>
+  <testcase name="each completed node advances the durable checkpoint()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.005"/>
+  <testcase name="a redelivered carrier resumes from the checkpoint its dead worker reached()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.004"/>
+  <testcase name="parking hands the execution to the enqueued item()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.004"/>
+  <testcase name="a worker overtaken mid-node cannot fail or compensate the execution()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.005"/>
+  <testcase name="a finished execution is never reopened by an old copy()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.002"/>
+  <testcase name="a lease marked lost by the heartbeat fences the worker at its next checkpoint()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.004"/>
+  <testcase name="a worker whose claim lease ran out stops before the next call()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.003"/>
+  <testcase name="a copy behind the checkpoint and not its carrier is dropped before any call()" classname="run.trama.saga.workflow.CheckpointFencingTest" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-09T11:15:25.939074746-03:00","@version":"1","message":"saga finished","logger_name":"run.trama.saga.workflow.WorkflowExecutor","thread_name":"Test worker @coroutine#8881","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"1fcf637f-7083-430d-865b-744d068ac69d","sagaName":"fence-cdecf640-fcdd-4b49-a12f-d864cfe0dd93","status":"SUCCEEDED","durationMs":4}
+{"@timestamp":"2026-10-09T11:15:25.941346313-03:00","@version":"1","message":"resuming from checkpoint","logger_name":"run.trama.saga.workflow.WorkflowExecutor","thread_name":"Test worker @coroutine#8885","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"8135821c-dbc2-4e4a-b8d4-004b63895734","fromSeq":0,"toSeq":2}
+{"@timestamp":"2026-10-09T11:15:25.943102218-03:00","@version":"1","message":"saga finished","logger_name":"run.trama.saga.workflow.WorkflowExecutor","thread_name":"Test worker @coroutine#8885","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"8135821c-dbc2-4e4a-b8d4-004b63895734","sagaName":"fence-ad864a17-70f8-4685-846a-9108ba2e2cbc","status":"SUCCEEDED","durationMs":2}
+{"@timestamp":"2026-10-09T11:15:25.947518597-03:00","@version":"1","message":"saga sleeping","logger_name":"run.trama.saga.workflow.WorkflowExecutor","thread_name":"Test worker @coroutine#8887","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"866e0d05-8945-4ff1-9680-84207d9b3e98","nodeId":"nap","wakeAt":"2026-10-09T14:16:25.947348840Z","delayMillis":60000}
+{"@timestamp":"2026-10-09T11:15:25.952455977-03:00","@version":"1","message":"node completed","logger_name":"run.trama.saga.workflow.TaskNodeHandler","thread_name":"Test worker @coroutine#8889","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"d5f7df09-bc67-486d-985e-2d13272b4a1d","nodeId":"b","phase":"UP","status":500}
+{"@timestamp":"2026-10-09T11:15:25.952810879-03:00","@version":"1","message":"compensation scheduled","logger_name":"run.trama.saga.workflow.WorkflowExecutor","thread_name":"Test worker @coroutine#8889","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"d5f7df09-bc67-486d-985e-2d13272b4a1d","failedNodeId":"b"}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

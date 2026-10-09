@@ -193,16 +193,32 @@ LANGUAGE: Luau (the typed Lua dialect from Roblox) — NOT Lua 5.x
       * annotate the entry point exactly as: function run(input: Input, context: Context): Output
       * annotate comparator parameters: table.sort(list, function(a: Item, b: Item) ... end)
       * annotate locals that start empty or nil: local out: { string } = {}, local best: number? = nil
-      * check `result.error` before using other fields of a tool result
+      * narrow tool-result unions using their declared discriminant before accessing variant fields
+        (for {ok: true, ...} | {ok: false, error: string, message: string}, use
+        `if not result.ok then return {error = result.error, message = result.message} end`)
+      * never read `result.error` on a success variant that does not declare that field
       * the predeclared types are already in scope — do NOT redeclare them"""
 
 
-def luau_generation_system() -> str:
+def luau_generation_system(assembled: bool = False) -> str:
+    entry = (
+        "For luau_body, provide statements only; Python supplies the typed run function. "
+        "Helpers must be local. For a complete script string, define exactly ONE global "
+        "function run(input: Input, context: Context): Output."
+        if assembled
+        else "Define exactly ONE global function: run(input, context) — helpers must be local functions"
+    )
+    notes = _LUAU_LANGUAGE_NOTES
+    if assembled:
+        notes = notes.replace(
+            "annotate the entry point exactly as: function run(input: Input, context: Context): Output",
+            "the assembled entry point is already typed; do not declare run inside body",
+        )
     return f"""\
 You are a Luau script generator for RiteSmith, a sandboxed execution runtime (LunarDyson).
 
 MANDATORY RULES
-- Define exactly ONE global function: run(input, context) — helpers must be local functions
+- {entry}
 - Maximum ~90 lines, maximum 6 KB
 - No recursion, no infinite loops
 - External effects happen ONLY through the tools.* functions listed in the user message —
@@ -214,14 +230,17 @@ MANDATORY RULES
 ERROR HANDLING CONVENTION
   On recoverable error, return a table with an "error" field:
     return {{error = "not_found", message = "item does not exist"}}
-  Guard every tool call: if r.error then return {{error = r.error, message = r.message}} end
+  Guard tool failures using the declared return contract, not a universal `r.error` check.
+  For an ok-discriminated union: if not r.ok then return {{error = r.error, message = r.message}} end
+  Count limited external calls before dispatch, including failed attempts. At the limit,
+  stop dispatching and return accumulated results unless the goal requests another behavior.
   Never call error() or assert() — the sandbox catches panics but wastes an attempt.
 
 OUTPUT CONTRACT
   The return value must be a plain table (no functions). If an output schema is given,
   every required field must be present and typed correctly.
 
-{_LUAU_LANGUAGE_NOTES}
+{notes}
 
 STYLE GUIDE
   - Prefer local variables
@@ -240,6 +259,7 @@ def luau_generation_user(
     similar_artifacts: list[dict],
     constraints: dict,
     response_schema: str,
+    assembled: bool = False,
 ) -> str:
     parts = [f"GOAL: {_sanitize_goal(goal)}"]
     if input_schema:
@@ -251,7 +271,12 @@ def luau_generation_user(
     parts.append(
         "PREDECLARED TYPES (already in scope — use them, do NOT redeclare them):\n"
         f"{type_declarations.strip()}\n\n"
-        "Annotate the entry point exactly as: function run(input: Input, context: Context): Output"
+        + (
+            "For luau_body return statements only: do not declare run inside body. "
+            "For a complete script string use function run(input: Input, context: Context): Output."
+            if assembled
+            else "Annotate the entry point exactly as: function run(input: Input, context: Context): Output"
+        )
     )
     if tool_descriptions:
         tools = "\n".join(f"  - {line}" for line in tool_descriptions)
@@ -438,7 +463,7 @@ Analyse and respond with JSON matching this schema:
 def test_generation_system() -> str:
     return """\
 You write black-box test cases for a RiteSmith capability, from its goal and
-input/output schemas ALONE — you do not see the implementation.
+input/output schemas, tool contracts and controlled fixtures — you do not see the implementation.
 
 RULES
 - Produce 2 to 4 cases. Each is an input object (matching the input schema) and
@@ -447,6 +472,11 @@ RULES
 - Cover a typical case and at least one boundary/edge case the goal implies.
 - Only include inputs that are valid per the input schema.
 - Expected outputs must be exact values, not placeholders or ranges.
+- Optional fields may be absent; do not emit null unless the schema permits null.
+- Derive external-data expectations from the supplied fixtures: preserve eligibility,
+  list order and each tool's success/failure response. Never list a failed send as notified.
+- Count call limits as attempts, including failures; do not invent a limit-exceeded error
+  when the goal only limits how many calls may be made.
 - If you cannot determine an exact expected output for a case, omit that case
   rather than guessing — a wrong expectation is worse than fewer cases.
 
@@ -618,10 +648,11 @@ correctly reflects X's output as long as X ran before Y in the execution graph.
 Sleep nodes serve ONE purpose: introducing real time delays between actions (e.g.
 "wait 5 minutes then check again"). They are NOT needed for data passing.
 
-For LOOPS: after a sleep, the next iteration starts fresh. A node can reference its
-OWN previous iteration's output via nodes.itself.response.body.* — this resolves to
-the result stored from the PREVIOUS iteration (null on first run). This is the
-"self-referential state" pattern for carrying aggregate state across iterations.
+JSON bodies use typed substitution; missing references fail before HTTP dispatch.
+The first pass needs explicit counter and state seeds. Later passes may reference
+only completed outputs. For bounded repetitions, use distinct nodes for each pass
+or a semantic repeat with initial_state; Python expands blocks of up to 20.
+Never reference an unexecuted node to manufacture an initial null value.
 
 PARALLEL FAN-OUT — SPLIT + JOIN
 -------------------------------
@@ -715,122 +746,13 @@ EXAMPLE — compare three coin prices in parallel, then send one summary:
     }
   ]
 }
-PATTERN A — SELF-REFERENTIAL LOOP  (aggregate tracking, condition-based termination)
--------------------------------------------------------------------------------------
-Use when: "monitor every N minutes", "poll until condition", "track running min/max",
-"check up to N times". Do NOT generate a single-pass workflow for these intents.
-
-REQUIRED: add "max_iterations": <int> at the workflow root level so RiteSmith's
-validator allows the back-edge. Trama itself does NOT use this value for anything.
-
-Trama has a native SLEEP node kind:
-  {"id": "<id>", "kind": "sleep", "durationSeconds": <N>, "next": "<next_node_id>"}
-Use this — do NOT fake a sleep with a task calling sleep.internal.
-
-Structure:
-  1. fetch_node  — task: retrieves current value via capability
-  2. track_node  — task (stat.min_value or stat.max_value capability): receives current value
-                   from fetch_node AND reads its OWN prior output for prev state;
-                   computes new aggregate; returns { min_value/max_value, iteration, last_value }
-  3. check_node  — switch: reads CURRENT iteration's track_node result
-       case "done":  target → send_result  (N reached or business condition met)
-       default:      sleep_node
-  4. send_result — task: sends notification, references track_node's current result
-  5. sleep_node  — kind: "sleep"; next → fetch_node  ← intentional loop back-edge
-
-COMPLETE EXAMPLE — ETH price monitor (track minimum, check every 5 min, 6 times):
-{
-  "name": "eth_price_monitor",
-  "version": "2.0.0",
-  "entrypoint": "fetch_price",
-  "max_iterations": 6,
-  "nodes": [
-    {
-      "id": "fetch_price",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "__RS_BASE_URL__/trama/execute",
-          "verb": "POST",
-          "headers": {
-            "Authorization": "Bearer __TRAMA_TOKEN__",
-            "Content-Type": "application/json"
-          },
-          "body": { "capability_name": "crypto.eth_price", "input": {} }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "track_min"
-    },
-    {
-      "id": "track_min",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "__RS_BASE_URL__/trama/execute",
-          "verb": "POST",
-          "headers": {
-            "Authorization": "Bearer __TRAMA_TOKEN__",
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "capability_name": "stat.min_value",
-            "input": {
-              "current":      "{{ nodes.fetch_price.response.body.output.price }}",
-              "previous_min": "{{ nodes.track_min.response.body.output.min_value }}",
-              "iteration":    "{{ nodes.track_min.response.body.output.iteration }}"
-            }
-          }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "check"
-    },
-    {
-      "id": "check",
-      "kind": "switch",
-      "cases": [
-        {
-          "name": "done",
-          "when": { ">=": [{ "var": "nodes.track_min.response.body.output.iteration" }, 6] },
-          "target": "send_result"
-        }
-      ],
-      "default": "sleep"
-    },
-    {
-      "id": "send_result",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "__RS_BASE_URL__/trama/execute",
-          "verb": "POST",
-          "headers": {
-            "Authorization": "Bearer __TRAMA_TOKEN__",
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "capability_name": "telegram.send",
-            "input": {
-              "text": "ETH monitor done (6 checks). Min: ${{ nodes.track_min.response.body.output.min_value }}"
-            }
-          }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "end"
-    },
-    {
-      "id": "sleep",
-      "kind": "sleep",
-      "durationSeconds": 300,
-      "next": "fetch_price"
-    }
-  ]
-}
+BOUNDED REPETITION
+------------------
+Prefer semantic repeat with total count/duration, interval_seconds, state and
+explicit initial_state. Python expands no more than 20 passes per chunk, seeds
+first-pass values, and carries remaining work and state into a cached continuation.
+When writing a native graph, use distinct task nodes with explicit first-pass
+values and references only to already completed prior nodes.
 
 PATTERN B — LINEAR MULTI-FETCH  (collect exactly N samples, then compute)
 --------------------------------------------------------------------------
@@ -843,158 +765,16 @@ Structure:
 The compute node references nodes.fetch_1.response.body.output.<field> through
 nodes.fetch_N.*. No max_iterations needed. No self-referential state needed.
 
-PATTERN C — CRON CHAIN  (unbounded periodic execution via workflow chaining)
-------------------------------------------------------------------------------
-Use when: "forever", "indefinitely", "until manually stopped", "keep monitoring".
-A single workflow cannot loop without bound — max_iterations must be ≤ 20 for stability.
-For unbounded tasks: run MAX_PER_CHAIN (= 20) iterations, then spawn the next chain via
-POST /plans, passing the accumulated state as context.continuation.
-
-The next plan receives the state as Trama payload. Access it via {{ payload.continuation.* }}.
-Use initial_min / initial_max / initial_state to seed stat capabilities from the payload
-on the first iteration of a continuation chain (when self-referential output is still null).
-
-Structure (20-iteration chain):
-  1. fetch_node   — retrieves current value
-  2. track_node   — stat.min_value with initial_min: "{{ payload.continuation.previous_min }}"
-  3. check_node   — switch:
-       case "chain":  iteration >= 20 → spawn_next
-       default:       sleep_node
-  4. sleep_node   — kind: "sleep"; next → fetch_node  (back-edge)
-  5. spawn_next   — POST __RS_BASE_URL__/plans with body carrying context.continuation state
-  6. next → "end" on spawn_next (auto-rewired to rs_complete by RiteSmith)
-  max_iterations: 20 at root (required for validator to accept back-edge)
-
-COMPLETE EXAMPLE — ETH price monitor (indefinite, track global minimum):
-{
-  "name": "eth_price_monitor_infinite",
-  "version": "2.0.0",
-  "entrypoint": "fetch_price",
-  "max_iterations": 20,
-  "nodes": [
-    {
-      "id": "fetch_price",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "__RS_BASE_URL__/trama/execute",
-          "verb": "POST",
-          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
-          "body": { "capability_name": "market.coin_price", "input": { "symbol": "eth" } }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "track"
-    },
-    {
-      "id": "track",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "__RS_BASE_URL__/trama/execute",
-          "verb": "POST",
-          "headers": { "Authorization": "Bearer __TRAMA_TOKEN__", "Content-Type": "application/json" },
-          "body": {
-            "capability_name": "stat.min_value",
-            "input": {
-              "current":      "{{ nodes.fetch_price.response.body.output.price }}",
-              "previous_min": "{{ nodes.track.response.body.output.min_value }}",
-              "initial_min":  "{{ payload.continuation.previous_min }}",
-              "iteration":    "{{ nodes.track.response.body.output.iteration }}"
-            }
-          }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "check"
-    },
-    {
-      "id": "check",
-      "kind": "switch",
-      "cases": [
-        {
-          "name": "chain",
-          "when": { ">=": [{ "var": "nodes.track.response.body.output.iteration" }, 20] },
-          "target": "spawn_next"
-        }
-      ],
-      "default": "sleep"
-    },
-    {
-      "id": "spawn_next",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "__RS_BASE_URL__/plans",
-          "verb": "POST",
-          "headers": { "Content-Type": "application/json" },
-          "body": {
-            "intent": "monitor ETH price indefinitely every 5 minutes, track the global minimum",
-            "mode": "execute",
-            "replan_budget": 0,
-            "context": {
-              "continuation": {
-                "previous_min": "{{ nodes.track.response.body.output.min_value }}"
-              }
-            }
-          }
-        },
-        "successStatusCodes": [200, 201]
-      },
-      "next": "end"
-    },
-    {
-      "id": "sleep",
-      "kind": "sleep",
-      "durationSeconds": 300,
-      "next": "fetch_price"
-    }
-  ]
-}
-
-CRITICAL for Pattern C:
-- spawn_next body.intent MUST be identical to the original plan intent for artifact reuse
-  (avoids LLM regeneration on every chain — same workflow artifact is reused)
-- replan_budget: 0 prevents recursive re-planning loops
-- context.continuation carries only the fields needed by the next chain
-- The next execution receives continuation as Trama payload: {{ payload.continuation.* }}
-- stat.min_value uses initial_min (from payload) to seed on first iteration of continuation;
-  on subsequent iterations within the chain, previous_min (self-referential) takes over
-
-CONTENT MONITOR — NOTIFY VIA llm.evaluate (mandatory for news/feed/status watches)
---------------------------------------------------------------------------------
-Do NOT decide "something changed" by comparing result COUNT — count is almost
-always constant and the alert never fires. Use llm.evaluate against the previous
-snapshot. Build exactly these 7 nodes, in this order, entrypoint = fetch:
-
-1. fetch (task, capability web.search) — input keys: query = "<topic>", limit = 10.
-2. evaluate (task, capability llm.evaluate) — input keys: task, previous, current.
-   task = a pt-BR instruction: novidade means a title in `current` absent from
-   `previous`; if `previous` is empty return decision "skip"; otherwise decision
-   "notify" with message = a short pt-BR summary (2-3 lines, 1-2 links). Fold the
-   USER-SPECIFIED PARAMETERS trigger into this text when present.
-   previous = nodes.remember.response.body.output.state.previous
-   current  = nodes.fetch.response.body.output.result
-3. remember (task, capability stat.tick) — input keys: iteration =
-   nodes.remember.response.body.output.iteration ; state = an object whose only
-   key `previous` = nodes.fetch.response.body.output.result. This stores THIS
-   fetch for the next pass; on pass 1 previous resolves empty so evaluate skips.
-4. decide (switch) — case when nodes.evaluate.response.body.output.decision == "notify"
-   targets avisar ; default targets check.
-5. avisar (task, capability telegram.send_markdown) — input key text =
-   nodes.evaluate.response.body.output.message ; next = check.
-6. check (switch) — case when nodes.remember.response.body.output.iteration >=
-   <max_iterations> targets rs_complete ; default targets wait.
-7. wait (sleep) — durationSeconds = <interval_seconds> ; next = fetch.
-
-Every node reference above is written verbatim as
-"{{ nodes.<id>.response.body.output.<field> }}" — the ".output." segment is
-mandatory. A capability's input object may hold ONLY the keys named above (which
-come from its input_schema); never add keys like top_k, filter or items.
-
+CONTINUATION AND CONTENT MONITORING
+-----------------------------------
+Run at most 20 passes per chunk. Preserve remaining work, state and the absolute
+end time in context.continuation. Never restart the original duration. Prefer a
+semantic repeat: the compiler carries its cached plan into the continuation.
+A first content snapshot must have an explicit previous value (usually an empty
+string). Compare the current snapshot to the completed previous snapshot, skip
+empty current snapshots, and notify only when llm.evaluate returns notify.
+Only use keys declared by the capability contracts. Never read a missing node or
+assume the renderer will supply null. JSON bodies always preserve value types.
 
 WIRING ANTI-PATTERNS TO AVOID
 ------------------------------
@@ -1014,7 +794,7 @@ WIRING ANTI-PATTERNS TO AVOID
 - Do NOT leave "next" pointing to a non-existent node id.
 - Every switch MUST have a "default" — never rely on all cases being exhaustive.
 - The last task node in every non-looping path MUST have "next": "end".
-- For polling loops (Pattern A), the sleep node MUST point back to the fetch node.
+- For bounded polling, wire explicit passes through sleep nodes; initialize the first pass.
 - Do NOT use a task node to simulate sleep — use kind: "sleep" with durationSeconds.
 - Do NOT point a branch's last node at the join — end the branch with "next": "end".
 - Do NOT read a branch node (nodes.<branch_node>.*) after the join — use
@@ -1075,10 +855,9 @@ GENERATION RULES
 - Use "{{{{ nodes.<id>.response.body.<field> }}}}" to wire outputs between nodes
 - Add "compensation" only when the HTTP call creates state that can be rolled back
 - Keep the definition focused: one purpose, minimum necessary nodes
-- For monitoring/polling intents: ALWAYS use Pattern A (self-referential loop) or Pattern B
-  (linear multi-fetch); add "max_iterations" at root for Pattern A to allow the back-edge
-- For unbounded/indefinite/forever intents: ALWAYS use Pattern C (cron chain); max_iterations
-  MUST be exactly 20; spawn_next intent must match original for reuse
+- For monitoring/polling, use semantic repeat or explicit bounded passes with first-pass seeds
+- For indefinite monitoring, continue in chunks of at most 20; preserve the original intent,
+  remaining work, state and absolute deadline; never read an unexecuted prior node
 - For several INDEPENDENT actions that can run at the same time, use split/join
   (PARALLEL FAN-OUT) instead of chaining them one after another
 

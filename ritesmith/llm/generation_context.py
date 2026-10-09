@@ -6,7 +6,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-PROMPT_VERSION = "generation-v3"
+PROMPT_VERSION = "generation-v6"
 
 
 def normalized(text):
@@ -22,7 +22,10 @@ def proposal_kind(goal, input_schema=None, output_schema=None):
     )
     workflow = bool(
         re.search(
-            r"\b(workflow|trama|monitor|watch|every|reminder|parallel|callback|schedule)\b|lembre|monitore|a cada|em paralelo|diariamente|semanal",
+            r"\b(workflow|trama|monitor|watch|reminder|parallel|callback|schedule)\b"
+            r"|\bevery\s+(?:(?:\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|a|an|other)\s+)?"
+            r"(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?|morning|evening|night|weekdays?|weekends?|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b"
+            r"|lembre|monitore|a cada|em paralelo|diariamente|semanal",
             text,
         )
     )

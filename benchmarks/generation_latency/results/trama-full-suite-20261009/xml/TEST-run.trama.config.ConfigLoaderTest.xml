@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.config.ConfigLoaderTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:14:36.533Z" hostname="c3po" time="0.136">
+  <properties/>
+  <testcase name="partial callback override keeps the other callback fields()" classname="run.trama.config.ConfigLoaderTest" time="0.027"/>
+  <testcase name="invalid redis topology is ignored()" classname="run.trama.config.ConfigLoaderTest" time="0.022"/>
+  <testcase name="system properties override yaml values()" classname="run.trama.config.ConfigLoaderTest" time="0.021"/>
+  <testcase name="redis cluster can be configured through overrides()" classname="run.trama.config.ConfigLoaderTest" time="0.014"/>
+  <testcase name="partial database override keeps the remaining yaml fields()" classname="run.trama.config.ConfigLoaderTest" time="0.014"/>
+  <testcase name="fields without an explicit override can be set via hoplite config override properties()" classname="run.trama.config.ConfigLoaderTest" time="0.013"/>
+  <testcase name="invalid values are ignored instead of crashing()" classname="run.trama.config.ConfigLoaderTest" time="0.011"/>
+  <testcase name="defaults come from application yaml()" classname="run.trama.config.ConfigLoaderTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

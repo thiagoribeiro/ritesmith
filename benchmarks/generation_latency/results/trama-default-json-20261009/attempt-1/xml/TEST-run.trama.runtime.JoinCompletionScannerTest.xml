@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.runtime.JoinCompletionScannerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:25.989Z" hostname="c3po" time="0.006">
+  <properties/>
+  <testcase name="an exception for one parent does not stop the others()" classname="run.trama.runtime.JoinCompletionScannerTest" time="0.003"/>
+  <testcase name="nothing stalled resumes nothing()" classname="run.trama.runtime.JoinCompletionScannerTest" time="0.001"/>
+  <testcase name="counts only joins that were actually resumed()" classname="run.trama.runtime.JoinCompletionScannerTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

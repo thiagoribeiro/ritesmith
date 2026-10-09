@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.callback.CallbackTokenServiceTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:16.491Z" hostname="c3po" time="0.015">
+  <properties/>
+  <testcase name="generate and validate round trip succeeds()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.002"/>
+  <testcase name="validate returns 410 for expired token()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.001"/>
+  <testcase name="parseToken handles uuid nonce with hyphens()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.005"/>
+  <testcase name="validate fails when nodeId differs()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.001"/>
+  <testcase name="different secrets produce different signatures()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.001"/>
+  <testcase name="validate returns 401 for wrong signature()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.001"/>
+  <testcase name="parseToken returns null for malformed token()" classname="run.trama.saga.callback.CallbackTokenServiceTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

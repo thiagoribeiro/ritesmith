@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:37.735Z" hostname="c3po" time="0.07">
+  <properties/>
+  <testcase name="sleep node parks the execution and enqueues the first chunk()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="early sleeping delivery without sentinel is discarded as stale()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.002"/>
+  <testcase name="a woken terminal sleep (re-delivered with wakeAt = now) finishes the v2 saga()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.001"/>
+  <testcase name="waking after wakeAt continues at next node and consumes the sentinel()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.003"/>
+  <testcase name="completion hooks preserve typed JSON values without mode selection()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="onFailureCallback fires after compensation and saga ends FAILED()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.005"/>
+  <testcase name="terminal sleep finishes the saga on wake()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.002"/>
+  <testcase name="compensation that keeps failing ends CORRUPTED()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.005"/>
+  <testcase name="compensation runs in reverse order and skips nodes without compensation()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.005"/>
+  <testcase name="failing onSuccessCallback records a warning but saga still succeeds()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.003"/>
+  <testcase name="a sleep item past wakeAt whose sentinel was already consumed is discarded()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.001"/>
+  <testcase name="long compensation stack checkpoints after maxNodesPerExecution()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="unreachable onSuccessCallback records a warning with the error()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="onSuccessCallback fires with rendered body after the last node()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="short sleep enqueues exactly its duration()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.001"/>
+  <testcase name="compensation failure is retried per failureHandling before giving up()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="node durations are recorded per node kind and mode()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.004"/>
+  <testcase name="a Succeeded execution from a terminal async callback is finished with hooks()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.002"/>
+  <testcase name="a delayed retry checkpoints the time it is due()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.003"/>
+  <testcase name="early sleeping delivery re-enqueues when sentinel still exists()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.003"/>
+  <testcase name="missing reference in completion hook records a warning without HTTP dispatch()" classname="run.trama.saga.workflow.WorkflowExecutorBehaviorTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

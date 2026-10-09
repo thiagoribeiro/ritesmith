@@ -71,6 +71,14 @@ class LLMCallStats(BaseModel):
     prompt_version: str = ""
     contract_version: str = ""
     format_version: str = ""
+    variant: str = "A"
+    response_schema_version: str = ""
+    constructor_version: str = ""
+    response_mode: str = "json_object"
+    schema_fallback_reason: str | None = None
+    locally_validated_json: bool = False
+    representation: str = ""
+    representation_fallback: bool = False
 
 
 class LLMProvider(ABC):

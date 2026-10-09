@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.SagaDefinitionCrudTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:27.585Z" hostname="c3po" time="0.265">
+  <properties/>
+  <testcase name="insertDefinition saves definition decoded from direct-content json()" classname="run.trama.saga.SagaDefinitionCrudTest" time="0.245"/>
+  <testcase name="getDefinition reads from cache when available()" classname="run.trama.saga.SagaDefinitionCrudTest" time="0.004"/>
+  <testcase name="insertDefinition saves square chain definition with template placeholders()" classname="run.trama.saga.SagaDefinitionCrudTest" time="0.006"/>
+  <testcase name="getDefinitionByNameVersion reads from cache when available()" classname="run.trama.saga.SagaDefinitionCrudTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

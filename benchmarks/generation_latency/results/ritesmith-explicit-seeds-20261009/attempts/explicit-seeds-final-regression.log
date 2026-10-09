@@ -1,0 +1,65 @@
+............................................................x....xx..... [  7%]
+........................................................................ [ 15%]
+..............................................................s......... [ 22%]
+........................................................................ [ 30%]
+........................................................................ [ 37%]
+...............................s.....s.................................. [ 45%]
+........................................................................ [ 52%]
+........................................................................ [ 60%]
+........................................................................ [ 67%]
+.....................xx................................................. [ 75%]
+........................................................................ [ 82%]
+........................................................................ [ 90%]
+........................................................................ [ 97%]
+..................F..                                                    [100%]
+=================================== FAILURES ===================================
+______ test_serialized_json_preserves_scalars_and_value_fields[null-None] ______
+
+native = <benchmarks.generation_latency.native_transport.TramaTransportOracle object at 0x7fbe0d191810>
+source = 'null', expected = None
+
+    @pytest.mark.parametrize(
+        "source,expected",
+        [
+            ('"{{payload.x}}"', 7),
+            ("false", False),
+            ("null", None),
+            ('["{{payload.x}}"]', [7]),
+            ('{"value":"{{payload.x}}","other":true}', {"value": 7, "other": True}),
+        ],
+    )
+    def test_serialized_json_preserves_scalars_and_value_fields(native, source, expected):
+        candidate = {
+            "nodes": [
+                {
+                    "id": "call",
+                    "action": {
+                        "request": {
+                            "url": "http://candidate/endpoint",
+                            "headers": {"Content-Type": "application/json"},
+                            "body": source,
+                        }
+                    },
+                }
+            ]
+        }
+        prepared = typed_json_workflow(candidate)
+        assert typed_json_workflow(prepared) == prepared
+        assert (
+>           native.action(prepared["nodes"][0]["action"], {"payload": {"x": 7}})["request"]["body"]
+            == expected
+        )
+E       KeyError: 'body'
+
+ritesmith/tests/unit/test_workflow_initialization.py:358: KeyError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+  /home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py:720: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ritesmith/tests/unit/test_workflow_initialization.py::test_serialized_json_preserves_scalars_and_value_fields[null-None]
+1 failed, 948 passed, 3 skipped, 14 deselected, 5 xfailed, 3 warnings in 11.41s

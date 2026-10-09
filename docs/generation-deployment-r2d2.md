@@ -1,10 +1,13 @@
 # r2d2 generation deployment — 2026-10-08
 
 The owner authorized a direct update of the single-user r2d2 deployment with an
-executable rollback. The update is now running on r2d2. This supersedes the isolated-only promotion procedure in
-`generation-improvements.md`; historical benchmark conclusions remain unchanged.
+executable rollback. The update was deployed, then **withdrawn on October 8, 2026**
+after generation failures in the bounded typed-decisions comparison. The previous
+image is running again, with strict certification explicitly kept enabled.
+See [the rollback and verification record](generation-rollback-r2d2.md).
+Historical benchmark conclusions remain unchanged.
 
-## Configuration
+## Withdrawn configuration
 
 - Scripts: `gpt-5-mini`, reasoning effort `low`.
 - Workflows: `gpt-5.4-mini`, reasoning effort `low`.

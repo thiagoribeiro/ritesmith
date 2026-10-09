@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.cli.DryRunSimulatorTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:14:36.497Z" hostname="c3po" time="0.035">
+  <properties/>
+  <testcase name="split branch failure marks the whole simulation failed()" classname="run.trama.cli.DryRunSimulatorTest" time="0.013"/>
+  <testcase name="switch conditions see the same names in the dry-run as in production()" classname="run.trama.cli.DryRunSimulatorTest" time="0.019"/>
+  <testcase name="nested split inside a branch is simulated recursively()" classname="run.trama.cli.DryRunSimulatorTest" time="0.001"/>
+  <testcase name="simulates split branches and continues after join()" classname="run.trama.cli.DryRunSimulatorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

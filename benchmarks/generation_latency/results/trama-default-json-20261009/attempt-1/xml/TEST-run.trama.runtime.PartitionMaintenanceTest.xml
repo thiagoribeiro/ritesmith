@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.runtime.PartitionMaintenanceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:25.995Z" hostname="c3po" time="0.733">
+  <properties/>
+  <testcase name="createPartitions also covers saga_step_call()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.265"/>
+  <testcase name="dropOldPartitions also prunes saga_step_call()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.011"/>
+  <testcase name="createPartitions extends the window Liquibase created and is idempotent()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.238"/>
+  <testcase name="createPartitions works when the JVM time zone is not UTC()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.201"/>
+  <testcase name="dropOldPartitions drops months past retention and keeps the current one()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Oct 09, 2026 2:43:26 PM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Creating database changelog table with name: public.databasechangelog
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:43:26 PM liquibase.snapshot
+INFO: Creating snapshot
+Oct 09, 2026 2:43:26 PM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 2:43:26 PM liquibase.command
+INFO: Using deploymentId: 1557006028
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: SQL in file db/schema.sql executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001-create-saga-tables::codex ran successfully in 6ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 37ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::002-add-waiting-state::codex ran successfully in 2ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::003-execution-name-index::trama ran successfully in 5ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004-step-result-observability::trama ran successfully in 3ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 19ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::005-step-call-query-index::trama ran successfully in 6ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::006-split-join-barrier::trama ran successfully in 4ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama ran successfully in 3ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::008-execution-payload::trama ran successfully in 2ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama ran successfully in 11ms
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Run:                         11
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Previously run:               0
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 2:43:26 PM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 2:43:26 PM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 2:43:26 PM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 2:43:26 PM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Creating database changelog table with name: public.databasechangelog
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:43:26 PM liquibase.snapshot
+INFO: Creating snapshot
+Oct 09, 2026 2:43:26 PM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 2:43:26 PM liquibase.command
+INFO: Using deploymentId: 1557006028
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: SQL in file db/schema.sql executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001-create-saga-tables::codex ran successfully in 7ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 41ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::002-add-waiting-state::codex ran successfully in 1ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::003-execution-name-index::trama ran successfully in 4ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004-step-result-observability::trama ran successfully in 4ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 23ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::005-step-call-query-index::trama ran successfully in 6ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::006-split-join-barrier::trama ran successfully in 3ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama ran successfully in 2ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::008-execution-payload::trama ran successfully in 1ms
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:43:26 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama ran successfully in 12ms
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Run:                         11
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Previously run:               0
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 2:43:26 PM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 2:43:26 PM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 2:43:26 PM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 2:43:26 PM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:43:26 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Creating database changelog table with name: public.databasechangelog
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:26 AM liquibase.snapshot
+INFO: Creating snapshot
+Oct 09, 2026 11:43:26 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:26 AM liquibase.command
+INFO: Using deploymentId: 1557006028
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: SQL in file db/schema.sql executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001-create-saga-tables::codex ran successfully in 7ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 43ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::002-add-waiting-state::codex ran successfully in 2ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::003-execution-name-index::trama ran successfully in 5ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004-step-result-observability::trama ran successfully in 3ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 24ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::005-step-call-query-index::trama ran successfully in 7ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::006-split-join-barrier::trama ran successfully in 5ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama ran successfully in 5ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::008-execution-payload::trama ran successfully in 2ms
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:43:26 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama ran successfully in 11ms
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: Run:                         11
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: Previously run:               0
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:26 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:26 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:26 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:26 AM liquibase.command
+INFO: Command execution complete
+]]></system-err>
+</testsuite>

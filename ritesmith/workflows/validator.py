@@ -20,12 +20,108 @@ Layer 2 — Contracts (only when capability_registry is provided):
 
 from __future__ import annotations
 
-import json
 import re
+
+from ritesmith.workflows.expressions import expression_errors
 
 _V1_STEP_TYPES = {"capability", "sleep", "condition", "notification", "callback"}
 _V2_NODE_KINDS = {"task", "switch", "sleep", "split", "join"}
 _NODE_REF = re.compile(r"\bnodes\.([A-Za-z0-9_\-]+)")
+
+
+def _data_strings(value):
+    """Template source strings, excluding protected literal continuation data."""
+    if isinstance(value, dict):
+        if set(value) == {"__trama_literal_json__"}:
+            return
+        for item in value.values():
+            yield from _data_strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _data_strings(item)
+    elif isinstance(value, str):
+        yield value
+
+
+def native_shape_errors(definition, *, partial=False):
+    """Reject malformed containers before graph traversal or transport preparation."""
+    if not isinstance(definition, dict):
+        return ["definition must be a JSON object"]
+    if "nodes" not in definition and "entrypoint" not in definition:
+        return []
+    nodes = definition.get("nodes", [])
+    if not isinstance(nodes, list):
+        return ["definition.nodes must be a list"]
+    errors = []
+    if (not partial or "entrypoint" in definition) and not isinstance(
+        definition.get("entrypoint"), str
+    ):
+        errors.append("definition.entrypoint must be a string")
+    for index, node in enumerate(nodes):
+        location = f"definition.nodes[{index}]"
+        if not isinstance(node, dict):
+            errors.append(f"{location} must be a JSON object")
+            continue
+        if (not partial or "id" in node) and (
+            not isinstance(node.get("id"), str) or not node["id"]
+        ):
+            errors.append(f"{location}.id must be a nonempty string")
+        if (not partial or "kind" in node) and not isinstance(node.get("kind"), str):
+            errors.append(f"{location}.kind must be a string")
+        for field in ("next", "default", "join"):
+            if field in node and not isinstance(node[field], str):
+                errors.append(f"{location}.{field} must be a string")
+        if "branches" in node and (
+            not isinstance(node["branches"], list)
+            or any(not isinstance(branch, str) for branch in node["branches"])
+        ):
+            errors.append(f"{location}.branches must be a list of strings")
+        if "cases" in node:
+            if not isinstance(node["cases"], list):
+                errors.append(f"{location}.cases must be a list")
+            else:
+                for case_index, case in enumerate(node["cases"]):
+                    if not isinstance(case, dict):
+                        errors.append(f"{location}.cases[{case_index}] must be a JSON object")
+                    elif not isinstance(case.get("target"), str):
+                        errors.append(f"{location}.cases[{case_index}].target must be a string")
+        for field in ("action", "compensation"):
+            if field not in node:
+                continue
+            action = node[field]
+            if not isinstance(action, dict):
+                errors.append(f"{location}.{field} must be a JSON object")
+                continue
+            if (
+                field == "action"
+                and "callback" in action
+                and not isinstance(action["callback"], dict)
+            ):
+                errors.append(f"{location}.action.callback must be a JSON object")
+            request = action.get("request", {}) if field == "action" else action
+            request_location = f"{location}.{field}" + (".request" if field == "action" else "")
+            if not isinstance(request, dict):
+                errors.append(f"{request_location} must be a JSON object")
+                continue
+
+            def string_template(value):
+                return isinstance(value, str) or (
+                    isinstance(value, dict)
+                    and set(value) == {"value"}
+                    and isinstance(value["value"], str)
+                )
+
+            if "url" in request and not string_template(request["url"]):
+                errors.append(f"{request_location}.url must be a string template")
+            if "headers" in request and (
+                not isinstance(request["headers"], dict)
+                or any(
+                    not isinstance(key, str) or not string_template(value)
+                    for key, value in request["headers"].items()
+                )
+            ):
+                errors.append(f"{request_location}.headers must contain string templates")
+    return errors
 
 
 def _v2_successors(node: dict | None) -> list[str]:
@@ -93,8 +189,9 @@ class WorkflowValidator:
         self.capability_registry = capability_registry or {}
 
     def validate(self, definition: dict) -> list[str]:
-        if not isinstance(definition, dict):
-            return ["definition must be a JSON object"]
+        shape_errors = native_shape_errors(definition)
+        if shape_errors:
+            return shape_errors
 
         if "nodes" in definition or "entrypoint" in definition:
             return self._validate_v2(definition)
@@ -132,6 +229,19 @@ class WorkflowValidator:
 
         for node in nodes_list:
             errors.extend(self._validate_v2_node(node, node_ids))
+            if node.get("kind") == "switch":
+                for index, case in enumerate(node.get("cases", []) or []):
+                    errors.extend(
+                        expression_errors(
+                            case.get("when"), f"Node '{node['id']}'.cases[{index}].when"
+                        )
+                    )
+            callback = (node.get("action") or {}).get("callback", {})
+            for key in ("successWhen", "failureWhen"):
+                if key in callback:
+                    errors.extend(
+                        expression_errors(callback[key], f"Node '{node['id']}'.callback.{key}")
+                    )
 
         if not errors:
             errors.extend(self._validate_split_join(nodes_list))
@@ -271,7 +381,7 @@ class WorkflowValidator:
         branch_sets = _branch_sets(nodes)
         inside = set().union(*branch_sets.values()) if branch_sets else set()
         for node in nodes:
-            refs = set(_NODE_REF.findall(json.dumps(node))) & set(node_map)
+            refs = set(_NODE_REF.findall(" ".join(_data_strings(node)))) & set(node_map)
             if node["id"] not in inside:
                 for ref in sorted(refs & inside):
                     errors.append(
@@ -329,7 +439,7 @@ class WorkflowValidator:
                 continue
             nid = node.get("id", "<unknown>")
             body = (node.get("action") or {}).get("request", {}).get("body") or {}
-            cap_name = body.get("capability_name")
+            cap_name = body.get("capability_name") if isinstance(body, dict) else None
 
             if cap_name and cap_name not in self.capability_registry:
                 errors.append(
@@ -342,7 +452,7 @@ class WorkflowValidator:
 
     def _validate_templates(self, nid: str, body: dict, node_ids: set[str]) -> list[str]:
         errors = []
-        body_str = json.dumps(body)
+        body_str = " ".join(_data_strings(body))
         for ref_node in re.findall(r"\{\{\s*nodes\.([^.\s}]+)", body_str):
             if ref_node not in node_ids:
                 errors.append(f"Node '{nid}': template references undefined node '{ref_node}'")

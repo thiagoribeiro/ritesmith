@@ -1,0 +1,803 @@
+diff --git a/README.md b/README.md
+index 438fd28..eff370e 100644
+--- a/README.md
++++ b/README.md
+@@ -103,7 +103,9 @@ A payment flow: an async authorization, voided if anything later fails, then a s
+ 
+ ### Templates
+ 
+-Requests are [Mustache](https://mustache.github.io/) templates. Available values:
++JSON request bodies use typed substitution. URLs, headers and non-JSON bodies use
++[Mustache](https://mustache.github.io/) templates with destination-specific escaping.
++Available values:
+ 
+ | Value | Meaning |
+ |---|---|
+@@ -113,13 +115,21 @@ Requests are [Mustache](https://mustache.github.io/) templates. Available values
+ | `{{sagaId}}`, `{{sagaName}}`, `{{sagaVersion}}` | The execution |
+ | `{{runtime.callback.url}}`, `{{runtime.callback.token}}` | Async nodes only: where and how to call back |
+ 
+-`{{ }}` escapes the value for where it lands:
+-- inside JSON string literals for JSON bodies (by `Content-Type`, or a body starting with `{`/`[` when none is set);
++In JSON bodies, an entire `"{{path}}"` value preserves the referenced JSON type,
++including numbers, booleans, null, arrays and objects. References within text accept
++scalars only. Missing keys, out-of-range indexes and traversal through null fail
++before task HTTP dispatch, with the node, JSON field and reference in the diagnostic.
++JSON rendering has no mode header or legacy path. Declare a JSON `Content-Type`;
++when no content type is set, bodies starting with `{` or `[` are also treated as JSON.
++
++In text destinations, `{{ }}` escapes the value for where it lands:
+ - XML entities for XML/HTML bodies;
+ - form encoding for `application/x-www-form-urlencoded`;
+ - the literal value in URLs, headers (line breaks removed) and other bodies.
+ 
+-`{{{ }}}` always inserts the raw value.
++`{{{ }}}` inserts raw values in text destinations only. JSON bodies reject triple
++braces, sections and lambdas. See [typed JSON transport](docs/typed-json-transport.md)
++for examples and migration requirements.
+ 
+ ---
+ 
+diff --git a/app/main/kotlin/run/trama/cli/DryRunSimulator.kt b/app/main/kotlin/run/trama/cli/DryRunSimulator.kt
+index ae9759f..48189be 100644
+--- a/app/main/kotlin/run/trama/cli/DryRunSimulator.kt
++++ b/app/main/kotlin/run/trama/cli/DryRunSimulator.kt
+@@ -11,6 +11,7 @@ import run.trama.saga.SagaDefinitionV2
+ import run.trama.saga.StepResult
+ import run.trama.saga.TaskMode
+ import run.trama.saga.TemplateEscaping
++import run.trama.saga.renderBody
+ import run.trama.saga.toAny
+ import run.trama.saga.workflow.DefinitionNormalizer
+ import run.trama.saga.workflow.JoinNode
+@@ -170,7 +171,7 @@ class DryRunSimulator {
+                     val isAsync = node.action.mode == TaskMode.ASYNC
+                     val ctx     = buildContext(definition, payload, stepResults, node.id, isAsync)
+                     val url     = renderer.render(node.action.request.url, ctx, TemplateEscaping.NONE)
+-                    val body    = node.action.request.body?.let { renderer.render(it, ctx, TemplateEscaping.forBody(node.action.request)) }
++                    val body    = renderer.renderBody(node.action.request, ctx)
+                     val verb    = node.action.request.verb.name
+                     val mock    = scenario.steps[node.id] ?: StepMock()
+ 
+diff --git a/app/main/kotlin/run/trama/saga/TemplateRenderer.kt b/app/main/kotlin/run/trama/saga/TemplateRenderer.kt
+index 0ee7a2f..7a926d8 100644
+--- a/app/main/kotlin/run/trama/saga/TemplateRenderer.kt
++++ b/app/main/kotlin/run/trama/saga/TemplateRenderer.kt
+@@ -10,17 +10,15 @@ import java.util.concurrent.ConcurrentHashMap
+ import kotlinx.serialization.json.JsonElement
+ 
+ /**
+- * How `{{ }}` values are escaped, chosen by where the rendered text ends up. `{{{ }}}` (and
+- * `{{& }}`) always write the raw value. Mustache's default HTML escaping is only right for
+- * XML/HTML bodies: in a JSON body it corrupted values (`'` → `&#39;`) and let `\` or newlines
+- * through, producing invalid JSON; in URLs and headers it mangled `&`, `=`, quotes.
++ * Rendering is selected by destination. JSON bodies use typed replacement;
++ * text destinations use Mustache with their corresponding escaping.
+  */
+ enum class TemplateEscaping {
+     /** Literal value (URLs: templates may build whole URLs/paths, so nothing is encoded). */
+     NONE,
+     /** Literal value with CR/LF removed, so a value can never split a header. */
+     HEADER_VALUE,
+-    /** Escaped for inclusion inside a JSON string literal. */
++    /** A complete JSON body, parsed and rendered with typed replacement. */
+     JSON_STRING,
+     /** XML/HTML entity escaping (the previous behavior, correct for XML bodies). */
+     XML,
+@@ -50,8 +48,15 @@ enum class TemplateEscaping {
+ 
+ interface TemplateRenderer {
+     fun render(template: TemplateString, context: Map<String, Any?>, escaping: TemplateEscaping): String
++
++    fun renderTypedJson(template: TemplateString, context: Map<String, Any?>): String =
++        render(template, context, TemplateEscaping.JSON_STRING)
+ }
+ 
++/** JSON bodies always use typed replacement; no request-level mode is available. */
++fun TemplateRenderer.renderBody(call: HttpCall, context: Map<String, Any?>): String? =
++    call.body?.let { render(it, context, TemplateEscaping.forBody(call)) }
++
+ class MustacheTemplateRenderer : TemplateRenderer {
+     /** A compiled template keeps a reference to its factory's encoder, so each escaping has its own. */
+     private class EscapingFactory(private val escaping: TemplateEscaping) : DefaultMustacheFactory() {
+@@ -61,16 +66,21 @@ class MustacheTemplateRenderer : TemplateRenderer {
+             when (escaping) {
+                 TemplateEscaping.NONE -> writer.write(value)
+                 TemplateEscaping.HEADER_VALUE -> value.forEach { if (it != '\r' && it != '\n') writer.write(it.code) }
+-                TemplateEscaping.JSON_STRING -> writeJsonStringContent(value, writer)
++                TemplateEscaping.JSON_STRING -> error("JSON bodies must use typed replacement")
+                 TemplateEscaping.XML -> super.encode(value, writer)
+                 TemplateEscaping.FORM_URLENCODED -> writer.write(URLEncoder.encode(value, Charsets.UTF_8))
+             }
+         }
+     }
+ 
+-    private val factories = TemplateEscaping.entries.associateWith { EscapingFactory(it) }
++    private val factories = TemplateEscaping.entries
++        .filterNot { it == TemplateEscaping.JSON_STRING }
++        .associateWith { EscapingFactory(it) }
+ 
+     override fun render(template: TemplateString, context: Map<String, Any?>, escaping: TemplateEscaping): String {
++        if (escaping == TemplateEscaping.JSON_STRING) {
++            return TypedJsonTemplate.render(template.value, context)
++        }
+         val factory = factories.getValue(escaping)
+         val mustache = factory.templates.computeIfAbsent(template.value) { key ->
+             factory.compile(StringReader(key), "saga-template")
+@@ -79,27 +89,6 @@ class MustacheTemplateRenderer : TemplateRenderer {
+         mustache.execute(writer, context).flush()
+         return writer.toString()
+     }
+-
+-    private companion object {
+-        fun writeJsonStringContent(value: String, writer: Writer) {
+-            for (c in value) {
+-                when (c) {
+-                    '"' -> writer.write("\\\"")
+-                    '\\' -> writer.write("\\\\")
+-                    '\n' -> writer.write("\\n")
+-                    '\r' -> writer.write("\\r")
+-                    '\t' -> writer.write("\\t")
+-                    '\b' -> writer.write("\\b")
+-                    '\u000C' -> writer.write("\\f")
+-                    else -> if (c < ' ' || c == ' ' || c == ' ') {
+-                        writer.write("\\u%04x".format(c.code))
+-                    } else {
+-                        writer.write(c.code)
+-                    }
+-                }
+-            }
+-        }
+-    }
+ }
+ 
+ object TemplateContextBuilder {
+diff --git a/app/main/kotlin/run/trama/saga/TypedJsonTemplate.kt b/app/main/kotlin/run/trama/saga/TypedJsonTemplate.kt
+new file mode 100644
+index 0000000..8e3cda4
+--- /dev/null
++++ b/app/main/kotlin/run/trama/saga/TypedJsonTemplate.kt
+@@ -0,0 +1,73 @@
++package run.trama.saga
++
++import kotlinx.serialization.json.*
++
++/** Typed replacement applies to source placeholders, never recursively to resolved values. */
++internal object TypedJsonTemplate {
++    private val reference = Regex("\\{\\{\\s*([A-Za-z_][A-Za-z0-9_.\\[\\]-]*)\\s*}}")
++    private val path = Regex("[A-Za-z_][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9_-]+|\\[\\d+])*")
++
++    fun render(source: String, context: Map<String, Any?>): String {
++        fun resolve(element: JsonElement, location: String): JsonElement = when (element) {
++            is JsonObject -> if (element.keys == setOf("__trama_literal_json__")) {
++                element.getValue("__trama_literal_json__")
++            } else JsonObject(element.mapValues { (key, value) -> resolve(value, "$location.$key") })
++            is JsonArray -> JsonArray(element.mapIndexed { index, value -> resolve(value, "$location[$index]") })
++            is JsonPrimitive -> if (!element.isString) element else {
++                val text = element.content
++                require(!text.contains("{{{") && !reference.replace(text, "").contains("{{")) {
++                    "JSON body $location: unsupported template expression: $text"
++                }
++                val full = reference.matchEntire(text)
++                if (full != null) jsonValue(lookup(context, full.groupValues[1], location)) else {
++                    val rendered = reference.replace(text) { match ->
++                        when (val value = lookup(context, match.groupValues[1], location)) {
++                            null -> ""
++                            is Map<*, *>, is List<*> -> error("JSON body $location: collection reference must occupy an entire JSON value: ${match.groupValues[1]}")
++                            else -> value.toString()
++                        }
++                    }
++                    JsonPrimitive(rendered)
++                }
++            }
++        }
++        return resolve(Json.parseToJsonElement(source), "$").toString()
++    }
++
++    private fun lookup(context: Map<String, Any?>, reference: String, location: String): Any? {
++        val diagnostic = "JSON body $location: reference '$reference'"
++        require(path.matches(reference)) { "$diagnostic has invalid syntax" }
++        val parts = reference.replace(Regex("\\[(\\d+)]"), ".$1").split('.')
++        var value: Any? = context
++        for (part in parts) {
++            value = when (val parent = value) {
++                null -> error("$diagnostic traverses null at '$part'")
++                is Map<*, *> -> {
++                    require(parent.containsKey(part)) { "$diagnostic is missing key '$part'" }
++                    parent[part]
++                }
++                is List<*> -> {
++                    val index = part.toIntOrNull() ?: error("$diagnostic requires a list index at '$part'")
++                    require(index in parent.indices) { "$diagnostic has an out-of-range index '$part'" }
++                    parent[index]
++                }
++                else -> error("$diagnostic traverses a scalar at '$part'")
++            }
++        }
++        return value
++    }
++
++    private fun jsonValue(value: Any?): JsonElement = when (value) {
++        null -> JsonNull
++        is JsonElement -> value
++        is String -> JsonPrimitive(value)
++        is Boolean -> JsonPrimitive(value)
++        is Number -> JsonPrimitive(value)
++        is Map<*, *> -> JsonObject(value.entries.associate { (key, item) ->
++            require(key is String) { "JSON object keys must be strings" }
++            key to jsonValue(item)
++        })
++        is List<*> -> JsonArray(value.map { jsonValue(it) })
++        else -> error("Unsupported typed JSON value: ${value.javaClass.name}")
++    }
++}
+diff --git a/app/main/kotlin/run/trama/saga/workflow/TaskNodeHandler.kt b/app/main/kotlin/run/trama/saga/workflow/TaskNodeHandler.kt
+index 768f16d..bb35b83 100644
+--- a/app/main/kotlin/run/trama/saga/workflow/TaskNodeHandler.kt
++++ b/app/main/kotlin/run/trama/saga/workflow/TaskNodeHandler.kt
+@@ -20,6 +20,7 @@ import run.trama.saga.TaskMode
+ import run.trama.saga.TemplateContextBuilder
+ import run.trama.saga.TemplateEscaping
+ import run.trama.saga.TemplateRenderer
++import run.trama.saga.renderBody
+ import run.trama.saga.callback.CallbackTokenService
+ import run.trama.saga.callback.CallbackUrlFactory
+ import run.trama.telemetry.Metrics
+@@ -147,8 +148,19 @@ class TaskNodeHandler(
+         context: Map<String, Any?>,
+         execution: SagaExecution,
+     ): TaskHttpResult {
+-        val url = renderer.render(call.url, context, TemplateEscaping.NONE)
+-        val renderedBody = call.body?.let { renderer.render(it, context, TemplateEscaping.forBody(call)) }
++        val (url, renderedBody) = try {
++            renderer.render(call.url, context, TemplateEscaping.NONE) to renderer.renderBody(call, context)
++        } catch (ex: RuntimeException) {
++            return TaskHttpResult(
++                statusCode = null,
++                responseBody = null,
++                nodeResult = NodeResult.NodeFailed(
++                    retryable = false,
++                    reason = FailureReason("node=$nodeName template rendering failed: ${ex.message}"),
++                ),
++                error = ex.message,
++            )
++        }
+         val stepStartedAt = Instant.now()
+         return Tracing.withSpan(
+             tracer = tracer,
+diff --git a/app/main/kotlin/run/trama/saga/workflow/WorkflowExecutor.kt b/app/main/kotlin/run/trama/saga/workflow/WorkflowExecutor.kt
+index 841d9ef..6ab0fb4 100644
+--- a/app/main/kotlin/run/trama/saga/workflow/WorkflowExecutor.kt
++++ b/app/main/kotlin/run/trama/saga/workflow/WorkflowExecutor.kt
+@@ -32,6 +32,7 @@ import run.trama.runtime.JoinResumer
+ import run.trama.saga.TemplateContextBuilder
+ import run.trama.saga.TemplateEscaping
+ import run.trama.saga.TemplateRenderer
++import run.trama.saga.renderBody
+ import run.trama.saga.callback.CallbackTokenService
+ import run.trama.saga.callback.CallbackUrlFactory
+ import run.trama.telemetry.Metrics
+@@ -1088,12 +1089,13 @@ class WorkflowExecutor(
+         call: HttpCall,
+         context: Map<String, Any?>,
+     ): RawCallResult {
+-        val url = renderer.render(call.url, context, TemplateEscaping.NONE)
+         return try {
++            val url = renderer.render(call.url, context, TemplateEscaping.NONE)
++            val renderedBody = renderer.renderBody(call, context)
+             val response = httpClient.client.request(url) {
+                 method = call.verb.toKtorMethod()
+                 call.headers.forEach { (k, v) -> header(k, renderer.render(v, context, TemplateEscaping.HEADER_VALUE)) }
+-                call.body?.let { setBody(renderer.render(it, context, TemplateEscaping.forBody(call))) }
++                renderedBody?.let { setBody(it) }
+             }
+             RawCallResult(
+                 success = response.status.value in call.successStatusCodes,
+diff --git a/app/test/kotlin/io/trama/saga/TemplateRendererTest.kt b/app/test/kotlin/io/trama/saga/TemplateRendererTest.kt
+index 55800fa..ae1221c 100644
+--- a/app/test/kotlin/io/trama/saga/TemplateRendererTest.kt
++++ b/app/test/kotlin/io/trama/saga/TemplateRendererTest.kt
+@@ -23,7 +23,7 @@ class TemplateRendererTest {
+         payload: Map<String, PayloadValue> = emptyMap(),
+     ) = TemplateContextBuilder.build(execution, "current", ExecutionPhase.UP, steps, payload)
+ 
+-    private fun render(t: String, context: Map<String, Any?>, escaping: TemplateEscaping = TemplateEscaping.JSON_STRING) =
++    private fun render(t: String, context: Map<String, Any?>, escaping: TemplateEscaping = TemplateEscaping.NONE) =
+         renderer.render(TemplateString(t), context, escaping)
+ 
+     @Test
+@@ -106,9 +106,9 @@ class TemplateRendererTest {
+     }
+ 
+     @Test
+-    fun `triple mustache is always raw`() {
++    fun `triple mustache is raw for text destinations`() {
+         val payload = mapOf("q" to PayloadValue(JsonPrimitive("a&\"b")))
+-        TemplateEscaping.entries.forEach { escaping ->
++        TemplateEscaping.entries.filterNot { it == TemplateEscaping.JSON_STRING }.forEach { escaping ->
+             assertEquals("a&\"b", render("{{{payload.q}}}", ctx(payload = payload), escaping), "escaping=$escaping")
+         }
+     }
+diff --git a/app/test/kotlin/io/trama/saga/TypedJsonTemplateTest.kt b/app/test/kotlin/io/trama/saga/TypedJsonTemplateTest.kt
+new file mode 100644
+index 0000000..e1bf2aa
+--- /dev/null
++++ b/app/test/kotlin/io/trama/saga/TypedJsonTemplateTest.kt
+@@ -0,0 +1,84 @@
++package run.trama.saga
++
++import kotlin.test.*
++import kotlinx.serialization.json.*
++
++class TypedJsonTemplateTest {
++    private val renderer = MustacheTemplateRenderer()
++    private val context: Map<String, Any?> = mapOf(
++        "payload" to mapOf("number" to 8L, "flag" to false, "nothing" to null,
++            "text" to "O'Brien & \"Co\" \\path\nline", "state" to mapOf("minimum" to 7.5, "samples" to listOf(1, 2)),
++            "untrusted" to "{{payload.number}}"),
++        "nodes" to mapOf("join" to mapOf("response" to mapOf("body" to mapOf("branches" to listOf(
++            mapOf("result" to mapOf("output" to mapOf("price" to 111111))),
++            mapOf("result" to mapOf("output" to mapOf("price" to 2222)))
++        )))))
++    )
++    private fun typed(body: String): JsonElement = Json.parseToJsonElement(
++        renderer.renderTypedJson(TemplateString(body), context)
++    )
++    @Test fun `whole values preserve scalar and collection types including explicit null`() {
++        assertEquals(Json.parseToJsonElement("""{"remaining":8,"flag":false,"null":null,"state":{"minimum":7.5,"samples":[1,2]}}"""),
++            typed("""{"remaining":"{{payload.number}}","flag":"{{payload.flag}}","null":"{{payload.nothing}}","state":"{{payload.state}}"}"""))
++    }
++    @Test fun `dot and bracket indexes resolve real join output envelopes`() {
++        assertEquals(JsonPrimitive(111111), typed(""""{{nodes.join.response.body.branches.0.result.output.price}}""""))
++        assertEquals(JsonPrimitive(2222), typed(""""{{nodes.join.response.body.branches[1].result.output.price}}""""))
++        assertEquals("BTC 111111 / ETH 2222", typed("""{"text":"BTC {{nodes.join.response.body.branches.0.result.output.price}} / ETH {{nodes.join.response.body.branches.1.result.output.price}}"}""").jsonObject["text"]!!.jsonPrimitive.content)
++    }
++    @Test fun `values round trip escaped text without interpreting injected placeholders`() {
++        assertEquals(JsonPrimitive((context["payload"] as Map<*, *>)["text"] as String), typed(""""{{payload.text}}""""))
++        assertEquals(JsonPrimitive("{{payload.number}}"), typed(""""{{payload.untrusted}}""""))
++        assertEquals(Json.parseToJsonElement("""{"future":"{{runtime.callback.url}}"}"""), typed("""{"__trama_literal_json__":{"future":"{{runtime.callback.url}}"}}"""))
++    }
++    @Test fun `JSON bodies always use typed replacement without a mode header`() {
++        val body = """{"remaining":"{{payload.number}}"}"""
++        assertEquals("""{"remaining":8}""", renderer.renderBody(httpCall("http://x", body = body), context))
++        assertEquals("""{"remaining":8}""", renderer.renderBody(httpCall("http://x", body = body,
++            headers = mapOf("Content-Type" to "application/json")), context))
++        assertEquals("""{"remaining":8}""", renderer.render(TemplateString(body), context, TemplateEscaping.JSON_STRING))
++        assertEquals("[8,false,null]", renderer.renderBody(httpCall("http://x", body = """["{{payload.number}}","{{payload.flag}}","{{payload.nothing}}"]"""), context))
++        assertEquals("8", renderer.renderBody(httpCall("http://x", body = """"{{payload.number}}"""",
++            headers = mapOf("content-type" to "application/vnd.test+json")), context))
++    }
++    @Test fun `non JSON bodies keep their declared text escaping`() {
++        assertEquals("<n>8</n>", renderer.renderBody(httpCall("http://x", body = "<n>{{payload.number}}</n>",
++            headers = mapOf("Content-Type" to "application/xml")), context))
++        assertEquals("n=8", renderer.renderBody(httpCall("http://x", body = "n={{payload.number}}",
++            headers = mapOf("Content-Type" to "application/x-www-form-urlencoded")), context))
++        assertEquals("number 8", renderer.renderBody(httpCall("http://x", body = "number {{payload.number}}",
++            headers = mapOf("Content-Type" to "text/plain")), context))
++        assertNull(renderer.renderBody(httpCall("http://x"), context))
++    }
++    @Test fun `missing references and out of range indexes identify the JSON field and full reference`() {
++        for (reference in listOf("payload.missing", "nodes.tick.response.body.output.iteration",
++                "nodes.join.response.body.branches[2].result", "nodes.join.response.body.branches.-1.result")) {
++            val failure = assertFailsWith<IllegalArgumentException> {
++                typed("""{"input":[{"price":"{{$reference}}"}]}""")
++            }
++            assertTrue(failure.message!!.contains(reference))
++            assertTrue(failure.message!!.contains("$.input[0].price"))
++        }
++        val failure = assertFailsWith<IllegalArgumentException> {
++            typed("""{"text":"Price {{payload.missing}}"}""")
++        }
++        assertTrue(failure.message!!.contains("$.text"))
++    }
++    @Test fun `explicit null is a value but traversing it is a reference error`() {
++        assertEquals(JsonNull, typed(""""{{payload.nothing}}""""))
++        val failure = assertFailsWith<IllegalStateException> { typed(""""{{payload.nothing.value}}"""") }
++        assertTrue(failure.message!!.contains("traverses null"))
++    }
++    @Test fun `invalid JSON bodies fail without falling back to text substitution`() {
++        assertFailsWith<IllegalArgumentException> {
++            renderer.renderBody(httpCall("http://x", body = "{invalid",
++                headers = mapOf("Content-Type" to "application/json")), context)
++        }
++    }
++    @Test fun `unsupported expressions and embedded collections fail without stringifying Java objects`() {
++        assertFailsWith<IllegalStateException> { typed(""""state={{payload.state}}"""") }
++        assertFailsWith<IllegalArgumentException> { typed(""""{{#payload}}x{{/payload}}"""") }
++        assertFailsWith<IllegalArgumentException> { typed(""""{{{payload.number}}}"""") }
++        assertFailsWith<IllegalStateException> { typed(""""{{payload.number.foo}}"""") }
++    }
++}
+diff --git a/app/test/kotlin/io/trama/saga/workflow/JsonLogicEvaluatorTest.kt b/app/test/kotlin/io/trama/saga/workflow/JsonLogicEvaluatorTest.kt
+index 22b4ac1..f95be4b 100644
+--- a/app/test/kotlin/io/trama/saga/workflow/JsonLogicEvaluatorTest.kt
++++ b/app/test/kotlin/io/trama/saga/workflow/JsonLogicEvaluatorTest.kt
+@@ -8,6 +8,13 @@ import kotlinx.serialization.json.JsonElement
+ 
+ class JsonLogicEvaluatorTest {
+ 
++    @Test
++    fun `joined list references and nullable counters match generated conditions`() {
++        val data = mapOf("nodes" to mapOf("join" to mapOf("response" to mapOf("body" to mapOf("branches" to listOf(mapOf("result" to mapOf("output" to mapOf("price" to 111111)))))))))
++        assertTrue(JsonLogicEvaluator.evaluateBool(rule("""{">":[{"var":"nodes.join.response.body.branches.0.result.output.price"},100000]}"""), data))
++        assertTrue(JsonLogicEvaluator.evaluateBool(rule("""{"==":[{"var":"missing"},null]}"""), data))
++    }
++
+     private fun rule(raw: String): JsonElement = Json.parseToJsonElement(raw)
+ 
+     @Test
+diff --git a/app/test/kotlin/io/trama/saga/workflow/TaskNodeHandlerTest.kt b/app/test/kotlin/io/trama/saga/workflow/TaskNodeHandlerTest.kt
+index 1b57b16..7b4aed3 100644
+--- a/app/test/kotlin/io/trama/saga/workflow/TaskNodeHandlerTest.kt
++++ b/app/test/kotlin/io/trama/saga/workflow/TaskNodeHandlerTest.kt
+@@ -14,6 +14,8 @@ import kotlin.test.assertNull
+ import kotlin.test.assertTrue
+ import kotlinx.coroutines.runBlocking
+ import kotlinx.serialization.json.JsonPrimitive
++import kotlinx.serialization.json.Json
++import run.trama.saga.StepResult
+ import run.trama.saga.ExecutionState
+ import run.trama.saga.FailureHandling
+ import run.trama.saga.HttpCall
+@@ -47,6 +49,54 @@ class TaskNodeHandlerTest {
+     private fun task(call: HttpCall, mode: TaskMode = TaskMode.SYNC, accepted: Set<Int>? = null, callback: CallbackConfig? = null) =
+         TaskNode(id = "a", action = TaskAction(mode, call, accepted, callback))
+ 
++    @Test
++    fun `invalid typed templates fail before HTTP without retrying transport`() = runBlocking<Unit> {
++        val http = RecordingHttp { error("must not dispatch") }
++        val call = httpCall("http://svc/x", body = """{"value":"{{#payload}}unsupported{{/payload}}"}""",
++            headers = mapOf("Content-Type" to "application/json"))
++        val result = handler(http).execute(task(call), v2Execution(def), emptyMap(), emptyList())
++        val failed = assertIs<NodeResult.NodeFailed>(result.nodeResult)
++        assertFalse(failed.retryable)
++        assertTrue(failed.reason.message.contains("template rendering failed"))
++        assertTrue(http.requests.isEmpty())
++    }
++
++    @Test
++    fun `typed transport sends joined numeric values and continuation state through HTTP`() = runBlocking<Unit> {
++        val http = RecordingHttp { respond("{}", HttpStatusCode.OK) }
++        val call = httpCall("http://ritesmith/trama/execute", body = """{"input":{"price":"{{nodes.join.response.body.branches.0.result.output.price}}","state":"{{payload.state}}","iteration":"{{payload.iteration}}"}}""",
++            headers = mapOf("Content-Type" to "application/json"))
++        val typedPayload = mapOf(
++            "state" to PayloadValue(Json.parseToJsonElement("""{"minimum":7,"samples":[1,2]}""")),
++            "iteration" to PayloadValue(JsonPrimitive(0)),
++        )
++        val steps = listOf(StepResult(0, "join", Json.parseToJsonElement("""{"branches":[{"result":{"output":{"price":111111}}}]}"""), null))
++        val result = handler(http).execute(task(call), v2Execution(def, typedPayload), typedPayload, steps)
++        assertIs<NodeResult.Advanced>(result.nodeResult)
++        assertEquals(Json.parseToJsonElement("""{"input":{"price":111111,"state":{"minimum":7,"samples":[1,2]},"iteration":0}}"""), Json.parseToJsonElement(String(http.requests.single().body.toByteArray())))
++        val compensation = task(httpCall("http://svc/x")).copy(compensation = call)
++        assertIs<NodeResult.Advanced>(handler(http).compensate(compensation, v2Execution(def, typedPayload), typedPayload, steps).nodeResult)
++    }
++
++    @Test
++    fun `missing JSON reference prevents task and compensation HTTP dispatch`() = runBlocking<Unit> {
++        val http = RecordingHttp { error("must not dispatch") }
++        val call = httpCall("http://svc/x", body = """{"input":{"iteration":"{{payload.missing}}"}}""")
++        val executor = handler(http)
++        val results = listOf(
++            executor.execute(task(call), v2Execution(def), emptyMap(), emptyList()),
++            executor.compensate(task(httpCall("http://svc/x")).copy(compensation = call), v2Execution(def), emptyMap(), emptyList()),
++        )
++        for (result in results) {
++            val failure = assertIs<NodeResult.NodeFailed>(result.nodeResult)
++            assertFalse(failure.retryable)
++            assertTrue(failure.reason.message.contains("node=a"))
++            assertTrue(failure.reason.message.contains("$.input.iteration"))
++            assertTrue(failure.reason.message.contains("payload.missing"))
++        }
++        assertTrue(http.requests.isEmpty())
++    }
++
+     @Test
+     fun `url, headers and body are rendered from payload`() = runBlocking<Unit> {
+         val http = RecordingHttp { respond("""{"ok":true}""", HttpStatusCode.OK) }
+diff --git a/app/test/kotlin/io/trama/saga/workflow/WorkflowExecutorBehaviorTest.kt b/app/test/kotlin/io/trama/saga/workflow/WorkflowExecutorBehaviorTest.kt
+index 9701ed6..a8faf17 100644
+--- a/app/test/kotlin/io/trama/saga/workflow/WorkflowExecutorBehaviorTest.kt
++++ b/app/test/kotlin/io/trama/saga/workflow/WorkflowExecutorBehaviorTest.kt
+@@ -12,6 +12,7 @@ import kotlin.test.assertNull
+ import kotlin.test.assertTrue
+ import kotlinx.coroutines.runBlocking
+ import kotlinx.serialization.json.JsonPrimitive
++import kotlinx.serialization.json.Json
+ import run.trama.saga.ExecutionOutcome
+ import run.trama.saga.ExecutionPhase
+ import run.trama.saga.ExecutionState
+@@ -204,6 +205,35 @@ class WorkflowExecutorBehaviorTest {
+ 
+     // ── Success / failure hooks ─────────────────────────────────────────────
+ 
++    @Test
++    fun `completion hooks preserve typed JSON values without mode selection`() = runBlocking<Unit> {
++        val store = RecordingStore()
++        val http = http()
++        val d = def(syncTask("a", "http://svc/a"),
++            onSuccess = httpCall("http://hooks/success", body = """{"count":"{{payload.count}}","state":"{{payload.state}}"}"""))
++        val payload = mapOf(
++            "count" to PayloadValue(JsonPrimitive(3)),
++            "state" to PayloadValue(Json.parseToJsonElement("""{"samples":[1,2]}""")),
++        )
++        testExecutor(store, RecordingEnqueuer(), http.provider).execute(v2Execution(d, payload))
++        assertEquals("SUCCEEDED", store.finalStatus)
++        assertEquals(Json.parseToJsonElement("""{"count":3,"state":{"samples":[1,2]}}"""),
++            Json.parseToJsonElement(String(http.requests.last().body.toByteArray())))
++    }
++
++    @Test
++    fun `missing reference in completion hook records a warning without HTTP dispatch`() = runBlocking<Unit> {
++        val store = RecordingStore()
++        val http = http()
++        val d = def(syncTask("a", "http://svc/a"),
++            onSuccess = httpCall("http://hooks/success", body = """{"value":"{{payload.missing}}"}"""))
++        testExecutor(store, RecordingEnqueuer(), http.provider).execute(v2Execution(d))
++        assertEquals("SUCCEEDED", store.finalStatus)
++        assertEquals(listOf("/a"), http.urls())
++        assertTrue(store.callbackWarnings.single().contains("payload.missing"))
++        assertTrue(store.callbackWarnings.single().contains("$.value"))
++    }
++
+     @Test
+     fun `onSuccessCallback fires with rendered body after the last node`() = runBlocking<Unit> {
+         val store = RecordingStore()
+diff --git a/app/test/kotlin/run/trama/cli/DryRunSimulatorTest.kt b/app/test/kotlin/run/trama/cli/DryRunSimulatorTest.kt
+index bb629e7..41fb28a 100644
+--- a/app/test/kotlin/run/trama/cli/DryRunSimulatorTest.kt
++++ b/app/test/kotlin/run/trama/cli/DryRunSimulatorTest.kt
+@@ -2,6 +2,7 @@ package run.trama.cli
+ 
+ import kotlinx.serialization.json.JsonObject
+ import kotlinx.serialization.json.JsonPrimitive
++import kotlinx.serialization.json.Json
+ import run.trama.saga.FailureHandling
+ import run.trama.saga.HttpCall
+ import run.trama.saga.HttpVerb
+@@ -12,10 +13,40 @@ import run.trama.saga.TaskMode
+ import run.trama.saga.TemplateString
+ import kotlin.test.Test
+ import kotlin.test.assertEquals
++import kotlin.test.assertFailsWith
+ import kotlin.test.assertTrue
+ 
+ class DryRunSimulatorTest {
+ 
++    private fun jsonDefinition(body: String) = SagaDefinitionV2(
++        name = "typed-json",
++        version = "1",
++        failureHandling = FailureHandling.Retry(1, 0),
++        entrypoint = "a",
++        nodes = listOf(NodeDefinition.Task("a", NodeActionDef(TaskMode.SYNC,
++            HttpCall(TemplateString("http://a"), HttpVerb.POST, body = TemplateString(body))))),
++    )
++
++    @Test
++    fun `dry run preserves typed JSON request values without a mode header`() {
++        val scenario = DryRunScenario(payload = Json.parseToJsonElement("""{"count":3,"state":{"samples":[1,2]}}""") as JsonObject)
++        val result = DryRunSimulator().run(
++            jsonDefinition("""{"count":"{{payload.count}}","state":"{{payload.state}}"}"""), scenario,
++        )
++        assertEquals(SimOutcome.SUCCEEDED, result.outcome)
++        val task = result.entries.filterIsInstance<TraceEntry.Task>().single()
++        assertEquals(scenario.payload, Json.parseToJsonElement(task.renderedBody!!))
++    }
++
++    @Test
++    fun `dry run rejects missing JSON references instead of simulating a null value`() {
++        val failure = assertFailsWith<IllegalArgumentException> {
++            DryRunSimulator().run(jsonDefinition("""{"value":"{{payload.missing}}"}"""), DryRunScenario())
++        }
++        assertTrue(failure.message!!.contains("$.value"))
++        assertTrue(failure.message!!.contains("payload.missing"))
++    }
++
+     private fun httpCall(url: String) = HttpCall(TemplateString(url), HttpVerb.POST)
+ 
+     private fun splitJoinDefinition(): SagaDefinitionV2 = SagaDefinitionV2(
+diff --git a/app/test/kotlin/run/trama/e2e/E2EAdvancedFlowTest.kt b/app/test/kotlin/run/trama/e2e/E2EAdvancedFlowTest.kt
+index 7c78465..5e4c877 100644
+--- a/app/test/kotlin/run/trama/e2e/E2EAdvancedFlowTest.kt
++++ b/app/test/kotlin/run/trama/e2e/E2EAdvancedFlowTest.kt
+@@ -5,6 +5,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
+ import kotlinx.coroutines.delay
+ import kotlinx.serialization.json.jsonObject
+ import kotlinx.serialization.json.jsonPrimitive
++import kotlinx.serialization.json.Json
+ import org.junit.jupiter.api.AfterEach
+ import org.junit.jupiter.api.BeforeEach
+ import kotlin.test.Test
+@@ -110,6 +111,35 @@ class E2EAdvancedFlowTest {
+         val body = testJson.parseToJsonElement(b.bodyAsString).jsonObject
+         assertEquals("A-1", body["fromA"]?.jsonPrimitive?.content)
+         assertEquals("7", body["prev"]?.jsonPrimitive?.content)
++        assertEquals(false, body["prev"]?.jsonPrimitive?.isString)
++    }
++
++    @Test
++    fun `task HTTP bodies preserve typed values without a mode header`() = e2eTest {
++        val def = v2DefinitionMap(uniqueName("typed"), listOf(taskNodeMap("a", svc("/step/a"),
++            body = mapOf("quantity" to "{{payload.quantity}}", "flag" to "{{payload.flag}}",
++                "state" to "{{payload.state}}", "optional" to "{{payload.optional}}"))))
++        val id = client.runInline(def, mapOf("quantity" to 8, "flag" to false,
++            "state" to mapOf("samples" to listOf(1, 2)), "optional" to null))
++        assertEquals("SUCCEEDED", awaitSagaTerminal(client, id)["status"]?.jsonPrimitive?.content)
++        val request = wm.requestsTo("/step/a").single()
++        assertEquals(Json.parseToJsonElement("""{"quantity":8,"flag":false,"state":{"samples":[1,2]},"optional":null}"""),
++            Json.parseToJsonElement(request.bodyAsString))
++    }
++
++    @Test
++    fun `missing JSON references fail the workflow without HTTP calls or retries`() = e2eTest {
++        val def = v2DefinitionMap(uniqueName("missing-json"), listOf(taskNodeMap("a", svc("/step/a"),
++            body = mapOf("required" to "{{payload.missing}}"))),
++            failureHandling = mapOf("type" to "retry", "maxAttempts" to 2, "delayMillis" to 10))
++        val id = client.runInline(def)
++        val terminal = awaitSagaTerminal(client, id)
++        assertEquals("FAILED", terminal["status"]?.jsonPrimitive?.content)
++        val diagnostic = terminal["failureDescription"]?.jsonPrimitive?.content ?: ""
++        assertTrue(diagnostic.contains("node=a"), diagnostic)
++        assertTrue(diagnostic.contains("payload.missing"), diagnostic)
++        assertTrue(diagnostic.contains("$.required"), diagnostic)
++        assertTrue(wm.requestsTo("/step/a").isEmpty())
+     }
+ 
+     @Test
+diff --git a/app/test/kotlin/run/trama/e2e/E2ECallbackHooksTest.kt b/app/test/kotlin/run/trama/e2e/E2ECallbackHooksTest.kt
+index b3a2dba..b085ae7 100644
+--- a/app/test/kotlin/run/trama/e2e/E2ECallbackHooksTest.kt
++++ b/app/test/kotlin/run/trama/e2e/E2ECallbackHooksTest.kt
+@@ -2,6 +2,8 @@ package run.trama.e2e
+ 
+ import com.github.tomakehurst.wiremock.WireMockServer
+ import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
++import kotlinx.serialization.json.Json
++import kotlinx.serialization.json.JsonPrimitive
+ import kotlinx.serialization.json.jsonObject
+ import kotlinx.serialization.json.jsonPrimitive
+ import org.junit.jupiter.api.AfterEach
+@@ -37,10 +39,15 @@ class E2ECallbackHooksTest {
+         val def = v2DefinitionMap(
+             uniqueName("hook-ok"),
+             listOf(taskNodeMap("a", svc("/step/a"))),
+-            onSuccess = httpCallMap(svc("/hooks/success"), mapOf("sagaId" to "{{sagaId}}", "order" to "{{payload.orderId}}")),
++            onSuccess = httpCallMap(svc("/hooks/success"), mapOf(
++                "sagaId" to "{{sagaId}}", "order" to "{{payload.orderId}}",
++                "remaining" to "{{payload.remaining}}", "state" to "{{payload.state}}",
++            )),
+             onFailure = httpCallMap(svc("/hooks/failure")),
+         )
+-        val id = client.runInline(def, mapOf("orderId" to "ord-42"))
++        val id = client.runInline(def, mapOf(
++            "orderId" to "ord-42", "remaining" to 3, "state" to mapOf("samples" to listOf(1, 2)),
++        ))
+ 
+         val final = awaitSagaTerminal(client, id)
+         assertEquals("SUCCEEDED", final["status"]?.jsonPrimitive?.content)
+@@ -48,10 +55,33 @@ class E2ECallbackHooksTest {
+         val body = testJson.parseToJsonElement(hook.bodyAsString).jsonObject
+         assertEquals(id, body["sagaId"]?.jsonPrimitive?.content)
+         assertEquals("ord-42", body["order"]?.jsonPrimitive?.content)
++        assertEquals(JsonPrimitive(3), body["remaining"])
++        assertEquals(Json.parseToJsonElement("""{"samples":[1,2]}"""), body["state"])
+         assertEquals(0, wm.requestsTo("/hooks/failure").size)
+         assertNull(final["callbackWarning"]?.jsonPrimitive?.content)
+     }
+ 
++    @Test
++    fun `missing JSON reference in completion hook records warning without dispatch`() = e2eTest {
++        val def = v2DefinitionMap(
++            uniqueName("hook-missing"),
++            listOf(taskNodeMap("a", svc("/step/a"))),
++            onSuccess = httpCallMap(svc("/hooks/success"), mapOf("required" to "{{payload.missing}}")),
++        )
++        val id = client.runInline(def)
++        assertEquals("SUCCEEDED", awaitSagaTerminal(client, id)["status"]?.jsonPrimitive?.content)
++        var warning: String? = null
++        val deadline = System.currentTimeMillis() + 5_000
++        while (warning == null && System.currentTimeMillis() < deadline) {
++            val (_, body) = client.getJson("/workflows/$id")
++            warning = body?.jsonObject?.get("callbackWarning")?.jsonPrimitive?.content
++            if (warning == null) kotlinx.coroutines.delay(50)
++        }
++        assertTrue(warning?.contains("payload.missing") == true, "expected a reference diagnostic, got $warning")
++        assertTrue(warning.contains("$.required"), "expected a JSON field diagnostic, got $warning")
++        assertEquals(0, wm.requestsTo("/hooks/success").size)
++    }
++
+     @Test
+     fun `failure hook fires after compensations complete`() = e2eTest {
+         wm.stubPath("/step/b", 500)
+diff --git a/app/test/kotlin/run/trama/e2e/E2EExecutionQueryTest.kt b/app/test/kotlin/run/trama/e2e/E2EExecutionQueryTest.kt
+index fc9d96d..726b3ba 100644
+--- a/app/test/kotlin/run/trama/e2e/E2EExecutionQueryTest.kt
++++ b/app/test/kotlin/run/trama/e2e/E2EExecutionQueryTest.kt
+@@ -60,12 +60,12 @@ class E2EExecutionQueryTest {
+     fun `list filters by name and status and paginates newest first`() = e2eTest {
+         wm.stubPath("/fail/b", 500)
+         val name = uniqueName("query")
+-        val ok1 = client.runInline(def(name, failing = false))
+-        awaitSagaTerminal(client, ok1)
+-        val failed = client.runInline(def(name, failing = true))
+-        awaitSagaTerminal(client, failed)
+-        val ok2 = client.runInline(def(name, failing = false))
+-        awaitSagaTerminal(client, ok2)
++        val ok1 = client.runInline(def(name, failing = false), mapOf("orderId" to "o-1"))
++        assertEquals("SUCCEEDED", awaitSagaTerminal(client, ok1)["status"]?.jsonPrimitive?.content)
++        val failed = client.runInline(def(name, failing = true), mapOf("orderId" to "o-2"))
++        assertEquals("FAILED", awaitSagaTerminal(client, failed)["status"]?.jsonPrimitive?.content)
++        val ok2 = client.runInline(def(name, failing = false), mapOf("orderId" to "o-3"))
++        assertEquals("SUCCEEDED", awaitSagaTerminal(client, ok2)["status"]?.jsonPrimitive?.content)
+ 
+         fun ids(body: kotlinx.serialization.json.JsonElement?) = (body as JsonArray).map { it.jsonObject["id"]!!.jsonPrimitive.content }
+ 
+diff --git a/docs/typed-json-transport.md b/docs/typed-json-transport.md
+new file mode 100644
+index 0000000..2f8cc05
+--- /dev/null
++++ b/docs/typed-json-transport.md
+@@ -0,0 +1,64 @@
++# Typed JSON workflow transport
++
++JSON bodies always use typed replacement, without a mode header or a legacy text
++rendering path. Task requests, async requests, compensations, completion hooks and
++CLI dry-run simulation share this behavior. URLs and headers remain text templates;
++XML, HTML, form and plain-text bodies retain their appropriate escaping.
++
++A JSON `Content-Type`, including vendor JSON media types, selects JSON rendering.
++Without a content type, bodies beginning with `{` or `[` are also treated as JSON.
++Scalar JSON bodies must declare a JSON content type. The source body must be valid
++JSON before replacement; invalid JSON fails rather than falling back to text.
++
++## Typed references
++
++Given payload `{"count":3,"state":{"minimum":7}}`, this body:
++
++```json
++{"count":"{{payload.count}}","state":"{{payload.state}}"}
++```
++
++is sent as:
++
++```json
++{"count":3,"state":{"minimum":7}}
++```
++
++Entire `{{path}}` string values preserve numbers, booleans, null, arrays and objects.
++Dot and bracket list indexes are supported, including
++`nodes.join.response.body.branches.0.result.output.price`. Partial text
++interpolations accept scalars; collections must occupy an entire JSON value.
++An explicitly present null becomes JSON null as a whole value and empty text
++inside a longer string. An absent reference is an error, not an implicit null.
++
++Missing keys, out-of-range indexes and traversal through null or scalars produce a
++diagnostic containing the JSON field and full reference. Invalid task and
++compensation bodies fail without retry or HTTP dispatch; task diagnostics also
++identify the node. Invalid completion-hook bodies are not sent and record a
++`callbackWarning`, preserving the workflow's existing terminal status.
++
++Only placeholders present in the original body are evaluated. Referenced strings
++containing template syntax remain literal. Sections, lambdas and triple braces are
++rejected. An explicit `{"__trama_literal_json__": VALUE}` envelope preserves VALUE
++without interpolation. This reserved form protects cached plans and future
++placeholders; the receiving service sees VALUE, never the envelope.
++
++## Compatibility and migration
++
++This changes JSON template behavior: numeric and collection references retain their
++JSON types rather than becoming strings or Java collection text. Initialize
++counters and state explicitly in the first-run payload; do not reference a node
++that has not executed yet to manufacture a null initial value. Carry the initialized
++state into continuation payloads. Explicit null leaves remain valid; traversal
++through them does not.
++
++Rewrite JSON bodies relying on Mustache sections or raw substitution as valid JSON
++with structured references. The former `X-Trama-Template-Mode` header is not
++consulted and cannot select legacy rendering. Validate persisted workflows and
++consumer generators before upgrading. Typed object/array workflows may not work
++on an older engine; disabling generation alone does not rewrite persisted flows.
++
++This change has no database migration and includes no production deployment.
++Verification uses local unit, integration and end-to-end tests with controlled HTTP
++servers and temporary PostgreSQL/Redis containers. It makes no LLM calls and does
++not establish generation accuracy or latency.
