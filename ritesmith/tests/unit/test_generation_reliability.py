@@ -183,6 +183,7 @@ async def test_exhausted_script_returns_422_and_retains_failed_attempts(
 ):
     # Every mocked response fails before native validation; exercise Luau routing
     # independently of whether this test runner installs the optional runtime.
+    monkeypatch.setattr("ritesmith.runtime.luau.luau_available", lambda: False)
     monkeypatch.setattr("ritesmith.core.generation.luau_available", lambda: True)
     error = LLMError(
         "script.body: repeated run",
@@ -199,6 +200,7 @@ async def test_exhausted_script_returns_422_and_retains_failed_attempts(
             "/generate/lua",
             json={
                 "intent": "Convert Celsius",
+                "language": "luau",
                 "save": save,
                 "constraints": {"reuse_policy": "force_new"},
             },
