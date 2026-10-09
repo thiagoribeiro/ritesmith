@@ -179,8 +179,11 @@ async def test_provider_preserves_raw_script_candidate_and_location():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("save", [False, True])
 async def test_exhausted_script_returns_422_and_retains_failed_attempts(
-    make_client, db_session, save
+    make_client, db_session, save, monkeypatch
 ):
+    # Every mocked response fails before native validation; exercise Luau routing
+    # independently of whether this test runner installs the optional runtime.
+    monkeypatch.setattr("ritesmith.core.generation.luau_available", lambda: True)
     error = LLMError(
         "script.body: repeated run",
         details={
@@ -365,6 +368,7 @@ async def test_failed_offline_qualification_freezes_both_stages_without_paid_cal
 
 
 def test_notification_limit_counts_failed_attempts_with_twelve_eligible_customers(monkeypatch):
+    pytest.importorskip("lunardyson", reason="Native notification execution requires LunarDyson")
     from benchmarks.generation_latency.reliability import hidden_cases
     from benchmarks.generation_latency.tasks import BY_ID
     from ritesmith.runtime.providers.base import HostFunctionDef
