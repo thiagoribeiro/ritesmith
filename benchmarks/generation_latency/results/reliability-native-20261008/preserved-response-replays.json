@@ -1,0 +1,176 @@
+{
+  "original_evidence": "benchmarks/generation_latency/results/typed-decisions-20261008/spending.json",
+  "original_evidence_sha256": "fa80c7bfb70c1d8d541b0b3bf9fa048836cc6a69b07275b95db7d8a37865daa0",
+  "provider_calls": 17,
+  "retained_responses": 16,
+  "calls": [
+    {
+      "call": 0,
+      "method": "proposal_workflow",
+      "cell": "0:wf_week:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "e796d167feec91f492e6593cd8c07bdf107a4a85ffde6dae5628017ae6c4dfcd",
+      "local_structure": "rejected",
+      "diagnostic": "1 validation error for CompactWorkflow\nnodes\n  Input should be a valid list [type=list_type, input_value={'chunk_1': {'kind': 'rep...tate'}}, 'next': 'end'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/list_type"
+    },
+    {
+      "call": 1,
+      "method": "proposal_workflow",
+      "cell": "0:wf_week:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "d5a05f44581bbae6c1ff09c51ac2ee6a4e3063a5d098d6d48cadefbdae4a2772",
+      "local_structure": "rejected",
+      "diagnostic": "1 validation error for WorkflowPlan\nsteps.0.steps.2\n  Value error, Node 'condition'.when: unsupported JSONLogic operator 'greater' [type=value_error, input_value={'kind': 'condition', 'wh...: []}], 'otherwise': []}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+    },
+    {
+      "call": 2,
+      "method": "workflow_gen",
+      "cell": "1:wf_parallel_prices:C",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "2d5c061b411fa5159f976e3b01d490f0de7e5b3e6a810ce2dd578fb7cd752adf",
+      "diagnostic": "Local graph checks passed; native template transport remains unqualified.",
+      "local_structure": "passed"
+    },
+    {
+      "call": 3,
+      "method": "luau_gen",
+      "cell": "2:t1_celsius_to_fahrenheit:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "f4e0d1272ed7b7dd4ff15517daaae63bb8fd0180a575bd4605675c4b9dc431b9",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 4,
+      "method": "luau_gen",
+      "cell": "2:t1_celsius_to_fahrenheit:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "34336e1abe2f59fea0af596bb5c410b7c69f7c50ea38c273eb11a0389e0f06f4",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 5,
+      "method": "proposal_workflow",
+      "cell": "3:t3_notify_inactive:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "da9de30308941f0f8a4e5cc771fc834c3e1e3644a6792a0e0461dbb2ab9ea8b1",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 6,
+      "method": "test_gen",
+      "cell": "3:t3_notify_inactive:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "57af7327b78d65da9e79c5ab9b5347da0541ddf757a635c22af847a7cf268931",
+      "diagnostic": "Decoded locally; complete functional verification not established by parsing.",
+      "local_structure": "passed"
+    },
+    {
+      "call": 7,
+      "method": "proposal_workflow",
+      "cell": "3:t3_notify_inactive:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "d955b2ddfeb21abc477f6489c2154c28b3429359657a7cd601aeb3dbbd81a142",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 8,
+      "method": "proposal_workflow",
+      "cell": "4:wf_week:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "8debd4aade4c221d549f4c46f4d24d66628109df36f52e46d82bb545c08e347c",
+      "local_structure": "rejected",
+      "diagnostic": "1 validation error for CompactWorkflow\nnodes\n  Input should be a valid list [type=list_type, input_value={'check_price': {'type': ... USD'}}, 'next': 'end'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/list_type"
+    },
+    {
+      "call": 9,
+      "method": "proposal_workflow",
+      "cell": "4:wf_week:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "28902e90c4dfb4ce86df06482c5383c0a8e2f8df41f63aec218bd423d5e69832",
+      "local_structure": "rejected",
+      "diagnostic": "Node price_check: condition path 'fetch_price.price' needs a structured {ref,path} reference"
+    },
+    {
+      "call": 10,
+      "method": "workflow_gen",
+      "cell": "5:wf_parallel_prices:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "88cef5d2d6151f564b3867d1e33e10d8c6d7101fe1e85dbef3feb03ca4d66e7f",
+      "local_structure": "rejected",
+      "diagnostic": "Node 'send_telegram': references branch node 'fetch_btc', whose output is not visible outside its branch \u2014 read it from nodes.<join>.response.body.branches[].result instead; Node 'send_telegram': references branch node 'fetch_eth', whose output is not visible outside its branch \u2014 read it from nodes.<join>.response.body.branches[].result instead"
+    },
+    {
+      "call": 11,
+      "method": "workflow_repair",
+      "cell": "5:wf_parallel_prices:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "4a8f76bae8f174b5b034ca6ac4bf19cffeefe5a5315c30cdec976b48eda642d4",
+      "diagnostic": "Local graph checks passed; native template transport remains unqualified.",
+      "local_structure": "passed"
+    },
+    {
+      "call": 12,
+      "method": "luau_gen",
+      "cell": "6:t1_celsius_to_fahrenheit:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "5717324ecd1301c065057cf0465c1ab95ca56da25559da5014182b6f9a548648",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 13,
+      "method": "luau_gen",
+      "cell": "6:t1_celsius_to_fahrenheit:A",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "59d31bd242321936e2e3748e0956809f09d7b8a3c1713efad03e5e3fc49f4c29",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 14,
+      "method": "proposal_workflow",
+      "cell": "7:t3_notify_inactive:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "99c07946736075887318a2bc883fc902c62944c481f32e5b567fc9e2252b20c0",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    },
+    {
+      "call": 15,
+      "method": "test_gen",
+      "cell": "7:t3_notify_inactive:B",
+      "original_status": "unknown",
+      "functional_valid": null,
+      "diagnostic": "Original call has no response/known usage; cannot replay."
+    },
+    {
+      "call": 16,
+      "method": "proposal_workflow",
+      "cell": "7:t3_notify_inactive:B",
+      "original_status": "settled",
+      "functional_valid": null,
+      "response_sha256": "22eeeba91d80edd2f2b24246308c94d681cd6df18413c5a0fd9a88b8408df6e0",
+      "local_structure": "rejected",
+      "diagnostic": "script.body: luau_body must not redeclare run; return statements only, or put the complete function in the script string"
+    }
+  ]
+}

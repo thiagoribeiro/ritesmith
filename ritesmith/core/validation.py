@@ -51,7 +51,6 @@ _FORBIDDEN_PATTERNS = [
     (re.compile(r"\bnewproxy\s*\("), "função 'newproxy' é proibida"),
 ]
 
-_RUN_SIGNATURE = re.compile(r"\bfunction\s+run\s*\(")
 _HOST_FN_CALL = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s*\(")
 _LUAU_TOOL_REF = re.compile(r"\btools\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)")
 
@@ -92,7 +91,7 @@ class ValidationPipeline:
             checks.extend(self._check_schema_presence(content))
             checks.extend(self._check_allowed_primitives(content, profile))
 
-            if test_cases:
+            if test_cases and not any(c.status == "failed" for c in checks):
                 exec_checks = await self._check_test_execution(content, test_cases, profile)
                 checks.extend(exec_checks)
 
@@ -101,11 +100,12 @@ class ValidationPipeline:
             checks.extend(self._check_forbidden_tokens(content, extra=_LUAU_EXTRA_FORBIDDEN))
             checks.extend(self._check_size(content, constraints, factor=_LUAU_SIZE_FACTOR))
             checks.extend(self._check_schema_presence(content))
-            checks.extend(
-                await self._check_luau_session(
-                    content, profile, input_schema, output_schema, test_cases or []
+            if not any(c.status == "failed" for c in checks):
+                checks.extend(
+                    await self._check_luau_session(
+                        content, profile, input_schema, output_schema, test_cases or []
+                    )
                 )
-            )
 
         elif artifact_type in ("trama_workflow", "workflow_template"):
             checks.extend(self._check_json_syntax(content))
@@ -309,12 +309,14 @@ class ValidationPipeline:
         return [ValidationCheck(name="size_limit", status="passed")]
 
     def _check_schema_presence(self, content: str) -> list[ValidationCheck]:
-        if not _RUN_SIGNATURE.search(content):
+        from ritesmith.llm.script_candidate import run_declarations
+
+        if run_declarations(content) != 1:
             return [
                 ValidationCheck(
                     name="run_function",
                     status="failed",
-                    message="Script deve definir exatamente uma função 'run(input, ...)'",
+                    message="script: define exactly one run(input, ...) function",
                 )
             ]
         return [ValidationCheck(name="run_function", status="passed")]

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.SagaRepositoryStoreTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:27.956Z" hostname="c3po" time="0.141">
+  <properties/>
+  <testcase name="delegates to repository()" classname="run.trama.saga.SagaRepositoryStoreTest" time="0.141"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

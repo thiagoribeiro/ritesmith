@@ -193,7 +193,7 @@ async def test_strict_only_errors_are_warnings_not_blocking():
 async def test_nonstrict_type_errors_always_block():
     result = await _validate("function run() return { t = os.time() } end")
     assert not result.valid
-    assert any("Unknown global 'os'" in e for e in result.errors)
+    assert any(c.name == "forbidden_tokens" and c.status == "failed" for c in result.checks)
 
 
 async def test_tool_outside_profile_is_a_type_error():
@@ -324,6 +324,7 @@ async def test_require_strict_typecheck_fails_generation(db_session):
     # generation failure: validated but not accepted, so nothing is persisted.
     from sqlalchemy import func, select
 
+    from ritesmith.core.exceptions import GenerationFailedError
     from ritesmith.core.generation import GenerationService
     from ritesmith.registry.models import Artifact as ArtifactORM
     from ritesmith.schemas.generation import GenerateScriptRequest
@@ -339,12 +340,9 @@ async def test_require_strict_typecheck_fails_generation(db_session):
         output_schema=OUTPUT_SCHEMA,
         constraints={"reuse_policy": "force_new"},
     )
-    resp = await svc.generate_lua(req)
-    assert resp.validation.valid
-    assert resp.artifact.metadata["certification"] == "nonstrict"
-    count = await db_session.scalar(
-        select(func.count()).select_from(ArtifactORM).where(ArtifactORM.name == resp.artifact.name)
-    )
+    with pytest.raises(GenerationFailedError, match="No acceptable script"):
+        await svc.generate_lua(req)
+    count = await db_session.scalar(select(func.count()).select_from(ArtifactORM))
     assert count == 0
 
 

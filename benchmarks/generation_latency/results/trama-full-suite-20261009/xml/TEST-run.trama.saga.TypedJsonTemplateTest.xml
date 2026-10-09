@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.TypedJsonTemplateTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:16.416Z" hostname="c3po" time="0.01">
+  <properties/>
+  <testcase name="values round trip escaped text without interpreting injected placeholders()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.002"/>
+  <testcase name="unsupported expressions and embedded collections fail without stringifying Java objects()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.003"/>
+  <testcase name="legacy mode remains unchanged and typed mode requires explicit version and JSON()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.002"/>
+  <testcase name="whole values preserve scalar and collection types including missing self references()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <testcase name="dot and bracket indexes resolve real join output envelopes()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

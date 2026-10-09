@@ -1,0 +1,320 @@
+{
+  "artifacts": [
+    {
+      "name": "celsius_to_fahrenheit",
+      "tags": [
+        "conversion",
+        "temperature"
+      ],
+      "status": "draft",
+      "created_at": "2026-10-09T09:53:49.591672+00:00",
+      "expires_at": "2026-11-08T09:53:54.634619+00:00",
+      "updated_at": "2026-10-09T09:53:49.591672+00:00",
+      "artifact_id": "art_01M4G1AREA6H7EQBW3NGH28SQ7",
+      "description": "Convert a temperature from Celsius to Fahrenheit.",
+      "content_hash": "55e0289b81c5fba027f69d244e72a31c2c0ccd2d7c6609fe835bc55eab291cf6",
+      "artifact_type": "luau_script",
+      "search_vector": "'celsius':1A,15B,22B 'convers':25C 'convert':10B,18B 'fahrenheit':3A,17B,24B 'need':8B 'numer':12B 'temperatur':13B,20B,26C 'use':4B",
+      "current_version": 1,
+      "usage_description": "Use this when you need to convert a numeric temperature in Celsius to Fahrenheit.",
+      "generated_by_plan_id": null
+    }
+  ],
+  "artifact_versions": [
+    {
+      "content": "local function celsius_to_fahrenheit(c: number): number\n    -- Convert Celsius to Fahrenheit using the exact formula\n    return c * 9 / 5 + 32\nend\nfunction run(input: Input, context: Context): Output\nlocal f = celsius_to_fahrenheit(input.celsius)\nreturn { fahrenheit = f }\nend\n",
+      "version": 1,
+      "metadata": {
+        "certification": "strict",
+        "runtime_profile": "transform_only"
+      },
+      "created_at": "2026-10-09T09:53:49.591672+00:00",
+      "risk_level": "low",
+      "artifact_id": "art_01M4G1AREA6H7EQBW3NGH28SQ7",
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "celsius"
+        ],
+        "properties": {
+          "celsius": {
+            "type": "number"
+          }
+        }
+      },
+      "side_effects": null,
+      "deterministic": true,
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "fahrenheit"
+        ],
+        "properties": {
+          "fahrenheit": {
+            "type": "number"
+          }
+        }
+      },
+      "requires_approval": false,
+      "allowed_primitives": null
+    }
+  ],
+  "generation_jobs": [
+    {
+      "goal": "Generate a reusable Luau function: Convert a temperature from Celsius to Fahrenheit.",
+      "status": "completed",
+      "plan_id": null,
+      "attempts": 1,
+      "created_at": "2026-10-09T09:53:49.606656+00:00",
+      "constraints": {
+        "max_lines": 60,
+        "reuse_policy": "force_new",
+        "allow_network": true,
+        "max_http_calls": 2,
+        "runtime_profile": "transform_only",
+        "allow_filesystem": false,
+        "allowed_host_functions": null
+      },
+      "finished_at": "2026-10-09T09:53:54.633864+00:00",
+      "target_type": "luau_script",
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "celsius"
+        ],
+        "properties": {
+          "celsius": {
+            "type": "number"
+          }
+        }
+      },
+      "generation_id": "gen_01M4G1AKH65HC4MJR7M3JBH0NM",
+      "output_schema": {
+        "type": "object",
+        "required": [
+          "fahrenheit"
+        ],
+        "properties": {
+          "fahrenheit": {
+            "type": "number"
+          }
+        }
+      },
+      "final_artifact_id": "art_01M4G1AREA6H7EQBW3NGH28SQ7"
+    },
+    {
+      "goal": "Generate a reusable Luau function: List customers of a segment and send the message 'Hi <name>, we miss you!' to every customer with last_seen_days >= inactive_days (user = customer id). Return notified (ids whose send succeeded, in list order), failed (ids whose send failed) and count (= number notified). If listing fails, return {error, message} from the tool. tools.message.send may be called at most 10 times per execution.",
+      "status": "failed",
+      "plan_id": null,
+      "attempts": 1,
+      "created_at": "2026-10-09T09:54:00.059554+00:00",
+      "constraints": {
+        "max_lines": 60,
+        "reuse_policy": "force_new",
+        "allow_network": true,
+        "max_http_calls": 2,
+        "runtime_profile": "notification",
+        "allow_filesystem": false,
+        "allowed_host_functions": null
+      },
+      "finished_at": "2026-10-09T09:54:02.436124+00:00",
+      "target_type": "luau_script",
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "segment",
+          "inactive_days"
+        ],
+        "properties": {
+          "segment": {
+            "type": "string"
+          },
+          "inactive_days": {
+            "type": "integer"
+          }
+        }
+      },
+      "generation_id": "gen_01M4G1AXQVQA0HDNFBE6CXS430",
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "message": {
+            "type": "string"
+          },
+          "notified": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "final_artifact_id": null
+    }
+  ],
+  "generation_attempts": [
+    {
+      "error": null,
+      "content": "local function celsius_to_fahrenheit(c: number): number\n    -- Convert Celsius to Fahrenheit using the exact formula\n    return c * 9 / 5 + 32\nend\nfunction run(input: Input, context: Context): Output\nlocal f = celsius_to_fahrenheit(input.celsius)\nreturn { fahrenheit = f }\nend\n",
+      "created_at": "2026-10-09T09:53:54.614423+00:00",
+      "generation_id": "gen_01M4G1AKH65HC4MJR7M3JBH0NM",
+      "attempt_number": 1,
+      "validation_result": {
+        "valid": true,
+        "checks": [
+          {
+            "name": "tools_in_profile",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "forbidden_tokens",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "size_limit",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "run_function",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "syntax",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "type_check",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "strict_type_check",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_0",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_1",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_2",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_3",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_4",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_5",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_6",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "test_case_7",
+            "status": "passed",
+            "message": null
+          }
+        ],
+        "errors": [],
+        "warnings": [],
+        "risk_level": null
+      }
+    },
+    {
+      "error": null,
+      "content": "local function send_message(userId: string, name: string): { ok: boolean, id: string?, error: string?, message: string? }\n\tlocal text = \"Hi \" .. name .. \", we miss you!\"\n\tlocal r = tools.message.send({ user = userId, text = text })\n\tif r.error then\n\t\treturn { ok = false, error = r.error, message = r.message }\n\tend\n\treturn { ok = true, id = r.message_id }\nend\nfunction run(input: Input, context: Context): Output\nlocal listed = tools.crm.list({ segment = input.segment })\nif listed.error then\n\treturn { error = listed.error, message = listed.message }\nend\n\nlocal notified = {}\nlocal failed = {}\nlocal sent_count = 0\nlocal eligible_count = 0\n\nfor _, customer in listed.customers do\n\tif customer.last_seen_days >= input.inactive_days then\n\t\teligible_count += 1\n\t\tif sent_count >= 10 then\n\t\t\treturn { error = \"limit_exceeded\", message = \"message.send may be called at most 10 times per execution\" }\n\t\tend\n\n\t\tlocal result = send_message(customer.id, customer.name)\n\t\tif result.ok then\n\t\t\ttable.insert(notified, customer.id)\n\t\t\tsent_count += 1\n\t\telse\n\t\t\ttable.insert(failed, customer.id)\n\t\tend\n\tend\nend\n\nreturn { notified = notified, failed = failed, count = #notified }\nend\n",
+      "created_at": "2026-10-09T09:54:02.425103+00:00",
+      "generation_id": "gen_01M4G1AXQVQA0HDNFBE6CXS430",
+      "attempt_number": 1,
+      "validation_result": {
+        "valid": false,
+        "checks": [
+          {
+            "name": "tools_in_profile",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "forbidden_tokens",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "size_limit",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "run_function",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "syntax",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "type_check",
+            "status": "passed",
+            "message": null
+          },
+          {
+            "name": "strict_type_check",
+            "status": "warning",
+            "message": "Strict-mode type errors: line 4: Key 'error' is missing from '{ message_id: string, ok: true }' in the type 'ToolError | { message_id: string, ok: true }'; line 5: Expected this to be 'string?', but got '~(false?)'; line 5: Key 'message' is missing from '{ read error: ~(false?), message_id: string, ok: true }' in the type 'ToolError | { read error: ~(false?), message_id: string, ok: true }'; line 11: Key 'error' is missing from '{ customers: {CustomerRef}, ok: true }' in the type 'ToolError | { customers: {CustomerRef}, ok: true }'; line 12: Expected this to be\n\t'{ count: number, failed: {string}, notified: {string} } | { error: string, message: string }'\nbut got\n\t'{ error: ~(false?), message: string }'; line 12: Key 'message' is missing from '{ customers: {CustomerRef}, read error: ~(false?), ok: true }' in the type 'ToolError | { customers: {CustomerRef}, read error: ~(false?), ok: true }'"
+          },
+          {
+            "name": "test_spec_fixture",
+            "status": "failed",
+            "message": "None is not of type 'string'\n\nFailed validating 'type' in schema['properties']['message']:\n    {'type': 'string'}\n\nOn instance['message']:\n    None"
+          }
+        ],
+        "errors": [
+          "None is not of type 'string'\n\nFailed validating 'type' in schema['properties']['message']:\n    {'type': 'string'}\n\nOn instance['message']:\n    None"
+        ],
+        "warnings": [
+          "Strict-mode type errors: line 4: Key 'error' is missing from '{ message_id: string, ok: true }' in the type 'ToolError | { message_id: string, ok: true }'; line 5: Expected this to be 'string?', but got '~(false?)'; line 5: Key 'message' is missing from '{ read error: ~(false?), message_id: string, ok: true }' in the type 'ToolError | { read error: ~(false?), message_id: string, ok: true }'; line 11: Key 'error' is missing from '{ customers: {CustomerRef}, ok: true }' in the type 'ToolError | { customers: {CustomerRef}, ok: true }'; line 12: Expected this to be\n\t'{ count: number, failed: {string}, notified: {string} } | { error: string, message: string }'\nbut got\n\t'{ error: ~(false?), message: string }'; line 12: Key 'message' is missing from '{ customers: {CustomerRef}, read error: ~(false?), ok: true }' in the type 'ToolError | { customers: {CustomerRef}, read error: ~(false?), ok: true }'"
+        ],
+        "risk_level": null
+      }
+    }
+  ],
+  "plans": [],
+  "policy_decisions": []
+}

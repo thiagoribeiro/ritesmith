@@ -1,0 +1,168 @@
+[
+  {
+    "calls": [
+      {
+        "model": "gpt-5-mini",
+        "resolved_model": "gpt-5-mini-2025-08-07",
+        "reasoning_effort": "low",
+        "prompt_tokens": 1437,
+        "completion_tokens": 303,
+        "total_tokens": 1740,
+        "duration_s": 4.754919960978441,
+        "reasoning_tokens": 128,
+        "cached_tokens": 0,
+        "api_attempts": 1,
+        "method": "luau_gen",
+        "fallback": false,
+        "examples": [],
+        "usage_known": true,
+        "prompt_version": "generation-v4",
+        "contract_version": "",
+        "format_version": "luau-body-v2",
+        "variant": "A",
+        "response_schema_version": "",
+        "constructor_version": "",
+        "response_mode": "json_object",
+        "schema_fallback_reason": null,
+        "locally_validated_json": false,
+        "representation": "",
+        "representation_fallback": false,
+        "operation_api_attempts": 1
+      }
+    ],
+    "stages": [
+      {
+        "stage": "recall",
+        "artifact_type": "luau_script",
+        "duration_s": 0.06777123705251142
+      },
+      {
+        "stage": "validation",
+        "artifact_type": "luau_script",
+        "duration_s": 0.19027013203594834
+      },
+      {
+        "stage": "persist",
+        "artifact_type": "luau_script",
+        "duration_s": 0.013600456004496664
+      }
+    ],
+    "fallback": false,
+    "diagnostics": [],
+    "estimated_usd": 0.00096525,
+    "price_version": "baseline-2026-10-08",
+    "client_tests": true,
+    "dependencies": false,
+    "entrypoint": "/generate/lua",
+    "response_log_prefix": "INFO:ritesmith.api.app:generation response duration=5.402s outcome=valid_over_5s"
+  },
+  {
+    "calls": [
+      {
+        "model": "gpt-4.1-nano",
+        "resolved_model": "gpt-4.1-nano-2025-04-14",
+        "reasoning_effort": null,
+        "prompt_tokens": 1737,
+        "completion_tokens": 306,
+        "total_tokens": 2043,
+        "duration_s": 3.041951232997235,
+        "reasoning_tokens": 0,
+        "cached_tokens": 0,
+        "api_attempts": 1,
+        "method": "test_gen",
+        "fallback": false,
+        "examples": [],
+        "usage_known": true,
+        "prompt_version": "generation-v4",
+        "contract_version": "",
+        "format_version": "",
+        "variant": "A",
+        "response_schema_version": "",
+        "constructor_version": "",
+        "response_mode": "json_object",
+        "schema_fallback_reason": null,
+        "locally_validated_json": false,
+        "representation": "",
+        "representation_fallback": false,
+        "operation_api_attempts": 1
+      },
+      {
+        "model": "gpt-5.4-mini",
+        "resolved_model": "gpt-5.4-mini-2026-03-17",
+        "reasoning_effort": "low",
+        "prompt_tokens": 3778,
+        "completion_tokens": 907,
+        "total_tokens": 4685,
+        "duration_s": 5.136638764990494,
+        "reasoning_tokens": 406,
+        "cached_tokens": 0,
+        "api_attempts": 1,
+        "method": "proposal_workflow",
+        "fallback": false,
+        "examples": [
+          "linear",
+          "bounded_polling",
+          "fixed_samples"
+        ],
+        "usage_known": true,
+        "prompt_version": "generation-v4",
+        "contract_version": "159fa31ee8a206555c036d51aa1201e6c7166a61ec28f48c2c2cc8855543d7fb",
+        "format_version": "workflow-plan-v1",
+        "variant": "A",
+        "response_schema_version": "",
+        "constructor_version": "",
+        "response_mode": "json_object",
+        "schema_fallback_reason": null,
+        "locally_validated_json": false,
+        "representation": "",
+        "representation_fallback": false,
+        "operation_api_attempts": 1
+      }
+    ],
+    "stages": [
+      {
+        "stage": "recall",
+        "artifact_type": "mixed",
+        "duration_s": 0.021726245991885662
+      },
+      {
+        "stage": "proposal",
+        "artifact_type": "mixed",
+        "duration_s": 5.182792214967776
+      },
+      {
+        "stage": "validation",
+        "artifact_type": "luau_script",
+        "duration_s": 2.3390124040306546
+      },
+      {
+        "stage": "persist",
+        "artifact_type": "luau_script",
+        "duration_s": 0.027781828015577048
+      }
+    ],
+    "fallback": false,
+    "diagnostics": [
+      {
+        "category": "type",
+        "message": "Strict-mode type errors: line 4: Key 'error' is missing from '{ message_id: string, ok: true }' in the type 'ToolError | { message_id: string, ok: true }'; line 5: Expected this to be 'string?', but got '~(false?)'; line 5: Key 'message' is missing from '{ read error: ~(false?), message_id: string, ok: true }' in the type 'ToolError | { read error: ~(false?), message_id: string, ok: true }'; line 11: Key 'error' is missing from '{ customers: {CustomerRef}, ok: true }' in the type 'ToolError | { customers: {CustomerRef}, ok: true }'; line 12: Expected this to be\n\t'{ count: number, failed: {string}, notified: {string} } | { error: string, message: string }'\nbut got\n\t'{ error: ~(false?), message: string }'; line 12: Key 'message' is missing from '{ customers: {CustomerRef}, read error: ~(false?), ok: true }' in the type 'ToolError | { customers: {CustomerRef}, read error: ~(false?), ok: true }'",
+        "location": "strict_type_check",
+        "cause": null,
+        "repairable": true
+      },
+      {
+        "category": "fixture",
+        "message": "None is not of type 'string'\n\nFailed validating 'type' in schema['properties']['message']:\n    {'type': 'string'}\n\nOn instance['message']:\n    None",
+        "location": "test_spec_fixture",
+        "cause": null,
+        "repairable": false
+      }
+    ],
+    "estimated_usd": 0.0072111,
+    "price_version": "baseline-2026-10-08",
+    "client_tests": false,
+    "dependencies": false,
+    "entrypoint": "/generate",
+    "response_log_prefix": "INFO:ritesmith.api.app:generation response duration=7.688s outcome=invalid"
+  }
+]

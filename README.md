@@ -738,7 +738,21 @@ See [generation improvements](docs/generation-improvements.md) for independent
 fixture tests, bounded recovery, optional Luau body assembly and semantic Trama
 plans. [The staging overlay](deploy/generation-staging.env.example) enables the
 new formats on an isolated instance. Performance/cost targets remain unqualified;
-no new paid benchmark campaign or production promotion accompanies these changes.
+historical benchmark evidence remains separate from subsequent improvements.
+
+The optional [typed decisions experiment](docs/typed-decisions-validation.md)
+adds schema-constrained responses and parameterized Trama constructors, disabled
+by default, with a frozen comparison capped at twelve requests and US$1.
+The [comparison report](benchmarks/generation_latency/results/typed-decisions-20261008/RESULTS.md)
+records its early accounting stop, observed failures and experimental recommendation.
+
+The subsequent [reliability corrections](docs/generation-reliability-validation.md)
+reject unusable artifacts with diagnostics and preserve strict certification.
+[The Trama integration](docs/trama-typed-json-integration.md) uses mandatory typed
+JSON with explicit initial state and retained continuation work, requiring the
+compatible engine revision. The [final offline review](benchmarks/generation_latency/results/integration-review-20261009/RESULTS.md)
+records 992 passing tests; it does not establish LLM accuracy or latency/cost targets.
+Production remains on the restored image; merging these changes does not deploy them.
 
 For the owner's direct r2d2 update and the executable image/configuration rollback,
 see [generation deployment on r2d2](docs/generation-deployment-r2d2.md). The rollback

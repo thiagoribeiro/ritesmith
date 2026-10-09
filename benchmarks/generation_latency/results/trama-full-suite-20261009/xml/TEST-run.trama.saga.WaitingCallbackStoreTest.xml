@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.WaitingCallbackStoreTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:16.427Z" hostname="c3po" time="0.021">
+  <properties/>
+  <testcase name="waiting callback round-trips through real Postgres()" classname="run.trama.saga.WaitingCallbackStoreTest" time="0.021"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

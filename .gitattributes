@@ -1,0 +1,5 @@
+# Preserve archived verification output byte-for-byte, including meaningful blank values.
+benchmarks/generation_latency/results/**/*.log -whitespace
+benchmarks/generation_latency/results/**/*.xml -whitespace
+benchmarks/generation_latency/results/**/*.patch -whitespace
+benchmarks/generation_latency/results/**/*.txt -whitespace

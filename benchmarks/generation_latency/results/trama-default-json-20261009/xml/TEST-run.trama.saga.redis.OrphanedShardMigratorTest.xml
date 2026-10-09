@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.redis.OrphanedShardMigratorTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:34.040Z" hostname="c3po" time="0.041">
+  <properties/>
+  <testcase name="queued work moves to the shard it maps to under the new count, keeping its due time()" classname="run.trama.saga.redis.OrphanedShardMigratorTest" time="0.029"/>
+  <testcase name="live claims in a removed shard are left to their owner until their lease expires()" classname="run.trama.saga.redis.OrphanedShardMigratorTest" time="0.012"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-09T11:45:34.054003513-03:00","@version":"1","message":"moved queued work out of a removed shard","logger_name":"run.trama.saga.redis.OrphanedShardMigrator","thread_name":"Test worker @coroutine#9099","level":"INFO","level_value":20000,"shard":504,"inflight":false,"items":1}
+{"@timestamp":"2026-10-09T11:45:34.056567335-03:00","@version":"1","message":"moved queued work out of a removed shard","logger_name":"run.trama.saga.redis.OrphanedShardMigrator","thread_name":"Test worker @coroutine#9099","level":"INFO","level_value":20000,"shard":487,"inflight":false,"items":1}
+{"@timestamp":"2026-10-09T11:45:34.059313181-03:00","@version":"1","message":"moved queued work out of a removed shard","logger_name":"run.trama.saga.redis.OrphanedShardMigrator","thread_name":"Test worker @coroutine#9099","level":"INFO","level_value":20000,"shard":419,"inflight":false,"items":1}
+{"@timestamp":"2026-10-09T11:45:34.061818563-03:00","@version":"1","message":"moved queued work out of a removed shard","logger_name":"run.trama.saga.redis.OrphanedShardMigrator","thread_name":"Test worker @coroutine#9099","level":"INFO","level_value":20000,"shard":725,"inflight":false,"items":1}
+{"@timestamp":"2026-10-09T11:45:34.07858133-03:00","@version":"1","message":"moved queued work out of a removed shard","logger_name":"run.trama.saga.redis.OrphanedShardMigrator","thread_name":"Test worker @coroutine#9100","level":"INFO","level_value":20000,"shard":205,"inflight":true,"items":1}
+{"@timestamp":"2026-10-09T11:45:34.07957328-03:00","@version":"1","message":"moved queued work out of a removed shard","logger_name":"run.trama.saga.redis.OrphanedShardMigrator","thread_name":"Test worker @coroutine#9100","level":"INFO","level_value":20000,"shard":386,"inflight":true,"items":1}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

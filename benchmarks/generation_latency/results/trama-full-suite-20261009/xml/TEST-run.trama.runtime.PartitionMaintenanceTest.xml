@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.runtime.PartitionMaintenanceTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:14.277Z" hostname="c3po" time="0.828">
+  <properties/>
+  <testcase name="createPartitions also covers saga_step_call()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.246"/>
+  <testcase name="dropOldPartitions also prunes saga_step_call()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.011"/>
+  <testcase name="createPartitions extends the window Liquibase created and is idempotent()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.221"/>
+  <testcase name="createPartitions works when the JVM time zone is not UTC()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.335"/>
+  <testcase name="dropOldPartitions drops months past retention and keeps the current one()" classname="run.trama.runtime.PartitionMaintenanceTest" time="0.013"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-09T11:15:14.295621901-03:00","@version":"1","message":"saga-db-pool - Starting...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8659","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.302644901-03:00","@version":"1","message":"saga-db-pool - Start completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8659","level":"INFO","level_value":20000}
+Running Changeset: db/changelog/db.changelog-master.xml::001-create-saga-tables::codex
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+Running Changeset: db/changelog/db.changelog-master.xml::002-add-waiting-state::codex
+Running Changeset: db/changelog/db.changelog-master.xml::003-execution-name-index::trama
+Running Changeset: db/changelog/db.changelog-master.xml::004-step-result-observability::trama
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::005-step-call-query-index::trama
+Running Changeset: db/changelog/db.changelog-master.xml::006-split-join-barrier::trama
+Running Changeset: db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama
+Running Changeset: db/changelog/db.changelog-master.xml::008-execution-payload::trama
+Running Changeset: db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama
+
+UPDATE SUMMARY
+Run:                         11
+Previously run:               0
+Filtered out:                 0
+-------------------------------
+Total change sets:           11
+
+Liquibase: Update has been successful. Rows affected: 0
+{"@timestamp":"2026-10-09T11:15:14.523664466-03:00","@version":"1","message":"saga-db-pool - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8659","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.524373599-03:00","@version":"1","message":"saga-db-pool - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8659","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.551315467-03:00","@version":"1","message":"saga-db-pool - Starting...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8661","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.559056918-03:00","@version":"1","message":"saga-db-pool - Start completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8661","level":"INFO","level_value":20000}
+Running Changeset: db/changelog/db.changelog-master.xml::001-create-saga-tables::codex
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+Running Changeset: db/changelog/db.changelog-master.xml::002-add-waiting-state::codex
+Running Changeset: db/changelog/db.changelog-master.xml::003-execution-name-index::trama
+Running Changeset: db/changelog/db.changelog-master.xml::004-step-result-observability::trama
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::005-step-call-query-index::trama
+Running Changeset: db/changelog/db.changelog-master.xml::006-split-join-barrier::trama
+Running Changeset: db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama
+Running Changeset: db/changelog/db.changelog-master.xml::008-execution-payload::trama
+Running Changeset: db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama
+
+UPDATE SUMMARY
+Run:                         11
+Previously run:               0
+Filtered out:                 0
+-------------------------------
+Total change sets:           11
+
+Liquibase: Update has been successful. Rows affected: 0
+{"@timestamp":"2026-10-09T11:15:14.7563913-03:00","@version":"1","message":"saga-db-pool - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8661","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.756892926-03:00","@version":"1","message":"saga-db-pool - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8661","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.775394239-03:00","@version":"1","message":"saga-db-pool - Starting...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8662","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:14.783233502-03:00","@version":"1","message":"saga-db-pool - Start completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8662","level":"INFO","level_value":20000}
+Running Changeset: db/changelog/db.changelog-master.xml::001-create-saga-tables::codex
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+Running Changeset: db/changelog/db.changelog-master.xml::002-add-waiting-state::codex
+Running Changeset: db/changelog/db.changelog-master.xml::003-execution-name-index::trama
+Running Changeset: db/changelog/db.changelog-master.xml::004-step-result-observability::trama
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::005-step-call-query-index::trama
+Running Changeset: db/changelog/db.changelog-master.xml::006-split-join-barrier::trama
+Running Changeset: db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama
+Running Changeset: db/changelog/db.changelog-master.xml::008-execution-payload::trama
+Running Changeset: db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama
+
+UPDATE SUMMARY
+Run:                         11
+Previously run:               0
+Filtered out:                 0
+-------------------------------
+Total change sets:           11
+
+Liquibase: Update has been successful. Rows affected: 0
+{"@timestamp":"2026-10-09T11:15:15.09226177-03:00","@version":"1","message":"saga-db-pool - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8662","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-09T11:15:15.092771451-03:00","@version":"1","message":"saga-db-pool - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"Test worker @coroutine#8662","level":"INFO","level_value":20000}
+]]></system-out>
+  <system-err><![CDATA[Oct 09, 2026 2:15:14 PM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Creating database changelog table with name: public.databasechangelog
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:15:14 PM liquibase.snapshot
+INFO: Creating snapshot
+Oct 09, 2026 2:15:14 PM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 2:15:14 PM liquibase.command
+INFO: Using deploymentId: 1555314307
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: SQL in file db/schema.sql executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001-create-saga-tables::codex ran successfully in 9ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 44ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::002-add-waiting-state::codex ran successfully in 2ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::003-execution-name-index::trama ran successfully in 4ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004-step-result-observability::trama ran successfully in 3ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 20ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::005-step-call-query-index::trama ran successfully in 7ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::006-split-join-barrier::trama ran successfully in 4ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama ran successfully in 2ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::008-execution-payload::trama ran successfully in 2ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama ran successfully in 9ms
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Run:                         11
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Previously run:               0
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 2:15:14 PM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 2:15:14 PM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 2:15:14 PM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 2:15:14 PM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Creating database changelog table with name: public.databasechangelog
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:15:14 PM liquibase.snapshot
+INFO: Creating snapshot
+Oct 09, 2026 2:15:14 PM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 2:15:14 PM liquibase.command
+INFO: Using deploymentId: 1555314307
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: SQL in file db/schema.sql executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001-create-saga-tables::codex ran successfully in 6ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 36ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::002-add-waiting-state::codex ran successfully in 2ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::003-execution-name-index::trama ran successfully in 4ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004-step-result-observability::trama ran successfully in 3ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 21ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::005-step-call-query-index::trama ran successfully in 5ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::006-split-join-barrier::trama ran successfully in 3ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama ran successfully in 2ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::008-execution-payload::trama ran successfully in 1ms
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 2:15:14 PM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama ran successfully in 8ms
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Run:                         11
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Previously run:               0
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 2:15:14 PM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 2:15:14 PM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 2:15:14 PM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 2:15:14 PM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:15:14 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: Creating database changelog table with name: public.databasechangelog
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:15:14 AM liquibase.snapshot
+INFO: Creating snapshot
+Oct 09, 2026 11:15:14 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:15:14 AM liquibase.command
+INFO: Using deploymentId: 1555314307
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: SQL in file db/schema.sql executed
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001-create-saga-tables::codex ran successfully in 20ms
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 101ms
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::002-add-waiting-state::codex ran successfully in 3ms
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::003-execution-name-index::trama ran successfully in 8ms
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:14 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004-step-result-observability::trama ran successfully in 8ms
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 39ms
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::005-step-call-query-index::trama ran successfully in 6ms
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::006-split-join-barrier::trama ran successfully in 5ms
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::007-join-branch-arrived-at::trama ran successfully in 3ms
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::008-execution-payload::trama ran successfully in 1ms
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: Custom SQL executed
+Oct 09, 2026 11:15:15 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::009-execution-checkpoint::trama ran successfully in 12ms
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: Run:                         11
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: Previously run:               0
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:15:15 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:15:15 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:15:15 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:15:15 AM liquibase.command
+INFO: Command execution complete
+]]></system-err>
+</testsuite>

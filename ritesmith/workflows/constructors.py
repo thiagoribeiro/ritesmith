@@ -2,6 +2,8 @@
 
 from ritesmith.workflows.semantic import WorkflowPlan
 
+CONSTRUCTOR_VERSION = "pattern-parameters-v2"
+
 
 def construct(
     pattern,
@@ -12,8 +14,11 @@ def construct(
     interval_seconds=60,
     count=3,
     state=None,
+    initial_state=None,
     action=None,
     compensation=None,
+    termination=None,
+    after=None,
 ):
     steps = steps or []
     if pattern == "linear":
@@ -31,10 +36,23 @@ def construct(
             "steps": steps,
             "interval_seconds": interval_seconds,
         }
-        operation.update({"continuous": True} if pattern == "continuation" else {"count": count})
+        if termination is not None:
+            from pydantic import TypeAdapter
+
+            from ritesmith.llm.response_contracts import Termination, termination_fields
+
+            operation.update(
+                termination_fields(TypeAdapter(Termination).validate_python(termination))
+            )
+        else:
+            operation.update(
+                {"continuous": True} if pattern == "continuation" else {"count": count}
+            )
         if state is not None:
             operation["state"] = state
-        operations = [operation]
+        if initial_state is not None:
+            operation["initial_state"] = initial_state
+        operations = [operation, *(after or [])]
     elif pattern == "parallel":
         operations = [{"kind": "parallel", "id": "parallel", "branches": branches or []}, *steps]
     elif pattern == "async_callback":
@@ -50,6 +68,68 @@ def construct(
     )
 
 
+def compile_parameters(candidate, base_url, **kwargs):
+    from ritesmith.workflows.semantic import compile_plan
+
+    parameters = dict(candidate["parameters"])
+    pattern = parameters.pop("pattern")
+    after = parameters.pop("after", [])
+    if pattern == "parallel" or pattern == "async_callback":
+        parameters["steps"] = after
+    else:
+        parameters["after"] = after
+    plan = construct(pattern, name=candidate["name"], **parameters)
+    return compile_plan(plan, base_url, **kwargs)
+
+
+PATTERN_RULES = """
+Prefer definition {format:"pattern_parameters",name,parameters:{pattern,...}} for
+supported compositions. Patterns: linear(steps); parallel(branches,after);
+bounded_polling/fixed_samples/continuation/state_tracking/content_monitor
+(steps,interval_seconds,termination,state,initial_state,after); async_callback(action,after);
+compensation(steps,compensation). Preserve conditions, tool arguments and data references.
+Repeat termination is exactly {kind:"samples",count}, {kind:"duration",seconds},
+{kind:"deadline",unix}, or {kind:"continuous"}; finite requests never use continuous.
+The constructor creates monitor/monitor_tick/parallel/parallel_join mechanical IDs.
+Business operations still use semantic kinds and IDs for data references.
+Use after for final aggregation/notification after a finite repeat or parallel join.
+Nested/multiple/branch repeats and pre-repeat actions needing continuation use
+semantic_plan or compact_graph instead. Choose the escape in this SAME response.
+"""
+
+
+def pattern_example(pattern):
+    from ritesmith.llm.response_contracts import PatternCandidate, operation_transport, packed
+
+    plan = semantic_example(pattern)
+    parameters = {"pattern": pattern}
+    if pattern in ("linear", "compensation"):
+        steps = [dict(item) for item in plan["steps"]]
+        if pattern == "compensation":
+            parameters["compensation_json"] = packed(steps[0].pop("compensation"))
+        parameters["steps"] = [operation_transport(item) for item in steps]
+    elif pattern == "parallel":
+        parameters["branches"] = [
+            operation_transport(item) for item in plan["steps"][0]["branches"]
+        ]
+        parameters["after"] = [operation_transport(item) for item in plan["steps"][1:]]
+    elif pattern == "async_callback":
+        parameters["action_json"] = packed(plan["steps"][0]["action"])
+        parameters["after"] = [operation_transport(item) for item in plan["steps"][1:]]
+    else:
+        repeat = operation_transport(plan["steps"][0])
+        parameters.update(
+            {key: value for key, value in repeat.items() if key not in ("kind", "id")}
+        )
+    return PatternCandidate.model_validate(
+        {
+            "format": "pattern_parameters",
+            "name": pattern,
+            "parameters": parameters,
+        }
+    ).model_dump(exclude_none=True)
+
+
 def semantic_example(pattern):
     fetch = {
         "kind": "call",
@@ -61,10 +141,13 @@ def semantic_example(pattern):
         "kind": "call",
         "id": "notify",
         "capability_name": "telegram.send",
-        "args": {"text": {"ref": "fetch", "path": "price"}},
+        "args": {
+            "text": {"type": "template", "parts": ["BTC: ", {"ref": "fetch", "path": "price"}]}
+        },
     }
     if pattern == "parallel":
         eth = {**fetch, "id": "eth", "args": {"symbol": "eth"}}
+        notify["args"]["text"]["parts"].extend([" ETH: ", {"ref": "eth", "path": "price"}])
         return construct(pattern, name=pattern, branches=[fetch, eth], steps=[notify])
     if pattern in ("async_callback", "compensation"):
         action = {
@@ -114,6 +197,7 @@ def semantic_example(pattern):
             count=2,
             steps=[fetch, collect],
             state={"samples": {"ref": "samples", "path": "samples"}},
+            initial_state={"samples": []},
         )
     if pattern == "state_tracking":
         track = {
@@ -131,6 +215,7 @@ def semantic_example(pattern):
             name=pattern,
             steps=[fetch, track],
             state={"minimum": {"ref": "minimum", "path": "min_value"}},
+            initial_state={"minimum": None},
         )
     if pattern == "content_monitor":
         search = {
@@ -144,7 +229,7 @@ def semantic_example(pattern):
             "id": "evaluate",
             "capability_name": "llm.evaluate",
             "args": {
-                "task": "Notify new titles only; skip an empty previous snapshot.",
+                "task": "Notify nonempty current titles only when changed; skip an empty current snapshot.",
                 "previous": {"ref": "monitor_tick", "path": "state.previous"},
                 "current": {"ref": "fetch", "path": "result"},
             },
@@ -160,6 +245,7 @@ def semantic_example(pattern):
             name=pattern,
             steps=[search, evaluate, decision],
             state={"previous": {"ref": "fetch", "path": "result"}},
+            initial_state={"previous": ""},
         )
     return construct(
         pattern, name=pattern, steps=[fetch, notify] if pattern == "linear" else [fetch]

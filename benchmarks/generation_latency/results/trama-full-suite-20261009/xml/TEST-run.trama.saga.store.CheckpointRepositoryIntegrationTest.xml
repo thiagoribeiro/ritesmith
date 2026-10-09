@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.store.CheckpointRepositoryIntegrationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:25.360Z" hostname="c3po" time="0.126">
+  <properties/>
+  <testcase name="responses that are not JSON are stored as JSON strings()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.023"/>
+  <testcase name="a join whose branches all finished is found even if no arrival was recorded()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.019"/>
+  <testcase name="parking records the parked state with the checkpoint()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.012"/>
+  <testcase name="an execution waiting out a retry delay is not stalled()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.009"/>
+  <testcase name="a finished execution can be neither checkpointed nor finalized again()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.012"/>
+  <testcase name="JSON responses keep their structure()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.006"/>
+  <testcase name="a checkpoint only applies on top of the seq it was based on()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.012"/>
+  <testcase name="an expired callback wait is claimed for its timeout()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.011"/>
+  <testcase name="a stored checkpoint rebuilds the execution()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.007"/>
+  <testcase name="a stalled running execution is claimed once, at a new seq()" classname="run.trama.saga.store.CheckpointRepositoryIntegrationTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

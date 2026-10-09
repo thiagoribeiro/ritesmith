@@ -1,0 +1,96 @@
+{
+  "protocol": "typed-decisions-v1",
+  "requests": 8,
+  "planned_requests": 12,
+  "unexecuted_cells": [
+    [
+      "wf_week",
+      "generate",
+      "C",
+      false
+    ],
+    [
+      "wf_parallel_prices",
+      "specialized",
+      "A",
+      false
+    ],
+    [
+      "plan_t1_celsius_to_fahrenheit",
+      "plans",
+      "A",
+      false
+    ],
+    [
+      "plan_t1_celsius_to_fahrenheit",
+      "plans",
+      "C",
+      false
+    ]
+  ],
+  "blocked": "missing_request_usage_or_trace",
+  "estimated_usd": null,
+  "provider_calls": 17,
+  "maximum_reserved_or_settled_usd": 0.070536,
+  "pairs": [
+    {
+      "task": "wf_week",
+      "entrypoint": "generate",
+      "comparison": "A\u2192B",
+      "before_valid": false,
+      "after_valid": false,
+      "latency_delta_s": 1.7719663650495932,
+      "cost_delta_usd": 0.004007500000000001,
+      "prompt_tokens_delta": 3252,
+      "completion_tokens_delta": 872,
+      "reasoning_tokens_delta": 949,
+      "cached_tokens_delta": 0
+    },
+    {
+      "task": "wf_parallel_prices",
+      "entrypoint": "specialized",
+      "comparison": "B\u2192C",
+      "before_valid": false,
+      "after_valid": true,
+      "latency_delta_s": -2.978441232990008,
+      "cost_delta_usd": -0.003628499999999999,
+      "prompt_tokens_delta": -1880,
+      "completion_tokens_delta": -493,
+      "reasoning_tokens_delta": -220,
+      "cached_tokens_delta": 0
+    },
+    {
+      "task": "t1_celsius_to_fahrenheit",
+      "entrypoint": "specialized",
+      "comparison": "A\u2192B",
+      "before_valid": false,
+      "after_valid": false,
+      "latency_delta_s": 2.2740868179826066,
+      "cost_delta_usd": 0.0005904,
+      "prompt_tokens_delta": 544,
+      "completion_tokens_delta": 256,
+      "reasoning_tokens_delta": 192,
+      "cached_tokens_delta": 256
+    },
+    {
+      "task": "t3_notify_inactive",
+      "entrypoint": "generate",
+      "comparison": "A\u2192B",
+      "before_valid": false,
+      "after_valid": false,
+      "latency_delta_s": -3.2060179520049132,
+      "cost_delta_usd": null,
+      "prompt_tokens_delta": 1621,
+      "completion_tokens_delta": -845,
+      "reasoning_tokens_delta": -343,
+      "cached_tokens_delta": 0
+    }
+  ],
+  "general_slo_qualified": false,
+  "production_promoted": false,
+  "limitations": [
+    "One observation per cell; no statistical SLO qualification.",
+    "Controlled local execution does not certify the complete Trama engine.",
+    "Cached tokens and reasoning tokens are recorded separately."
+  ]
+}

@@ -31,7 +31,7 @@ def _valid_response(name="test_script") -> LuaGenerationResponse:
 
 def _invalid_response() -> LuaGenerationResponse:
     return LuaGenerationResponse(
-        script="os.execute('rm -rf /')",  # will fail forbidden token check
+        script="os.execute('forbidden-command')",  # Rejected before any execution.
         name="evil_script",
         description="Bad script",
         tags=[],
@@ -208,6 +208,7 @@ async def test_generate_lua_repair_loop(mock_client_repair, repair_llm):
         json={
             "intent": "return the input value",
             "save": False,
+            "context": {"test_cases": [{"input": {"value": 3}, "expected_output": {"result": 3}}]},
         },
     )
     assert resp.status_code == 200
@@ -372,11 +373,12 @@ async def test_medium_risk_without_tests_is_not_accepted(db_session):
 
     intent = unique("double the value")
     llm = _MediumRiskLLM([])  # no sanity cases could be produced
-    resp = await _generate_direct(db_session, llm, intent)
+    from ritesmith.core.exceptions import GenerationFailedError
+
+    with pytest.raises(GenerationFailedError, match="No acceptable script"):
+        await _generate_direct(db_session, llm, intent)
     assert llm.gen_tests_called
-    # Validated (the script is fine), but the risk gate blocks acceptance/persistence.
-    assert resp.validation.valid
-    assert await _artifact_count(db_session, resp.artifact.name) == 0
+    assert await _artifact_count(db_session, intent[:40].lower().replace(" ", "_")) == 0
 
 
 @pytest.mark.asyncio

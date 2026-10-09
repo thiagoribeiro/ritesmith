@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.TemplateRendererTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:16.398Z" hostname="c3po" time="0.013">
+  <properties/>
+  <testcase name="missing variables render as empty string()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="form bodies url-encode values()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="URLs get the literal value()" classname="run.trama.saga.TemplateRendererTest" time="0.0"/>
+  <testcase name="payload scalars and nested objects render()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="prev, step by name, step by index and nodes resolve previous bodies()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="body escaping follows Content-Type, or the body shape when absent()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="header values are literal but can never contain line breaks()" classname="run.trama.saga.TemplateRendererTest" time="0.0"/>
+  <testcase name="saga metadata is available()" classname="run.trama.saga.TemplateRendererTest" time="0.0"/>
+  <testcase name="triple mustache is always raw()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="sections iterate over steps list()" classname="run.trama.saga.TemplateRendererTest" time="0.002"/>
+  <testcase name="JSON bodies escape values as JSON string content()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <testcase name="XML bodies keep entity escaping()" classname="run.trama.saga.TemplateRendererTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

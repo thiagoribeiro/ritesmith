@@ -1,14 +1,4 @@
-"""WorkflowGenerationService — gera Trama workflow definitions via LLM + repair loop.
-
-Fluxo:
-1. Lista capabilities disponíveis no registry
-2. Busca FTS por workflows similares (artifacts tipo trama_workflow)
-3. Gera workflow via LLM.generate_workflow()
-4. Valida com WorkflowValidator (Layer 1 + Layer 2)
-5. Se inválido → LLM.repair_workflow() e tenta de novo (até max_attempts)
-6. Persiste se save=True e válido
-7. Retorna GeneratedArtifactResponse
-"""
+"""Generate native Trama workflows; exhausted validation returns generation_failed."""
 
 import json
 import logging
@@ -22,7 +12,7 @@ from ritesmith.api.routes.artifacts import _build_artifact
 from ritesmith.config import Settings
 from ritesmith.core.audit import AuditLogger
 from ritesmith.core.diagnostics import Diagnostic
-from ritesmith.core.exceptions import LLMError
+from ritesmith.core.exceptions import GenerationFailedError, LLMError
 from ritesmith.core.generation_budget import bounded_generation, current_budget
 from ritesmith.core.ids import generate_id
 from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_workflow
@@ -32,7 +22,7 @@ from ritesmith.llm.base import LLMCallStats, LLMProvider, WorkflowGenerationResp
 from ritesmith.llm.generation_context import prepare_catalog
 from ritesmith.observability.generation import current_trace, outcome, stage
 from ritesmith.registry.models import Artifact as ArtifactORM
-from ritesmith.registry.models import ArtifactVersion
+from ritesmith.registry.models import ArtifactVersion, GenerationAttempt, GenerationJob
 from ritesmith.registry.search import SearchResult, fts_search
 from ritesmith.registry.service import RegistryService
 from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, ValidationResult
@@ -134,6 +124,15 @@ class WorkflowGenerationService:
             if self.settings.generation_semantic_workflows
             else None
         )
+        if continuation is not None and not isinstance(continuation, dict):
+            outcome("trama_workflow", False)
+            raise GenerationFailedError(
+                "Invalid workflow continuation",
+                details={
+                    "category": "graph",
+                    "diagnostics": ["workflow_continuation must be an object"],
+                },
+            )
         if continuation and continuation.get("intent") != req.intent:
             continuation = None
         presence = None
@@ -208,12 +207,6 @@ class WorkflowGenerationService:
             for r in similar
         ]
 
-        catalog = prepare_catalog(req.intent, all_caps_for_prompt)
-        if continuation and (
-            continuation.get("version") != FORMAT_VERSION
-            or continuation.get("contract_version") != catalog.version
-        ):
-            continuation = None
         artifact_contracts = {
             artifact.artifact_id: {
                 "input_schema": artifact._input_schema,
@@ -227,6 +220,7 @@ class WorkflowGenerationService:
         last_errors: list[str] = []
         final_response: WorkflowGenerationResponse | None = None
         active_llm = self.llm
+        attempts = []
 
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_definition, last_errors, final_response, active_llm
@@ -235,23 +229,32 @@ class WorkflowGenerationService:
 
             if continuation:
                 catalog = prepare_catalog(req.intent, all_caps_for_prompt)
-                if (
-                    continuation.get("version") != FORMAT_VERSION
-                    or continuation.get("contract_version") != catalog.version
-                ):
-                    raise ValueError(
-                        "Continuation version/contracts changed; explicit regeneration required"
+                try:
+                    if (
+                        continuation.get("version") != FORMAT_VERSION
+                        or continuation.get("contract_version") != catalog.version
+                    ):
+                        raise ValueError(
+                            "Continuation version/contracts changed; explicit regeneration required"
+                        )
+                    state = dict((req.context or {}).get("continuation", {}))
+                    state["_resume_repeat"] = continuation.get("completed_repeat")
+                    definition = compile_plan(
+                        continuation["plan"],
+                        self.settings.public_url or "http://ritesmith:8081",
+                        contract_version=catalog.version,
+                        continuation=state,
+                        intent=req.intent,
+                        constraints=constraints,
                     )
-                state = dict((req.context or {}).get("continuation", {}))
-                state["_resume_repeat"] = continuation.get("completed_repeat")
-                definition = compile_plan(
-                    continuation["plan"],
-                    self.settings.public_url or "http://ritesmith:8081",
-                    contract_version=catalog.version,
-                    continuation=state,
-                    intent=req.intent,
-                    constraints=constraints,
-                )
+                except (ValueError, TypeError, KeyError) as exc:
+                    last_errors = ["workflow_continuation: " + str(exc)]
+                    last_definition = continuation.get("plan")
+                    attempts.append((attempt, last_definition, last_errors))
+                    raise GenerationFailedError(
+                        "Invalid workflow continuation; explicit correction is required",
+                        details={"category": "graph", "diagnostics": last_errors},
+                    ) from exc
                 llm_resp = WorkflowGenerationResponse(
                     definition=definition,
                     name=definition["name"],
@@ -282,10 +285,11 @@ class WorkflowGenerationService:
                         context=req.context,
                     )
                 except LLMError as exc:
+                    last_errors = [str(exc)]
                     candidate = exc.details.get("candidate")
                     if isinstance(candidate, (dict, str)):
                         last_definition = candidate
-                        last_errors = [str(exc)]
+                    attempts.append((attempt, candidate, [str(exc)]))
                     raise
                 definition = llm_resp.definition
             else:
@@ -307,8 +311,24 @@ class WorkflowGenerationService:
                 )
 
             final_response = llm_resp
+            from ritesmith.workflows.validator import native_shape_errors
+
+            shape_errors = native_shape_errors(definition)
+            if shape_errors:
+                last_definition, last_errors = definition, shape_errors
+                attempts.append((attempt, definition, shape_errors))
+                return False
             if plan_id:
                 definition = _inject_completion_step(deepcopy(definition))
+
+            from ritesmith.workflows.transport import typed_json_workflow
+
+            try:
+                definition = typed_json_workflow(definition)
+            except ValueError as exc:
+                last_definition, last_errors = definition, [str(exc)]
+                attempts.append((attempt, definition, last_errors))
+                return False
 
             if self.audit and not presence and not continuation:
                 await self.audit.log_event(
@@ -326,9 +346,12 @@ class WorkflowGenerationService:
                 errors = validator.validate(definition)
                 if not errors:
                     ids = {
-                        node.get("action", {}).get("request", {}).get("body", {}).get("artifact_id")
+                        body.get("artifact_id")
                         for node in definition.get("nodes", [])
                         if node.get("kind") == "task"
+                        and isinstance(
+                            body := node.get("action", {}).get("request", {}).get("body", {}), dict
+                        )
                     } - {None}
                     missing = ids - artifact_contracts.keys()
                     if missing:
@@ -362,6 +385,7 @@ class WorkflowGenerationService:
                         )
             last_definition = definition
             last_errors = errors
+            attempts.append((attempt, definition, errors))
             log.info(
                 "workflow generation attempt %d valid=%s",
                 attempt,
@@ -395,6 +419,15 @@ class WorkflowGenerationService:
                 warnings=[],
                 checks=[],
             )
+            if not valid:
+                outcome("trama_workflow", False)
+                raise GenerationFailedError(
+                    "No acceptable workflow after bounded recovery",
+                    details={
+                        "category": "graph",
+                        "diagnostics": last_errors or ["Missing workflow candidate"],
+                    },
+                )
 
             # 6. Persist if requested and valid
             if req.save and valid and final_response:
@@ -417,7 +450,37 @@ class WorkflowGenerationService:
                         payload={"goal": req.intent},
                     )
         except Exception:
+            outcome("trama_workflow", False)
             await self.db.rollback()
+            job = GenerationJob(
+                generation_id=generate_id("gen"),
+                goal=req.intent,
+                target_type="trama_workflow",
+                status="failed",
+                constraints=constraints,
+                plan_id=plan_id,
+                attempts=len(attempts),
+                finished_at=datetime.now(UTC),
+            )
+            self.db.add(job)
+            await self.db.flush()
+            for number, candidate, errors in attempts:
+                self.db.add(
+                    GenerationAttempt(
+                        generation_id=job.generation_id,
+                        attempt_number=number,
+                        content=candidate if isinstance(candidate, str) else json.dumps(candidate),
+                        validation_result={"valid": False, "errors": errors},
+                    )
+                )
+            if self.audit:
+                await self.audit.log_event(
+                    "generation.failed",
+                    "workflow_generation",
+                    plan_id,
+                    payload={"candidate": last_definition, "diagnostics": last_errors},
+                )
+            await self.db.commit()
             log.error("workflow generation failed with exception", exc_info=True)
             raise
         else:

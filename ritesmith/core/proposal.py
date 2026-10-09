@@ -3,7 +3,8 @@
 import asyncio
 import re
 
-from ritesmith.core.exceptions import LLMError
+from ritesmith.core.exceptions import GenerationFailedError, LLMError
+from ritesmith.core.pending_tests import finish_pending_tests
 from ritesmith.core.repair import claim_recovery
 from ritesmith.core.reuse import check_reuse
 from ritesmith.observability.generation import stage
@@ -107,10 +108,26 @@ async def prepare_proposal(
             with stage("proposal", "mixed"):
                 proposal, stats = await llm.propose(**kwargs)
         except LLMError as exc:
+            if audit:
+                await audit.log_event(
+                    "generation.candidate_rejected",
+                    "proposal",
+                    payload={"candidate": exc.details.get("candidate"), "diagnostic": str(exc)},
+                )
             if exc.details.get("retryable") is False:
                 raise
-            fallback = llm.fallback()
-            if fallback is llm or not claim_recovery(
+            candidate = exc.details.get("candidate")
+            fallback = llm if candidate is not None else llm.fallback()
+            if candidate is not None:
+                kwargs["context"] = {
+                    **(context or {}),
+                    "generation_repair": {
+                        "candidate": candidate,
+                        "diagnostic": str(exc),
+                        "location": exc.details.get("location"),
+                    },
+                }
+            if (fallback is llm and candidate is None) or not claim_recovery(
                 "proposal", settings.generation_recovery_attempts
             ):
                 raise
@@ -123,9 +140,18 @@ async def prepare_proposal(
                 proposal._tests_attempted = True
             except NotImplementedError:
                 proposal._tests_attempted = True
+    except LLMError as exc:
+        if audit:
+            await audit.log_event("generation.failed", "proposal", payload={"diagnostic": str(exc)})
+            await db.commit()
+        raise GenerationFailedError(
+            "No acceptable generation proposal",
+            details={
+                "category": exc.details.get("category", "response"),
+                "diagnostics": [str(exc)],
+                "location": exc.details.get("location"),
+            },
+        ) from exc
     finally:
-        if tests_task is not None:
-            if not tests_task.done():
-                tests_task.cancel()
-            await asyncio.gather(tests_task, return_exceptions=True)
+        await finish_pending_tests(tests_task)
     return (proposal, stats), recall, None

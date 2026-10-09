@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "source_sha256": "caacbf7ed764295bf26b33679059a19b658ade6e88294127d3aa85e7ee309f34",
+  "local_regression_passed": 855,
+  "arm_regression_passed": 155,
+  "final_transport_tests_passed": 41,
+  "fixture_checks_passed": true,
+  "lint_passed": true,
+  "paid_calls": 0,
+  "runtime_image": "sha256:3674b56b2d208411697311ab41a528a25372cfceba44773128644598ca97b0d7"
+}

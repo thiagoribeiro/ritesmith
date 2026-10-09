@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.redis.RedisSleepAndMembershipTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:35.906Z" hostname="c3po" time="1.072">
+  <properties/>
+  <testcase name="saveSleeping ignores executions that are not in Sleeping state()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.006"/>
+  <testcase name="pods see each other and split all shards between them()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.003"/>
+  <testcase name="concurrent wake attempts never both win()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.073"/>
+  <testcase name="readiness goes stale when refresh stops for longer than the TTL()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.353"/>
+  <testcase name="readiness reflects membership lifecycle()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.003"/>
+  <testcase name="sleep entry can be peeked repeatedly but consumed exactly once()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.026"/>
+  <testcase name="a pod that stops heartbeating expires after the TTL and its shards are taken over()" classname="run.trama.saga.redis.RedisSleepAndMembershipTest" time="0.603"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

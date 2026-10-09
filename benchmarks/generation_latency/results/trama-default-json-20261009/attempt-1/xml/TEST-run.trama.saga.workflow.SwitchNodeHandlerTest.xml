@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.SwitchNodeHandlerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:37.674Z" hostname="c3po" time="0.004">
+  <properties/>
+  <testcase name="matching on step by index works()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.001"/>
+  <testcase name="input is an alias of payload()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.001"/>
+  <testcase name="first case matches returns first target()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.0"/>
+  <testcase name="matching on prev body works()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.001"/>
+  <testcase name="no case matches uses default target()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.0"/>
+  <testcase name="matching on step by name works()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.0"/>
+  <testcase name="matching on node response body works()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.0"/>
+  <testcase name="second case matches when first is false()" classname="run.trama.saga.workflow.SwitchNodeHandlerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

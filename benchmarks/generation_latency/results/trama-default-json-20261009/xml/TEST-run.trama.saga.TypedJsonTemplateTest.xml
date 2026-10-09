@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.TypedJsonTemplateTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:33.964Z" hostname="c3po" time="0.008">
+  <properties/>
+  <testcase name="JSON bodies always use typed replacement without a mode header()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <testcase name="invalid JSON bodies fail without falling back to text substitution()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.0"/>
+  <testcase name="explicit null is a value but traversing it is a reference error()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.0"/>
+  <testcase name="values round trip escaped text without interpreting injected placeholders()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <testcase name="whole values preserve scalar and collection types including explicit null()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.0"/>
+  <testcase name="unsupported expressions and embedded collections fail without stringifying Java objects()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <testcase name="missing references and out of range indexes identify the JSON field and full reference()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.002"/>
+  <testcase name="non JSON bodies keep their declared text escaping()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <testcase name="dot and bracket indexes resolve real join output envelopes()" classname="run.trama.saga.TypedJsonTemplateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.app.OpenApiRoutesContractTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:14:36.483Z" hostname="c3po" time="0.013">
+  <properties/>
+  <testcase name="every route in Application kt is documented in openapi json()" classname="run.trama.app.OpenApiRoutesContractTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

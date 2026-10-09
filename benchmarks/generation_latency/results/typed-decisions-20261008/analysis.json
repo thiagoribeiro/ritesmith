@@ -1,0 +1,168 @@
+{
+  "source_sha256": "caacbf7ed764295bf26b33679059a19b658ade6e88294127d3aa85e7ee309f34",
+  "requests": 8,
+  "valid_requests": 1,
+  "valid_within_10s": 1,
+  "provider_calls": 17,
+  "settled_calls": 16,
+  "unknown_calls": [
+    {
+      "cell": "7:t3_notify_inactive:B",
+      "method": "test_gen",
+      "reserved_usd": "0.003147"
+    }
+  ],
+  "known_usd": "0.06738900",
+  "reserved_or_settled_upper_bound_usd": "0.07053600",
+  "total_usd": null,
+  "typed_transport_checks": [
+    {
+      "ledger_index": 2,
+      "cell": "1:wf_parallel_prices:C",
+      "method": "workflow_gen",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 3,
+      "cell": "2:t1_celsius_to_fahrenheit:B",
+      "method": "luau_gen",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 4,
+      "cell": "2:t1_celsius_to_fahrenheit:B",
+      "method": "luau_gen",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 8,
+      "cell": "4:wf_week:B",
+      "method": "proposal_workflow",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 9,
+      "cell": "4:wf_week:B",
+      "method": "proposal_workflow",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 10,
+      "cell": "5:wf_parallel_prices:B",
+      "method": "workflow_gen",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 11,
+      "cell": "5:wf_parallel_prices:B",
+      "method": "workflow_repair",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 14,
+      "cell": "7:t3_notify_inactive:B",
+      "method": "proposal_workflow",
+      "typed_transport_valid": true,
+      "error": null
+    },
+    {
+      "ledger_index": 16,
+      "cell": "7:t3_notify_inactive:B",
+      "method": "proposal_workflow",
+      "typed_transport_valid": true,
+      "error": null
+    }
+  ],
+  "diagnostics": [
+    {
+      "cell": "0:wf_week:A",
+      "status": 200,
+      "errors": [
+        "validation failed or absent",
+        "missing continuation chain"
+      ],
+      "validation_errors": [
+        "Controlled workflow execution: Unsupported JSONLogic operator: greater"
+      ],
+      "message": null
+    },
+    {
+      "cell": "1:wf_parallel_prices:C",
+      "status": 200,
+      "errors": [],
+      "validation_errors": [],
+      "message": null
+    },
+    {
+      "cell": "2:t1_celsius_to_fahrenheit:B",
+      "status": 200,
+      "errors": [
+        "validation failed or absent",
+        "missing strict certification"
+      ],
+      "validation_errors": [],
+      "message": null
+    },
+    {
+      "cell": "3:t3_notify_inactive:A",
+      "status": 502,
+      "errors": [
+        "HTTP 502"
+      ],
+      "validation_errors": [],
+      "message": "Failed to parse unified proposal: luau_body must not redeclare run"
+    },
+    {
+      "cell": "4:wf_week:B",
+      "status": 502,
+      "errors": [
+        "HTTP 502"
+      ],
+      "validation_errors": [],
+      "message": "Failed to parse unified proposal: Node advance_chain: unknown reference monitor_chain_part"
+    },
+    {
+      "cell": "5:wf_parallel_prices:B",
+      "status": 200,
+      "errors": [
+        "validation failed or absent"
+      ],
+      "validation_errors": [
+        "Controlled workflow execution: Aggregate notification lacks branch results"
+      ],
+      "message": null
+    },
+    {
+      "cell": "6:t1_celsius_to_fahrenheit:A",
+      "status": 200,
+      "errors": [
+        "validation failed or absent",
+        "missing strict certification"
+      ],
+      "validation_errors": [],
+      "message": null
+    },
+    {
+      "cell": "7:t3_notify_inactive:B",
+      "status": 502,
+      "errors": [
+        "HTTP 502"
+      ],
+      "validation_errors": [],
+      "message": "Failed to parse unified proposal: luau_body must not redeclare run"
+    }
+  ],
+  "recommendation": {
+    "structured_outputs": "retain_experimentally_disabled",
+    "pattern_parameters": "retain_experimentally_disabled",
+    "production_promoted": false,
+    "general_slo_qualified": false
+  }
+}

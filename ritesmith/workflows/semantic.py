@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ritesmith.workflows.compact import compile_workflow
+from ritesmith.workflows.expressions import expression_errors
 
 FORMAT_VERSION = "workflow-plan-v1"
 
@@ -32,6 +34,7 @@ class Operation(BaseModel):
     continuous: bool = False
     deadline_unix: float | None = Field(default=None, gt=0)
     state: dict | None = None
+    initial_state: dict | None = None
     action: dict | None = None
     compensation: dict | None = None
 
@@ -52,6 +55,7 @@ class Operation(BaseModel):
                 "continuous",
                 "deadline_unix",
                 "state",
+                "initial_state",
             },
             "callback": {"action", "compensation"},
         }
@@ -70,6 +74,20 @@ class Operation(BaseModel):
             raise ValueError("wait requires seconds")
         if self.kind == "condition" and self.when is None:
             raise ValueError("condition requires when")
+        if self.kind == "condition":
+            # Business references are literals resolved by the compiler, not operators.
+            def refs(value):
+                if isinstance(value, dict):
+                    if "ref" in value:
+                        return {"var": "payload.placeholder"}
+                    return {key: refs(item) for key, item in value.items()}
+                if isinstance(value, list):
+                    return [refs(item) for item in value]
+                return value
+
+            errors = expression_errors(refs(self.when), f"Node '{self.id or 'condition'}'.when")
+            if errors:
+                raise ValueError("; ".join(errors))
         if self.kind == "parallel" and len(self.branches) < 2:
             raise ValueError("parallel needs at least two branches")
         if self.kind == "repeat":
@@ -158,6 +176,25 @@ class PlanCompiler:
         if isinstance(value, list):
             return [self.reference(v, node, scope, condition) for v in value]
         if isinstance(value, dict):
+            if set(value) == {"__trama_literal_json__"}:
+                return deepcopy(value)
+            if set(value) == {"type", "parts"} and value["type"] == "template":
+                if condition or not isinstance(value["parts"], list):
+                    raise ValueError(f"Node {node}: template parts require a string argument")
+                return {"__rs_template": self.reference(value["parts"], node, scope)}
+            if condition and "var" in value:
+                path = value["var"]
+                path = path[0] if isinstance(path, list) and path else path
+                if isinstance(path, str) and path.split(".", 1)[0] not in (
+                    "payload",
+                    "runtime",
+                    "callback",
+                    "nodes",
+                    "",
+                ):
+                    raise ValueError(
+                        f"Node {node}: condition path '{path}' needs a structured {{ref,path}} reference"
+                    )
             if "ref" in value:
                 if set(value) - {"ref", "path"}:
                     raise ValueError("reference only accepts ref/path")
@@ -169,6 +206,13 @@ class PlanCompiler:
         if isinstance(value, list):
             return [self.resolve(v, node, scope) for v in value]
         if isinstance(value, dict):
+            if set(value) == {"__trama_literal_json__"}:
+                return deepcopy(value)
+            if "__rs_template" in value:
+                parts = self.resolve(value["__rs_template"], node, scope)
+                if not all(isinstance(part, str) for part in parts):
+                    raise ValueError(f"Node {node}: template parts must be literals or references")
+                return "".join(parts)
             if "__rs_reference" in value:
                 reference = value["__rs_reference"]
                 ref, suffix = reference["ref"], reference.get("path", "")
@@ -256,43 +300,387 @@ class PlanCompiler:
                     self.branch_results[node_id] = (join, index)
             return self.add({"id": nid, "kind": "split", "branches": entries, "join": join}, scope)
         if op.kind == "repeat":
-            count = op.count
-            if op.duration_seconds is not None:
-                count = max(1, math.ceil(op.duration_seconds / op.interval_seconds))
-            remaining = self.continuation.get("remaining_iterations", count)
-            if remaining is not None and (
-                not isinstance(remaining, int) or isinstance(remaining, bool) or remaining < 0
-            ):
-                raise ValueError("continuation.remaining_iterations must be a nonnegative integer")
-            if remaining == 0:
+            return self.repeat(op, nid, after, scope)
+        raise ValueError(f"Unsupported operation: {op.kind}")
+
+    @staticmethod
+    def literal(value):
+        # Seed data is source JSON, so protect any future placeholders it contains.
+        import json
+
+        return (
+            {"__trama_literal_json__": deepcopy(value)}
+            if isinstance(value, (dict, list)) or "{{" in json.dumps(value)
+            else deepcopy(value)
+        )
+
+    def repeat(self, op, nid, after, scope):
+        count = op.count
+        if op.duration_seconds is not None:
+            count = max(1, math.ceil(op.duration_seconds / op.interval_seconds))
+        remaining = self.continuation.get("remaining_iterations", count)
+        if remaining is not None and (
+            not isinstance(remaining, int) or isinstance(remaining, bool) or remaining < 0
+        ):
+            raise ValueError("continuation.remaining_iterations must be a nonnegative integer")
+        if count is not None and remaining is not None and remaining > count:
+            raise ValueError("continuation.remaining_iterations exceeds the requested total")
+        if (
+            self.continuation
+            and op.duration_seconds is not None
+            and self.continuation.get("deadline_unix") is None
+        ):
+            raise ValueError("Duration continuation requires its original deadline_unix")
+        chunk = min(20, remaining) if remaining is not None else 20
+        initial_state = deepcopy(op.initial_state or {})
+        resumed_state = self.continuation.get("state", {})
+        if not isinstance(resumed_state, dict):
+            raise TypeError("continuation.state must be an object")
+        if self.continuation:
+            if count is not None and "remaining_iterations" not in self.continuation:
+                raise ValueError(
+                    "Finite continuation requires remaining_iterations; it cannot restart the total"
+                )
+            missing = set(op.initial_state or {}) - resumed_state.keys()
+            if missing:
+                raise ValueError(f"continuation.state is missing retained keys: {sorted(missing)}")
+        initial_state.update(deepcopy(resumed_state))
+        seed_paths = {
+            (value["ref"], value.get("path", "")): key
+            for key, value in (op.state or {}).items()
+            if isinstance(value, dict) and "ref" in value
+        }
+
+        def seed(reference):
+            ref, path = reference["ref"], reference.get("path", "")
+            if ref == nid + "_tick":
+                if path == "state":
+                    return self.literal(initial_state)
+                if path.startswith("state."):
+                    parts = path[6:].split(".")
+                else:
+                    values = {
+                        "iteration": 0,
+                        "remaining_iterations": remaining,
+                        "deadline_unix": self.continuation.get("deadline_unix", op.deadline_unix),
+                    }
+                    if path in values:
+                        return self.literal(values[path])
+                    raise ValueError(f"Repeat {nid}: unknown initial counter field {path}")
+            elif ref == "payload" and path.startswith("continuation.state."):
+                parts = path[len("continuation.state.") :].split(".")
+            else:
+                matches = [
+                    (base, key)
+                    for (target, base), key in seed_paths.items()
+                    if target == ref and (path == base or path.startswith(base + "."))
+                ]
+                if not matches:
+                    raise ValueError(
+                        f"Repeat {nid}: previous reference {ref}.{path} needs a state mapping and initial_state"
+                    )
+                base, key = max(matches, key=lambda match: len(match[0]))
+                suffix = path[len(base) :].lstrip(".")
+                parts = [key, *(suffix.split(".") if suffix else [])]
+            value = initial_state
+            for part in parts:
+                if isinstance(value, list) and part.isdigit() and int(part) < len(value):
+                    value = value[int(part)]
+                    continue
+                if not isinstance(value, dict) or part not in value:
+                    raise ValueError(
+                        f"Repeat {nid}: initial_state is missing '{'.'.join(parts)}' for {ref}.{path}"
+                    )
+                value = value[part]
+            return self.literal(value)
+
+        def ids(steps):
+            result = set()
+            for item in steps:
+                if item.id:
+                    result.add(item.id)
+                result.update(ids(item.steps + item.otherwise + item.branches))
+            return result
+
+        business_ids = ids(op.steps)
+
+        def name(original, index):
+            return original if index == chunk - 1 else f"{original}__rs_{index + 1}"
+
+        def rewrite(value, index, owner=None, current=False, exit_snapshot=False):
+            if isinstance(value, list):
+                return [rewrite(item, index, owner, current, exit_snapshot) for item in value]
+            if isinstance(value, dict):
+                if set(value) == {"__trama_literal_json__"}:
+                    return deepcopy(value)
+                template_key = (
+                    "__rs_template"
+                    if "__rs_template" in value
+                    else (
+                        "parts"
+                        if set(value) == {"type", "parts"} and value["type"] == "template"
+                        else None
+                    )
+                )
+                if template_key:
+                    parts = []
+                    for original in value[template_key]:
+                        item = rewrite(original, index, owner, current, exit_snapshot)
+                        if (
+                            isinstance(original, dict)
+                            and ("ref" in original or "__rs_reference" in original)
+                            and not isinstance(item, dict)
+                        ):
+                            if isinstance(item, list):
+                                raise ValueError(
+                                    f"Repeat {nid}: collection seed cannot be interpolated in text"
+                                )
+                            item = (
+                                ""
+                                if item is None
+                                else str(item).lower()
+                                if isinstance(item, bool)
+                                else str(item)
+                            )
+                        parts.append(item)
+                    return {**value, template_key: parts}
+                if "__rs_reference" in value:
+                    resolved = rewrite(
+                        value["__rs_reference"], index, owner, current, exit_snapshot
+                    )
+                    return (
+                        {**value, "__rs_reference": resolved}
+                        if isinstance(resolved, dict) and "ref" in resolved
+                        else resolved
+                    )
+                if "ref" in value:
+                    ref = value["ref"]
+                    previous = (ref == nid + "_tick" and not exit_snapshot) or (
+                        ref == owner and not current
+                    )
+                    if ref == "payload" and value.get("path", "").startswith("continuation.state."):
+                        return seed(value)
+                    if (previous and index == 0) or (
+                        index < 0 and (ref in business_ids or ref == nid + "_tick")
+                    ):
+                        return seed(value)
+                    if ref in business_ids or ref == nid + "_tick":
+                        return {**value, "ref": name(ref, index - 1 if previous else index)}
+                    return deepcopy(value)
+                return {
+                    key: rewrite(item, index, owner, current, exit_snapshot)
+                    for key, item in value.items()
+                }
+            return deepcopy(value)
+
+        def operations(steps, index):
+            result = []
+            for item in steps:
+                value = item.model_dump(exclude_none=True, exclude_defaults=True)
+                for key in ("args", "action", "compensation", "when"):
+                    if key in value:
+                        value[key] = rewrite(value[key], index, item.id)
+                for key in ("steps", "otherwise", "branches"):
+                    if key in value:
+                        value[key] = [
+                            child.model_dump(exclude_none=True, exclude_defaults=True)
+                            for child in operations(getattr(item, key), index)
+                        ]
+                if item.id:
+                    value["id"] = name(item.id, index)
+                result.append(Operation.model_validate(value))
+            return result
+
+        # A deadline can end before the last expanded iteration. Final actions
+        # must read the actually completed pass (or the explicit resumed seed).
+        tail_nodes = {node["id"]: node for node in self.nodes}
+        reachable_tail = set()
+        stack = [after]
+        from ritesmith.workflows.validator import _v2_successors
+
+        while stack:
+            key = stack.pop()
+            if key not in tail_nodes or key in reachable_tail:
+                continue
+            reachable_tail.add(key)
+            stack.extend(_v2_successors(tail_nodes[key]))
+
+        exit_cache = {}
+
+        def exit_entry(index):
+            if not reachable_tail or index == chunk - 1:
                 return after
-            chunk = min(20, remaining) if remaining is not None else 20
-            tick, check, wait = (
-                self.id(nid + "_tick"),
-                self.id(nid + "_check"),
-                self.id(nid + "_wait"),
+            if index in exit_cache:
+                return exit_cache[index]
+            renamed = {
+                key: self.id(f"{key}__exit_{nid}_{index + 1}") for key in sorted(reachable_tail)
+            }
+
+            def rename_tail(value):
+                if isinstance(value, list):
+                    return [rename_tail(item) for item in value]
+                if isinstance(value, dict):
+                    if set(value) == {"__trama_literal_json__"}:
+                        return deepcopy(value)
+                    if "ref" in value and value["ref"] in renamed:
+                        return {**value, "ref": renamed[value["ref"]]}
+                    return {key: rename_tail(item) for key, item in value.items()}
+                return value
+
+            for key in sorted(reachable_tail):
+                node = rename_tail(
+                    rewrite(tail_nodes[key], index, current=True, exit_snapshot=True)
+                )
+                node["id"] = renamed[key]
+                for link in ("next", "default", "join"):
+                    if node.get(link) in renamed:
+                        node[link] = renamed[node[link]]
+                if "branches" in node:
+                    node["branches"] = [renamed.get(branch, branch) for branch in node["branches"]]
+                for case in node.get("cases", []):
+                    case["target"] = renamed.get(case["target"], case["target"])
+                self.add(node, self.scopes[key])
+                if key in self.branch_results:
+                    join, branch = self.branch_results[key]
+                    self.branch_results[node["id"]] = (renamed.get(join, join), branch)
+            exit_cache[index] = renamed[after]
+            return renamed[after]
+
+        if remaining == 0:
+            self.nodes = [
+                rewrite(node, -1, current=True, exit_snapshot=True)
+                if node["id"] in reachable_tail
+                else node
+                for node in self.nodes
+            ]
+            return after
+
+        # Every reference in the first pass has an explicit seed. Later passes read
+        # already completed nodes. Unrolling is bounded to 20 business iterations.
+        next_entry = after
+        if remaining is None or remaining > chunk:
+            continuation = self.id(nid + "_continue")
+            boundary = self.id(nid + "_boundary_wait")
+            tick_path = "nodes." + nid + "_tick.response.body.output."
+            self.add(
+                {
+                    "id": continuation,
+                    "kind": "task",
+                    "plan": {
+                        "intent": self.literal(self.intent),
+                        "constraints": self.literal(self.constraints),
+                        "mode": "execute",
+                        "requested_artifact_types": ["trama_workflow"],
+                        "context": {
+                            "workflow_continuation": self.literal(
+                                {
+                                    "version": FORMAT_VERSION,
+                                    "intent": self.intent,
+                                    "plan": self.plan.model_dump(
+                                        exclude_none=True, exclude_defaults=True
+                                    ),
+                                    "contract_version": self.contract_version,
+                                    "completed_repeat": nid,
+                                }
+                            ),
+                            "continuation": {
+                                key: "{{ " + tick_path + key + " }}"
+                                for key in ("deadline_unix", "remaining_iterations", "state")
+                            },
+                        },
+                    },
+                    "next": "end",
+                },
+                scope,
             )
-            body = self.sequence(op.steps, tick, scope)
-            entry = body
-            deadline = op.deadline_unix
+            self.add(
+                {
+                    "id": boundary,
+                    "kind": "sleep",
+                    "durationSeconds": op.interval_seconds,
+                    "next": continuation,
+                },
+                scope,
+            )
+            next_entry = boundary
+
+        for index in reversed(range(chunk)):
+            tick = self.id(name(nid + "_tick", index))
+            check = self.id(name(nid + "_check", index))
+            deadline = self.continuation.get("deadline_unix") or op.deadline_unix
+            clock = None
             if op.deadline_unix is not None or op.duration_seconds is not None:
-                clock = self.id(nid + "_clock")
-                expired = self.id(nid + "_expired")
+                clock = self.id(name(nid + "_clock", index))
+                if index and deadline is None:
+                    deadline = (
+                        "{{ nodes."
+                        + name(nid + "_clock", index - 1)
+                        + ".response.body.output.deadline_unix }}"
+                    )
                 self.add(
                     {
                         "id": clock,
                         "kind": "task",
                         "capability_name": "stat.chain_step",
                         "input": {
-                            "deadline_unix": op.deadline_unix
-                            or "{{ nodes." + clock + ".response.body.output.deadline_unix }}",
+                            "deadline_unix": deadline,
                             "duration_seconds": op.duration_seconds,
                             "initial_deadline": self.continuation.get("deadline_unix"),
                         },
-                        "next": expired,
+                        "next": name(nid + "_expired", index),
                     },
                     scope,
                 )
+                deadline = "{{ nodes." + clock + ".response.body.output.deadline_unix }}"
+            previous_state = (
+                self.literal(initial_state)
+                if index == 0
+                else (
+                    "{{ nodes." + name(nid + "_tick", index - 1) + ".response.body.output.state }}"
+                )
+            )
+            self.add(
+                {
+                    "id": tick,
+                    "kind": "task",
+                    "capability_name": "stat.chain_step",
+                    "input": {
+                        "iteration": index,
+                        "remaining_iterations": None if remaining is None else remaining - index,
+                        "initial_remaining": remaining,
+                        "deadline_unix": deadline,
+                        "state": self.reference(
+                            rewrite(op.state or {}, index, current=True), tick, scope
+                        )
+                        or None,
+                        "previous_state": previous_state,
+                        "initial_state": self.literal(initial_state),
+                    },
+                    "next": check,
+                },
+                scope,
+            )
+            self.add(
+                {
+                    "id": check,
+                    "kind": "switch",
+                    "cases": [
+                        {
+                            "name": "done",
+                            "when": {
+                                "==": [{"var": f"nodes.{tick}.response.body.output.done"}, True]
+                            },
+                            "target": exit_entry(index) if clock else after,
+                        }
+                    ],
+                    "default": next_entry,
+                },
+                scope,
+            )
+            body = self.sequence(operations(op.steps, index), tick, scope)
+            entry = body
+            if clock:
+                expired = self.id(name(nid + "_expired", index))
                 self.add(
                     {
                         "id": expired,
@@ -306,7 +694,7 @@ class PlanCompiler:
                                         True,
                                     ]
                                 },
-                                "target": after,
+                                "target": exit_entry(index - 1),
                             }
                         ],
                         "default": body,
@@ -314,114 +702,22 @@ class PlanCompiler:
                     scope,
                 )
                 entry = clock
-                deadline = "{{ nodes." + clock + ".response.body.output.deadline_unix }}"
-            state = self.reference(op.state or {}, tick, scope)
-            self.add(
-                {
-                    "id": tick,
-                    "kind": "task",
-                    "capability_name": "stat.chain_step",
-                    "input": {
-                        "iteration": "{{ nodes." + tick + ".response.body.output.iteration }}",
-                        "remaining_iterations": "{{ nodes."
-                        + tick
-                        + ".response.body.output.remaining_iterations }}",
-                        "initial_remaining": remaining,
-                        "deadline_unix": deadline,
-                        "state": state or None,
-                        "previous_state": "{{ nodes." + tick + ".response.body.output.state }}",
-                        "initial_state": self.continuation.get("state", {}),
-                    },
-                    "next": check,
-                },
-                scope,
-            )
-            next_chunk = after
-            if remaining is None or remaining > 20:
-                continue_id = self.id(nid + "_continue")
-                boundary_wait = self.id(nid + "_boundary_wait")
-                native_plan = self.plan.model_dump(exclude_none=True, exclude_defaults=True)
+            if index:
+                wait = self.id(name(nid + "_wait", index - 1))
                 self.add(
                     {
-                        "id": continue_id,
-                        "kind": "task",
-                        "plan": {
-                            "intent": self.intent,
-                            "constraints": self.constraints,
-                            "mode": "execute",
-                            "requested_artifact_types": ["trama_workflow"],
-                            "context": {
-                                "workflow_continuation": {
-                                    "version": FORMAT_VERSION,
-                                    "intent": self.intent,
-                                    "plan": native_plan,
-                                    "contract_version": self.contract_version,
-                                    "completed_repeat": nid,
-                                },
-                                "continuation": {
-                                    "deadline_unix": "{{ nodes."
-                                    + tick
-                                    + ".response.body.output.deadline_unix }}",
-                                    "remaining_iterations": "{{ nodes."
-                                    + tick
-                                    + ".response.body.output.remaining_iterations }}",
-                                    "state": "{{ nodes." + tick + ".response.body.output.state }}",
-                                },
-                            },
-                        },
-                        "next": "end",
-                    },
-                    scope,
-                )
-                self.add(
-                    {
-                        "id": boundary_wait,
+                        "id": wait,
                         "kind": "sleep",
                         "durationSeconds": op.interval_seconds,
-                        "next": continue_id,
+                        "next": entry,
                     },
                     scope,
                 )
-                next_chunk = boundary_wait
-            self.add(
-                {
-                    "id": check,
-                    "kind": "switch",
-                    "cases": [
-                        {
-                            "name": "done",
-                            "when": {
-                                "==": [{"var": f"nodes.{tick}.response.body.output.done"}, True]
-                            },
-                            "target": after,
-                        },
-                        {
-                            "name": "chunk",
-                            "when": {
-                                ">=": [
-                                    {"var": f"nodes.{tick}.response.body.output.iteration"},
-                                    chunk,
-                                ]
-                            },
-                            "target": next_chunk,
-                        },
-                    ],
-                    "default": wait,
-                },
-                scope,
-            )
-            self.add(
-                {
-                    "id": wait,
-                    "kind": "sleep",
-                    "durationSeconds": op.interval_seconds,
-                    "next": entry,
-                },
-                scope,
-            )
-            self.loop_limits.append(chunk)
-            return entry
-        raise ValueError(f"Unsupported operation: {op.kind}")
+                next_entry = wait
+            else:
+                next_entry = entry
+        self.loop_limits.append(chunk)
+        return next_entry
 
     def compile(self):
         steps = self.plan.steps
@@ -465,10 +761,18 @@ Operations: call/state {id,capability_name OR artifact_id,args}; sequence {steps
 condition {when:JSONLogic,steps,otherwise}; parallel {id,branches:[operations]};
 repeat {id,steps,interval_seconds, exactly ONE of count,duration_seconds,continuous:true,deadline_unix}.
 References are {ref:"operation_id",path:"output_field"} or {ref:"payload",path:"field"}.
+For text combining references use {type:"template",parts:["BTC: ",{ref:"fetch",path:"price"}]};
+the compiler emits a native string, never a template object passed to a tool.
 After parallel, only the last result of each branch is available through its terminal operation id.
-State across repeat chunks: repeat.state; initial values from payload.continuation.state.
+State across repeat chunks: repeat.state and explicit repeat.initial_state defaults.
+The compiler overlays continuation.state on those defaults and initializes the first pass.
+Self-references need a repeat.state mapping and an explicit initial_state key; never use absent node results as null.
 Callback {id,kind:"callback",action} uses native async-http-callback contract.
 Calls may carry native compensation. Conditions use references for variables.
+Example: condition {when:{">": [{ref:"fetch",path:"price"},100000]},steps:[...]};
+do not use raw var paths, "greater", inline Mustache paths or mechanical counter IDs.
+Specify TOTAL work: seven days at four samples/day means count:28 and interval_seconds:21600.
+Do not cap count at 20, add manual advance_chain actions or build continuation yourself.
 Compiler constructs counters, scopes, joins, HTTP fields and continuation in blocks of 20.
 For nested/multiple repetitions, complex actions or unsupported topology return
 {format:"compact_graph",graph:{name,entrypoint,nodes,...}} using compact graph rules.
