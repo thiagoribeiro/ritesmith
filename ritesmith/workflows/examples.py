@@ -261,8 +261,7 @@ def workflow_system(
         from ritesmith.workflows.semantic import SEMANTIC_RULES
 
         return (
-            "You generate Trama workflows. Return JSON only.\n"
-            + ESSENTIAL_RULES
+            "You generate Trama workflows as semantic plans. Return JSON only.\n"
             + SEMANTIC_RULES
             + "\nEXAMPLES:\n"
             + "\n".join(

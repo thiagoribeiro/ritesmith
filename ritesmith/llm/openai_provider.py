@@ -112,11 +112,18 @@ def _script_schema(schema, assembled):
     return json.dumps(data, separators=(",", ":"))
 
 
-def _workflow_schema(schema: str, mermaid: bool) -> str:
-    if not mermaid:
+def _workflow_schema(schema: str, mermaid: bool, semantic: bool = False) -> str:
+    if not mermaid and not semantic:
         return schema
     data = json.loads(schema)
-    data["definition"] = "flowchart TD\n%% workflow {...}\n%% node ...\n..."
+    data["definition"] = (
+        "flowchart TD\n%% workflow {...}\n%% node ...\n..."
+        if mermaid
+        else {
+            "format": "semantic_plan",
+            "plan": {"version": "workflow-plan-v1", "name": "...", "steps": []},
+        }
+    )
     return json.dumps(data, separators=(",", ":"))
 
 
@@ -883,6 +890,22 @@ Return source="intent". The implementation is intentionally unavailable.
                 constraints=constraints,
                 continuation=(context or {}).get("continuation"),
             )
+        if self.settings.generation_semantic_workflows:
+            # One representation: a bare plan is accepted, any graph form is rejected so
+            # repair asks for a plan instead of silently compiling a hybrid as a graph.
+            if isinstance(definition, dict) and "steps" in definition and "nodes" not in definition:
+                return self._compile_definition(
+                    {"format": "semantic_plan", "plan": definition},
+                    base_url,
+                    contract_version,
+                    goal=goal,
+                    constraints=constraints,
+                    context=context,
+                )
+            raise ValueError(
+                'definition must be {"format":"semantic_plan","plan":{...}}; '
+                "graph nodes are compiled from the plan, not written directly"
+            )
         if isinstance(definition, dict) and definition.get("format") == "compact_graph":
             return compile_workflow(definition["graph"], base_url)
         if self.settings.generation_mermaid_workflows:
@@ -910,9 +933,12 @@ Return source="intent". The implementation is intentionally unavailable.
             constraints=constraints,
             similar_workflows=similar_workflows,
             response_schema=_workflow_schema(
-                _WORKFLOW_RESPONSE_SCHEMA, self.settings.generation_mermaid_workflows
+                _WORKFLOW_RESPONSE_SCHEMA,
+                self.settings.generation_mermaid_workflows,
+                self.settings.generation_semantic_workflows,
             ),
             context=context,
+            semantic=self.settings.generation_semantic_workflows,
         )
         user_msg += "\nCAPABILITY INVENTORY: " + json.dumps(
             catalog.inventory, separators=(",", ":")
@@ -1006,7 +1032,9 @@ Return source="intent". The implementation is intentionally unavailable.
             validation_errors=validation_errors,
             attempt_number=attempt_number,
             response_schema=_workflow_schema(
-                _WORKFLOW_REPAIR_SCHEMA, self.settings.generation_mermaid_workflows
+                _WORKFLOW_REPAIR_SCHEMA,
+                self.settings.generation_mermaid_workflows,
+                self.settings.generation_semantic_workflows,
             ),
             available_capability_names=available_capability_names,
         )
@@ -1112,9 +1140,12 @@ Return source="intent". The implementation is intentionally unavailable.
                     {},
                     [],
                     _workflow_schema(
-                        _WORKFLOW_RESPONSE_SCHEMA, self.settings.generation_mermaid_workflows
+                        _WORKFLOW_RESPONSE_SCHEMA,
+                        self.settings.generation_mermaid_workflows,
+                        self.settings.generation_semantic_workflows,
                     ),
                     context,
+                    semantic=self.settings.generation_semantic_workflows,
                 )
             )
         if kind != "workflow":
@@ -1172,7 +1203,9 @@ Return source="intent". The implementation is intentionally unavailable.
         if kind != "script":
             schemas["workflow"] = json.loads(
                 _workflow_schema(
-                    _WORKFLOW_RESPONSE_SCHEMA, self.settings.generation_mermaid_workflows
+                    _WORKFLOW_RESPONSE_SCHEMA,
+                    self.settings.generation_mermaid_workflows,
+                    self.settings.generation_semantic_workflows,
                 )
             )
         user_parts.append(
