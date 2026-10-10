@@ -150,7 +150,7 @@ class PlanCompiler:
             )
             if index > 0 and chunked:
                 raise ValueError(
-                    "Pre-repeat actions with continuation require compact_graph or payload state"
+                    "Semantic plans do not support actions before a continued repeat; move them after it"
                 )
 
     def _validate_shape(self, operations, in_loop=False, in_branch=False, depth=0):
@@ -158,7 +158,9 @@ class PlanCompiler:
             if operation.kind == "repeat":
                 self.repeat_count += 1
                 if in_loop or in_branch or self.repeat_count > 1 or depth > 0:
-                    raise ValueError("Nested/multiple/branch repeat requires compact_graph")
+                    raise ValueError(
+                        "Semantic plans support one top-level repeat, not nested/multiple/branch repeats"
+                    )
             self._validate_shape(
                 operation.steps, in_loop or operation.kind == "repeat", in_branch, depth + 1
             )
@@ -727,9 +729,7 @@ class PlanCompiler:
                 None,
             )
             if index is None:
-                raise ValueError(
-                    "Continuation must resume a top-level repeat; advanced composition requires compact_graph"
-                )
+                raise ValueError("Continuation must resume a top-level repeat")
             steps = steps[index:]
         entry = self.sequence(steps)
         self.nodes = [
@@ -756,7 +756,9 @@ def compile_plan(
 
 
 SEMANTIC_RULES = """
-Prefer definition {format:"semantic_plan",plan:{version:"workflow-plan-v1",name,steps}}.
+ALWAYS return definition {format:"semantic_plan",plan:{version:"workflow-plan-v1",name,steps}}.
+Never return graph nodes, entrypoint, next, sleep, switch, split/join or max_iterations: the
+compiler derives all of them from the plan.
 Operations: call/state {id,capability_name OR artifact_id,args}; sequence {steps}; wait {seconds};
 condition {when:JSONLogic,steps,otherwise}; parallel {id,branches:[operations]};
 repeat {id,steps,interval_seconds, exactly ONE of count,duration_seconds,continuous:true,deadline_unix}.
@@ -774,7 +776,13 @@ do not use raw var paths, "greater", inline Mustache paths or mechanical counter
 Specify TOTAL work: seven days at four samples/day means count:28 and interval_seconds:21600.
 Do not cap count at 20, add manual advance_chain actions or build continuation yourself.
 Compiler constructs counters, scopes, joins, HTTP fields and continuation in blocks of 20.
-For nested/multiple repetitions, complex actions or unsupported topology return
-{format:"compact_graph",graph:{name,entrypoint,nodes,...}} using compact graph rules.
+Use only one top-level repeat; put actions that must happen once after it, not before it.
+Only declared capability input keys. Tools go through declared RiteSmith capabilities, never
+directly to provider APIs (no web.fetch to Telegram or similar). Array outputs use path "result".
+wait is for elapsed time only; later operations reference earlier ones directly.
+Content monitors compare snapshots via llm.evaluate, skip empty current snapshots, keep the
+previous snapshot in repeat.state and notify only when decision=notify.
+Async callbacks require timeoutMillis and successWhen. Add compensation only for a reversible effect.
+Preserve explicit schedule, trigger, duration, counts and continuation; never guess different values.
 Never drop requirements to fit a pattern. One response; no format classification call.
 """
