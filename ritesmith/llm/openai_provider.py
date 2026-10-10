@@ -683,8 +683,9 @@ class OpenAIProvider(LLMProvider):
         contracts = [
             {
                 "name": name,
-                "input_schema": definition.input_schema,
-                "output_schema": definition.output_schema,
+                # Built-in sandbox functions carry no schemas; provider tools do.
+                "input_schema": getattr(definition, "input_schema", None),
+                "output_schema": getattr(definition, "output_schema", None),
             }
             for name, definition in luau_tools_for_profile(profile).items()
         ]

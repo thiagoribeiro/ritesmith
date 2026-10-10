@@ -216,3 +216,13 @@ async def test_proposal_without_analysis_is_accepted():
     provider = _provider({"script": {"script": REFERENCE, "name": "n", "description": "d"}})
     proposal, _ = await _propose(provider)
     assert proposal.analysis.requires_lua and proposal.script.script == REFERENCE
+
+
+@pytest.mark.asyncio
+async def test_independent_tests_accept_builtin_functions_without_schemas():
+    # Built-in sandbox functions (host_functions.HostFunctionDef) have no schema
+    # attributes; this crashed /plans with HTTP 500 when tests ran beside a script.
+    provider = _provider({"cases": []})
+    await provider.generate_validation_tests("Sum numbers", {}, {}, profile="transform_only")
+    contracts = provider._chat_with_retry.call_args.args[2]
+    assert "TOOL CONTRACTS" in contracts
