@@ -179,7 +179,8 @@ async def run(args):
     over_budget = asyncio.Event()
     # Hard spending cap: each dispatch reserves the worst request cost seen so far;
     # unknown usage is charged at that reservation, never as zero.
-    spent, reserve = [0.0], [args.reserve_usd]
+    spent, reserve = [0.0], [getattr(args, "reserve_usd", 0.05)]
+    max_usd = getattr(args, "max_usd", None)
     rows = [json.loads(line) for line in output.read_text().splitlines()] if output.exists() else []
     done = {(r["task"], r["entrypoint"], r["repetition"]) for r in rows}
     async with httpx.AsyncClient(base_url=args.url, timeout=600, headers=headers) as client:
@@ -190,7 +191,7 @@ async def run(args):
             async with semaphore:
                 if blocked.is_set() or over_budget.is_set():
                     return
-                if args.max_usd is not None and spent[0] + reserve[0] > args.max_usd:
+                if max_usd is not None and spent[0] + reserve[0] > max_usd:
                     over_budget.set()
                     return
                 endpoint, body = payload(task, entrypoint, args.missing_client_tests)
@@ -297,7 +298,7 @@ async def run(args):
     print(json.dumps(summary, indent=2))
     print(f"estimated spend: US${spent[0]:.4f}", flush=True)
     if over_budget.is_set():
-        print(f"stopped at the US${args.max_usd} cap; remaining cells unexecuted", flush=True)
+        print(f"stopped at the US${max_usd} cap; remaining cells unexecuted", flush=True)
     if blocked.is_set():
         raise BenchmarkBlocked("OpenAI account credits exhausted; incomplete evaluation")
 
