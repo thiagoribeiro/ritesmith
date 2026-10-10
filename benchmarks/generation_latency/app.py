@@ -57,7 +57,7 @@ async def cold_search(*args, **kwargs):
 
 def workflow_user(*args, **kwargs):
     current = scope.get()
-    if current and current.phase not in ("full", "mermaid"):
+    if current and current.phase not in ("full", "mermaid", "current"):
         return baseline_user(*args, **kwargs)
     return _original_workflow_user(*args, **kwargs)
 
@@ -158,7 +158,8 @@ providers = {}
 def settings_for(request: Request):
     current = scope.get()
     settings = get_settings()
-    if current is None:
+    if current is None or current.phase == "current":
+        # "current" measures the configured defaults as shipped, with no overrides.
         return settings
     baseline = current.phase == "baseline"
     return settings.model_copy(

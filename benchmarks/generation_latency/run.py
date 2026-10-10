@@ -176,6 +176,10 @@ async def run(args):
     output.parent.mkdir(parents=True, exist_ok=True)
     semaphore = asyncio.Semaphore(args.concurrency)
     blocked = asyncio.Event()
+    over_budget = asyncio.Event()
+    # Hard spending cap: each dispatch reserves the worst request cost seen so far;
+    # unknown usage is charged at that reservation, never as zero.
+    spent, reserve = [0.0], [args.reserve_usd]
     rows = [json.loads(line) for line in output.read_text().splitlines()] if output.exists() else []
     done = {(r["task"], r["entrypoint"], r["repetition"]) for r in rows}
     async with httpx.AsyncClient(base_url=args.url, timeout=600, headers=headers) as client:
@@ -184,7 +188,10 @@ async def run(args):
             if (task["id"], entrypoint, repetition) in done:
                 return
             async with semaphore:
-                if blocked.is_set():
+                if blocked.is_set() or over_budget.is_set():
+                    return
+                if args.max_usd is not None and spent[0] + reserve[0] > args.max_usd:
+                    over_budget.set()
                     return
                 endpoint, body = payload(task, entrypoint, args.missing_client_tests)
                 started = time.perf_counter()
@@ -239,6 +246,11 @@ async def run(args):
                     "stages": stages,
                     "response": response_body,
                 }
+                cost = estimated_cost(calls) if calls else None
+                row["estimated_usd"] = cost
+                spent[0] += reserve[0] if cost is None else cost
+                if cost is not None:
+                    reserve[0] = max(reserve[0], cost)
                 rows.append(row)
                 append_record(output, row)
                 if any(
@@ -257,8 +269,10 @@ async def run(args):
                                 "duration_s",
                                 "valid",
                                 "errors",
+                                "estimated_usd",
                             )
                         }
+                        | {"spent_usd": round(spent[0], 4)}
                     ),
                     flush=True,
                 )
@@ -276,9 +290,14 @@ async def run(args):
             ]
         )
     summary = summarize(rows)
-    suffix = ".partial.summary.json" if blocked.is_set() else ".summary.json"
+    suffix = (
+        ".partial.summary.json" if blocked.is_set() or over_budget.is_set() else ".summary.json"
+    )
     output.with_suffix(suffix).write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
+    print(f"estimated spend: US${spent[0]:.4f}", flush=True)
+    if over_budget.is_set():
+        print(f"stopped at the US${args.max_usd} cap; remaining cells unexecuted", flush=True)
     if blocked.is_set():
         raise BenchmarkBlocked("OpenAI account credits exhausted; incomplete evaluation")
 
@@ -287,7 +306,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8081")
     parser.add_argument(
-        "--phase", choices=("baseline", "model", "filtered", "full", "mermaid"), required=True
+        "--phase",
+        choices=("baseline", "model", "filtered", "full", "mermaid", "current"),
+        required=True,
     )
     parser.add_argument("--target-seconds", type=float, default=10)
     parser.add_argument("--model", choices=MODELS, default="gpt-5-mini")
@@ -309,6 +330,15 @@ def main():
     )
     parser.add_argument("--output", required=True)
     parser.add_argument("--missing-client-tests", action="store_true")
+    parser.add_argument(
+        "--max-usd", type=float, help="Stop dispatching before estimated spend exceeds this"
+    )
+    parser.add_argument(
+        "--reserve-usd",
+        type=float,
+        default=0.05,
+        help="Initial per-request reservation; grows to the worst observed request cost",
+    )
     asyncio.run(run(parser.parse_args()))
 
 
