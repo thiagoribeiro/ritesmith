@@ -99,9 +99,23 @@ def capability_action(base_url: str, body: dict) -> dict:
     }
 
 
+def _without_nulls(definition):
+    # Every optional field defaults when absent, so an explicit null (often an
+    # invented key, or next: null on a terminal node) carries no information.
+    if not isinstance(definition, dict):
+        return definition
+    cleaned = {k: v for k, v in definition.items() if v is not None}
+    if isinstance(cleaned.get("nodes"), list):
+        cleaned["nodes"] = [
+            {k: v for k, v in n.items() if v is not None} if isinstance(n, dict) else n
+            for n in cleaned["nodes"]
+        ]
+    return cleaned
+
+
 def compile_workflow(definition: dict, base_url: str) -> dict:
     """Type validation precedes expansion; callers must also run WorkflowValidator."""
-    compact = CompactWorkflow.model_validate(definition)
+    compact = CompactWorkflow.model_validate(_without_nulls(definition))
     result = compact.model_dump(exclude_none=True)
     nodes = []
     for node in compact.nodes:
