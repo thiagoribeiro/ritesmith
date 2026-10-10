@@ -662,23 +662,28 @@ class PlanCompiler:
                 },
                 scope,
             )
-            self.add(
-                {
-                    "id": check,
-                    "kind": "switch",
-                    "cases": [
-                        {
-                            "name": "done",
-                            "when": {
-                                "==": [{"var": f"nodes.{tick}.response.body.output.done"}, True]
-                            },
-                            "target": exit_entry(index) if clock else after,
-                        }
-                    ],
-                    "default": next_entry,
-                },
-                scope,
-            )
+            # A count-only pass before the block's last cannot finish. Exiting from it
+            # would make final actions reachable before the last pass's results exist.
+            if clock is None and remaining is not None and index < chunk - 1:
+                self.nodes[-1]["next"] = next_entry
+            else:
+                self.add(
+                    {
+                        "id": check,
+                        "kind": "switch",
+                        "cases": [
+                            {
+                                "name": "done",
+                                "when": {
+                                    "==": [{"var": f"nodes.{tick}.response.body.output.done"}, True]
+                                },
+                                "target": exit_entry(index) if clock else after,
+                            }
+                        ],
+                        "default": next_entry,
+                    },
+                    scope,
+                )
             body = self.sequence(operations(op.steps, index), tick, scope)
             entry = body
             if clock:

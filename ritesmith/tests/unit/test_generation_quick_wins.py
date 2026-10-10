@@ -108,3 +108,28 @@ async def test_semantic_mode_rejects_graph_definitions():
     provider = _semantic_provider(example("linear"))
     with pytest.raises(LLMError, match="semantic_plan"):
         await provider.propose(goal="Send BTC price", constraints={})
+
+
+def test_count_repeat_final_action_reads_last_pass_without_early_exits():
+    from ritesmith.workflows.constructors import semantic_example
+    from ritesmith.workflows.semantic import compile_plan
+    from ritesmith.workflows.semantic_validation import uninitialized_reference_errors
+
+    plan = semantic_example("fixed_samples")
+    plan["steps"].append(
+        {
+            "kind": "call",
+            "id": "notify",
+            "capability_name": "telegram.send",
+            "args": {
+                "text": {
+                    "type": "template",
+                    "parts": ["S: ", {"ref": "samples", "path": "samples"}],
+                }
+            },
+        }
+    )
+    definition = compile_plan(plan, BASE)
+    assert uninitialized_reference_errors(definition) == []
+    switches = [n for n in definition["nodes"] if n["kind"] == "switch"]
+    assert len(switches) == 1  # only the last pass can finish a count-only block
