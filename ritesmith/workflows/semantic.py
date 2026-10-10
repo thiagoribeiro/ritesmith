@@ -120,11 +120,48 @@ class WorkflowPlan(BaseModel):
     failureHandling: dict | None = None
 
 
+def _repeat_state_aliases(plan):
+    """Read retained state as {ref: <repeat id>, path: <state key>}.
+
+    Models naturally address loop state through the repeat itself; the compiler's
+    form is the repeat's tick state (previous pass inside the loop, final after it).
+    """
+    if not isinstance(plan, dict):
+        return plan
+    repeats = set()
+
+    def collect(steps):
+        for step in steps if isinstance(steps, list) else []:
+            if isinstance(step, dict):
+                if step.get("kind") == "repeat" and step.get("id"):
+                    repeats.add(step["id"])
+                for key in ("steps", "otherwise", "branches"):
+                    collect(step.get(key))
+
+    def alias(value):
+        if isinstance(value, list):
+            return [alias(item) for item in value]
+        if isinstance(value, dict):
+            if set(value) == {"__trama_literal_json__"}:
+                return value
+            if value.get("ref") in repeats and set(value) <= {"ref", "path"}:
+                path = value.get("path") or ""
+                return {
+                    "ref": value["ref"] + "_tick",
+                    "path": "state" + ("." + path if path else ""),
+                }
+            return {key: alias(item) for key, item in value.items()}
+        return value
+
+    collect(plan.get("steps"))
+    return alias(plan) if repeats else plan
+
+
 class PlanCompiler:
     def __init__(
         self, plan, base_url, contract_version="", continuation=None, intent=None, constraints=None
     ):
-        self.plan = WorkflowPlan.model_validate(plan)
+        self.plan = WorkflowPlan.model_validate(_repeat_state_aliases(plan))
         self.base_url = base_url
         self.contract_version = contract_version
         self.intent = intent or self.plan.name
@@ -772,6 +809,8 @@ For text combining references use {type:"template",parts:["BTC: ",{ref:"fetch",p
 the compiler emits a native string, never a template object passed to a tool.
 After parallel, only the last result of each branch is available through its terminal operation id.
 State across repeat chunks: repeat.state and explicit repeat.initial_state defaults.
+Read retained state as {ref:"<repeat id>",path:"<state key>"}: inside the repeat it is the
+previous pass's value (initial_state on the first pass); after the repeat it is the final value.
 The compiler overlays continuation.state on those defaults and initializes the first pass.
 Self-references need a repeat.state mapping and an explicit initial_state key; never use absent node results as null.
 Callback {id,kind:"callback",action} uses native async-http-callback contract.

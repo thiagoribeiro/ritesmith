@@ -133,3 +133,59 @@ def test_count_repeat_final_action_reads_last_pass_without_early_exits():
     assert uninitialized_reference_errors(definition) == []
     switches = [n for n in definition["nodes"] if n["kind"] == "switch"]
     assert len(switches) == 1  # only the last pass can finish a count-only block
+
+
+def test_repeat_id_reads_previous_state_inside_and_final_state_after():
+    from ritesmith.workflows.semantic import compile_plan
+    from ritesmith.workflows.semantic_validation import uninitialized_reference_errors
+
+    state = {"ref": "monitor", "path": "minimum"}
+    plan = {
+        "name": "min",
+        "steps": [
+            {
+                "kind": "repeat",
+                "id": "monitor",
+                "interval_seconds": 60,
+                "count": 3,
+                "state": {"minimum": {"ref": "min", "path": "min_value"}},
+                "initial_state": {"minimum": None},
+                "steps": [
+                    {
+                        "kind": "call",
+                        "id": "fetch",
+                        "capability_name": "market.coin_price",
+                        "args": {"symbol": "eth"},
+                    },
+                    {
+                        "kind": "state",
+                        "id": "min",
+                        "capability_name": "stat.min_value",
+                        "args": {
+                            "current": {"ref": "fetch", "path": "price"},
+                            "previous_min": state,
+                        },
+                    },
+                ],
+            },
+            {
+                "kind": "call",
+                "id": "notify",
+                "capability_name": "telegram.send",
+                "args": {"text": {"type": "template", "parts": ["Min: ", state]}},
+            },
+        ],
+    }
+    definition = compile_plan(plan, BASE)
+    assert uninitialized_reference_errors(definition) == []
+    inputs = {
+        n["id"]: n["action"]["request"]["body"]["input"]
+        for n in definition["nodes"]
+        if n["kind"] == "task"
+    }
+    assert inputs["min__rs_1"]["previous_min"] is None
+    assert (
+        "monitor_tick__rs_1.response.body.output.state.minimum"
+        in inputs["min__rs_2"]["previous_min"]
+    )
+    assert "monitor_tick.response.body.output.state.minimum" in inputs["notify"]["text"]
