@@ -7,6 +7,14 @@ releases yet, so changes are grouped under `Unreleased`.
 ## [Unreleased]
 
 ### Added
+- **Semantic workflow generation (default).** The model writes a semantic plan
+  (calls, waits, conditions, parallel branches, bounded repeats); Python compiles
+  counters, joins, first-pass seeds and continuation blocks into native Trama.
+  Loop state is read as `{ref: <repeat id>, path: <key>}`. Requires Trama with
+  mandatory typed JSON rendering (Trama PR #54). `RITESMITH_GENERATION_SEMANTIC_WORKFLOWS=false`
+  falls back to model-written compact graphs.
+- **Generation scorecard.** `benchmarks/generation_latency/scorecard.sh` measures pass
+  rate, latency and cost per valid artifact with a hard spend cap (`run.py --max-usd`).
 - **Luau script runtime (LunarDyson).** New capabilities are generated as
   `luau_script` and executed by the embedded [LunarDyson](https://github.com/thiagoribeiro/lunardyson)
   runtime: type-checked (`--!strict`) against the tool signatures before execution,
@@ -27,6 +35,7 @@ releases yet, so changes are grouped under `Unreleased`.
   (~400 new tests; coverage 61% → 69%).
 
 ### Changed
+- **Generation deadline** defaults to 60 s (was 30 s).
 - **Default models** are now `gpt-5-mini` (generation) and `gpt-4.1-nano` (intent
   analysis), replacing `gpt-4.1` / `gpt-4o-mini`.
 - **PolicyEngine** honors `allow_unapproved_low_risk`, and artifacts created by hand
@@ -35,7 +44,16 @@ releases yet, so changes are grouped under `Unreleased`.
 - README rewritten around the Luau/LunarDyson runtime, with the approval endpoint,
   split/join, the full provider list, and `script_language` documented.
 
+### Removed
+- Mermaid workflow generation, Structured Outputs transport and pattern-parameter
+  constructors (and their `RITESMITH_GENERATION_*` settings). None improved validity
+  in the 2026-10-10 scorecard; stale settings in `.env` are ignored.
+
 ### Fixed
+- Script generation without caller-supplied test cases no longer fails with HTTP 500
+  (independent test generation read schema attributes built-in functions lack).
+- Count-only repeats no longer make final actions reachable before the last pass.
+- Copied prompt placeholders and null-valued keys no longer discard valid candidates.
 - Any non-empty `approval_token` no longer bypasses approval — only a server-issued,
   version-bound token is accepted.
 - CI lint is green again: pre-existing `C408` findings (flagged by ruff 0.16) and
