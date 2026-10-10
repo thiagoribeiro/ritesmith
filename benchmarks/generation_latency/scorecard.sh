@@ -29,11 +29,18 @@ if ! podman container exists ritesmith-eval-pg; then
 fi
 RITESMITH_DATABASE_URL=$DB "$PY" -m alembic upgrade head >/dev/null
 
-RITESMITH_DATABASE_URL=$DB "$PY" -m uvicorn benchmarks.generation_latency.app:app \
+# Capabilities are listed to the LLM only when their provider is configured. Nothing is
+# executed here, so placeholder Telegram settings just expose telegram.* to generation.
+RITESMITH_DATABASE_URL=$DB RITESMITH_TELEGRAM_BOT_TOKEN=bench-placeholder \
+  RITESMITH_TELEGRAM_CHAT_ID=0 "$PY" -m uvicorn benchmarks.generation_latency.app:app \
   --host 127.0.0.1 --port "$PORT" >"$OUT/server.log" 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null || true' EXIT
 until curl -sf "127.0.0.1:$PORT/health" >/dev/null; do sleep 1; done
+for provider in telegram market stat web llm; do
+  grep -q "Provider registered: $provider (available=True)" "$OUT/server.log" \
+    || { echo "provider $provider unavailable; corpus results would be invalid" >&2; exit 1; }
+done
 
 run() {  # name, cap, extra args...
   local name=$1 cap=$2; shift 2
