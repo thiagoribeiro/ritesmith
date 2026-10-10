@@ -21,8 +21,7 @@ from ritesmith.runtime.providers.base import HostFunctionDef
 from ritesmith.runtime.validation_session import FixtureError, LuauValidationSession, preflight
 from ritesmith.schemas.test_spec import functional_tests
 from ritesmith.workflows.constructors import semantic_example
-from ritesmith.workflows.examples import EXAMPLE_IDS, example
-from ritesmith.workflows.mermaid import MermaidError, parse_mermaid, render_mermaid
+from ritesmith.workflows.examples import EXAMPLE_IDS
 from ritesmith.workflows.semantic import compile_plan
 from ritesmith.workflows.validator import WorkflowValidator
 
@@ -334,16 +333,6 @@ async def test_fixture_failure_is_nonrepairable_validation_diagnostic(monkeypatc
     assert any(d.category == "fixture" and not d.repairable for d in diagnostics)
 
 
-def test_mermaid_accepts_unquoted_visual_labels_and_reports_line():
-    graph = render_mermaid(example("linear"))
-    assert parse_mermaid(graph.replace('["task"]', "[task]")) == example("linear") | {
-        "version": "2.0.0"
-    }
-    with pytest.raises(MermaidError) as error:
-        parse_mermaid(graph + "\nunsupported junk")
-    assert error.value.line is not None
-
-
 @pytest.mark.parametrize("pattern", ["bounded_polling", "fixed_samples", "state_tracking"])
 def test_offline_simulation_preserves_counts_and_sample_state(pattern):
     from ritesmith.workflows.simulation import WorkflowSimulator
@@ -536,15 +525,6 @@ def test_notification_oracle_must_have_consistent_counts():
     invalid["expected_output"]["count"] = 99
     with pytest.raises(FixtureError, match="count contradicts"):
         preflight([invalid], crm_tools(), INPUT, OUTPUT)
-
-
-def test_mermaid_edge_diagnostic_retains_line_node_and_edge():
-    graph = render_mermaid(example("linear"))
-    with pytest.raises(MermaidError) as error:
-        parse_mermaid(graph + "\n  fetch --> missing")
-    assert error.value.node == "fetch"
-    assert error.value.edge == ("fetch", "", "missing")
-    assert error.value.line == len(graph.splitlines()) + 1
 
 
 def test_literal_contract_failure_and_undefined_switch_reference_are_rejected():

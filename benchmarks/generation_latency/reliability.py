@@ -18,8 +18,8 @@ import httpx
 from benchmarks.generation_latency import typed_decisions as previous
 from benchmarks.generation_latency.run import assess, payload
 from benchmarks.generation_latency.tasks import BY_ID
+from benchmarks.generation_latency.typed_decisions import packed
 from benchmarks.generation_latency.version import software_manifest
-from ritesmith.llm.response_contracts import packed
 from ritesmith.llm.spend_budget import SpendBudget, current_spend_budget
 from ritesmith.observability.costs import PRICE_VERSION, PRICES
 
