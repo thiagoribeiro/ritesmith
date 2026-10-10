@@ -75,14 +75,15 @@ _INTENT_SCHEMA = json.dumps(
         "domain": "text|math|crypto|network|documents|general",
         "suggested_name": "domain.verb_noun",
         "summary": "<one sentence summary>",
-        "artifact_types": ["lua_script OR trama_workflow"],
+        # Pipe notation like "domain"; models copied "lua_script OR trama_workflow" verbatim.
+        "artifact_types": ["lua_script|trama_workflow"],
     },
     indent=2,
 )
 
 _WORKFLOW_RESPONSE_SCHEMA = json.dumps(
     {
-        "definition": {"<workflow definition object>": "..."},
+        "definition": {"name": "...", "entrypoint": "...", "nodes": []},
         "name": "<workflow_name>",
         "description": "<description>",
         "required_capabilities": ["<capability_id>"],
@@ -92,7 +93,7 @@ _WORKFLOW_RESPONSE_SCHEMA = json.dumps(
 
 _WORKFLOW_REPAIR_SCHEMA = json.dumps(
     {
-        "definition": {"<corrected workflow definition>": "..."},
+        "definition": {"name": "...", "entrypoint": "...", "nodes": []},
         "changes_made": "<brief explanation of what was fixed>",
     },
     indent=2,
@@ -1159,6 +1160,8 @@ Return source="intent". The implementation is intentionally unavailable.
                 )
             )
         schemas = {"analysis": json.loads(_INTENT_SCHEMA)}
+        # Artifact types are derived from the candidates returned, not labelled separately.
+        del schemas["analysis"]["artifact_types"]
         if kind != "workflow":
             schemas["script"] = json.loads(
                 _script_schema(
@@ -1224,6 +1227,10 @@ Return source="intent". The implementation is intentionally unavailable.
                     "single-artifact interface cannot materialize a new script dependency"
                 )
             types = proposal.analysis.artifact_types
+            if any(t not in ("lua_script", "luau_script", "trama_workflow") for t in types):
+                # The candidates themselves say what was produced; a malformed label
+                # must not discard an otherwise valid script or workflow.
+                types = []
             if not types:
                 types = (
                     ["lua_script" if language == "lua" else "luau_script"]
