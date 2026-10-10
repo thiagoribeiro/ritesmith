@@ -17,7 +17,6 @@ def construct(
     initial_state=None,
     action=None,
     compensation=None,
-    termination=None,
     after=None,
 ):
     steps = steps or []
@@ -36,18 +35,7 @@ def construct(
             "steps": steps,
             "interval_seconds": interval_seconds,
         }
-        if termination is not None:
-            from pydantic import TypeAdapter
-
-            from ritesmith.llm.response_contracts import Termination, termination_fields
-
-            operation.update(
-                termination_fields(TypeAdapter(Termination).validate_python(termination))
-            )
-        else:
-            operation.update(
-                {"continuous": True} if pattern == "continuation" else {"count": count}
-            )
+        operation.update({"continuous": True} if pattern == "continuation" else {"count": count})
         if state is not None:
             operation["state"] = state
         if initial_state is not None:
@@ -66,68 +54,6 @@ def construct(
     return WorkflowPlan.model_validate({"name": name, "steps": operations}).model_dump(
         exclude_none=True, exclude_defaults=True
     )
-
-
-def compile_parameters(candidate, base_url, **kwargs):
-    from ritesmith.workflows.semantic import compile_plan
-
-    parameters = dict(candidate["parameters"])
-    pattern = parameters.pop("pattern")
-    after = parameters.pop("after", [])
-    if pattern == "parallel" or pattern == "async_callback":
-        parameters["steps"] = after
-    else:
-        parameters["after"] = after
-    plan = construct(pattern, name=candidate["name"], **parameters)
-    return compile_plan(plan, base_url, **kwargs)
-
-
-PATTERN_RULES = """
-Prefer definition {format:"pattern_parameters",name,parameters:{pattern,...}} for
-supported compositions. Patterns: linear(steps); parallel(branches,after);
-bounded_polling/fixed_samples/continuation/state_tracking/content_monitor
-(steps,interval_seconds,termination,state,initial_state,after); async_callback(action,after);
-compensation(steps,compensation). Preserve conditions, tool arguments and data references.
-Repeat termination is exactly {kind:"samples",count}, {kind:"duration",seconds},
-{kind:"deadline",unix}, or {kind:"continuous"}; finite requests never use continuous.
-The constructor creates monitor/monitor_tick/parallel/parallel_join mechanical IDs.
-Business operations still use semantic kinds and IDs for data references.
-Use after for final aggregation/notification after a finite repeat or parallel join.
-Nested/multiple/branch repeats and pre-repeat actions needing continuation use
-semantic_plan or compact_graph instead. Choose the escape in this SAME response.
-"""
-
-
-def pattern_example(pattern):
-    from ritesmith.llm.response_contracts import PatternCandidate, operation_transport, packed
-
-    plan = semantic_example(pattern)
-    parameters = {"pattern": pattern}
-    if pattern in ("linear", "compensation"):
-        steps = [dict(item) for item in plan["steps"]]
-        if pattern == "compensation":
-            parameters["compensation_json"] = packed(steps[0].pop("compensation"))
-        parameters["steps"] = [operation_transport(item) for item in steps]
-    elif pattern == "parallel":
-        parameters["branches"] = [
-            operation_transport(item) for item in plan["steps"][0]["branches"]
-        ]
-        parameters["after"] = [operation_transport(item) for item in plan["steps"][1:]]
-    elif pattern == "async_callback":
-        parameters["action_json"] = packed(plan["steps"][0]["action"])
-        parameters["after"] = [operation_transport(item) for item in plan["steps"][1:]]
-    else:
-        repeat = operation_transport(plan["steps"][0])
-        parameters.update(
-            {key: value for key, value in repeat.items() if key not in ("kind", "id")}
-        )
-    return PatternCandidate.model_validate(
-        {
-            "format": "pattern_parameters",
-            "name": pattern,
-            "parameters": parameters,
-        }
-    ).model_dump(exclude_none=True)
 
 
 def semantic_example(pattern):

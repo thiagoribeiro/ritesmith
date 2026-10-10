@@ -3,6 +3,10 @@
 The CLI runs production HTTP paths in-process on r2d2. Every paid nested call
 shares a durable ledger. Existing benchmark stubs are replaced by fixture-only
 production validation sessions, with an additional hidden functional oracle.
+
+Variants B (strict schemas) and C (pattern parameters) relied on transports removed
+after the 2026-10-10 scorecard; their archived results remain, only A is reproducible.
+Its fixture helpers are still shared by reliability.py.
 """
 
 import argparse
@@ -18,11 +22,14 @@ import httpx
 from benchmarks.generation_latency.run import assess, payload
 from benchmarks.generation_latency.tasks import BY_ID
 from benchmarks.generation_latency.version import software_manifest
-from ritesmith.llm.response_contracts import SCHEMA_VERSION, packed, response_model
 from ritesmith.llm.spend_budget import SpendBudget, current_spend_budget
-from ritesmith.llm.structured_output import strict_schema
 from ritesmith.observability.costs import PRICES, estimated_cost
 from ritesmith.workflows.constructors import CONSTRUCTOR_VERSION
+
+
+def packed(value):
+    return json.dumps(value, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
 
 CELLS = (
     ("wf_week", "generate", "A", False),
@@ -145,7 +152,6 @@ def settings_update(variant):
         "llm_workflow_effort": "low",
         "generation_specialized_prompts": True,
         "generation_compact_workflows": True,
-        "generation_mermaid_workflows": False,
         "generation_semantic_workflows": True,
         "generation_luau_assembly": True,
         "generation_unified_proposal": True,
@@ -156,10 +162,6 @@ def settings_update(variant):
         "generation_deadline_seconds": 30,
         "generation_recovery_attempts": 1,
         "generation_max_attempts": 2,
-        "generation_structured_outputs": variant != "A",
-        "generation_pattern_parameters": variant == "C",
-        "generation_structured_output_operations": None,
-        "generation_pattern_parameter_operations": None,
         "require_strict_typecheck": True,
         "require_luau": True,
         "require_tests_min_risk": "medium",
@@ -377,7 +379,6 @@ def freeze_manifest():
     manifest = software_manifest()
     manifest.update(
         protocol="typed-decisions-v1",
-        schema_version=SCHEMA_VERSION,
         constructor_version=CONSTRUCTOR_VERSION,
         cells=CELLS,
         prices=PRICES,
@@ -387,19 +388,6 @@ def freeze_manifest():
         ],
         settings={variant: settings_update(variant) for variant in "ABC"},
         fixture_sha256=hashlib.sha256(packed(notification_fixtures()).encode()).hexdigest(),
-        response_schemas={
-            f"{method}:{variant}": strict_schema(response_model(method, variant == "C"))
-            for method in (
-                "proposal_script",
-                "proposal_workflow",
-                "luau_gen",
-                "workflow_gen",
-                "test_gen",
-                "workflow_repair",
-                "luau_repair",
-            )
-            for variant in "BC"
-        },
     )
     return manifest
 

@@ -203,7 +203,7 @@ async def campaign(args):
             "baseline", "gpt-5-mini", ["t3_notify_inactive"], 1, ["generate"], missing=True
         )
         for model in ("gpt-5-mini", "gpt-5.4-mini"):
-            for phase in ("full", "mermaid"):
+            for phase in ("full",):
                 await measure(
                     phase,
                     model,

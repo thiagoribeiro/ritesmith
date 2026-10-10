@@ -40,22 +40,18 @@ class Settings(BaseSettings):
     llm_fallback_enabled: bool = True
     generation_specialized_prompts: bool = True
     generation_compact_workflows: bool = True
-    generation_mermaid_workflows: bool = False
     generation_unified_proposal: bool = True
     generation_parallel_tests: bool = True
     generation_avoid_speculative_workflow_tests: bool = True
     generation_latency_target_seconds: float = Field(default=10, gt=0)
     generation_typed_prompts: bool = True
     generation_luau_assembly: bool = False
-    generation_semantic_workflows: bool = False
+    # Semantic plans compiled to native Trama; disable to fall back to compact graphs.
+    generation_semantic_workflows: bool = True
     # Deprecated compatibility setting; it no longer selects JSON rendering behavior.
     generation_workflow_typed_json: bool = False
-    generation_structured_outputs: bool = False
-    generation_structured_output_operations: list[str] | None = None
-    generation_pattern_parameters: bool = False
-    generation_pattern_parameter_operations: list[str] | None = None
     generation_bounded_recovery: bool = True
-    generation_deadline_seconds: float = Field(default=30, gt=0)
+    generation_deadline_seconds: float = Field(default=60, gt=0)
     generation_recovery_min_seconds: float = Field(default=3, ge=0)
     generation_recovery_attempts: int = Field(default=1, ge=0, le=4)
     llm_timeout_seconds: int = 180  # gpt-5* reasoning + workflow JSON regularly exceeds 60s

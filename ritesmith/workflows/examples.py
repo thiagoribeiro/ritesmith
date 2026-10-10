@@ -224,9 +224,7 @@ def workflow_system(
     *,
     compact: bool,
     filtered: bool,
-    mermaid: bool = False,
     semantic: bool = False,
-    patterns: bool = False,
 ) -> tuple[str, list[str]]:
     selected = (
         select_examples(goal, context)
@@ -242,21 +240,7 @@ def workflow_system(
         else f"Task action is sync POST {base_url.rstrip('/')}/trama/execute, headers Authorization=Bearer __TRAMA_TOKEN__ and Content-Type=application/json; body has capability_name OR artifact_id and input; successStatusCodes=[200]."
     )
     rendered = []
-    if patterns and not mermaid:
-        from ritesmith.workflows.constructors import PATTERN_RULES, pattern_example
-
-        return (
-            "You generate Trama workflows. Return JSON only.\n"
-            + ESSENTIAL_RULES
-            + PATTERN_RULES
-            + "\nEXAMPLES:\n"
-            + "\n".join(
-                identifier + ":" + json.dumps(pattern_example(identifier), separators=(",", ":"))
-                for identifier in selected
-            ),
-            selected,
-        )
-    if semantic and not mermaid:
+    if semantic:
         from ritesmith.workflows.constructors import semantic_example
         from ritesmith.workflows.semantic import SEMANTIC_RULES
 
@@ -275,15 +259,8 @@ def workflow_system(
             ),
             selected,
         )
-    if mermaid:
-        from ritesmith.workflows.mermaid import MERMAID_RULES, render_mermaid
-
-        representation = MERMAID_RULES
     for id_ in selected:
         definition = example(id_)
-        if mermaid:
-            rendered.append(id_ + ":\n" + render_mermaid(definition))
-            continue
         if not compact:
             definition = compile_workflow(definition, base_url)
         rendered.append(

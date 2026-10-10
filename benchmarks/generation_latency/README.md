@@ -52,7 +52,8 @@ the returned workflow to its persisted ID; these run only through `/plans`.
 | `RITESMITH_LLM_FALLBACK_ENABLED` | `true` | Retry with original model |
 | `RITESMITH_GENERATION_SPECIALIZED_PROMPTS` | `true` | Select short examples locally |
 | `RITESMITH_GENERATION_COMPACT_WORKFLOWS` | `true` | Generate typed shorthand and compile |
-| `RITESMITH_GENERATION_MERMAID_WORKFLOWS` | `false` | Experimental annotated Mermaid; overrides compact/native LLM output |
+| `RITESMITH_GENERATION_SEMANTIC_WORKFLOWS` | `true` | Semantic plans compiled to Trama; `false` falls back to compact graphs |
+| `RITESMITH_GENERATION_DEADLINE_SECONDS` | `60` | Whole-request generation deadline, including recovery |
 | `RITESMITH_GENERATION_UNIFIED_PROPOSAL` | `true` | Intent and first candidate in one call |
 | `RITESMITH_GENERATION_PARALLEL_TESTS` | `true` | Independent tests alongside candidate |
 | `RITESMITH_GENERATION_AVOID_SPECULATIVE_WORKFLOW_TESTS` | `true` | Defer Lua tests for clear workflow intents; scripts still get required tests |
@@ -65,42 +66,36 @@ No winning model is hardcoded before qualification. A local model hint chooses
 the script model for explicit code/contracts and the workflow model otherwise;
 the unified response still decides the required artifact types.
 
-## Mermaid comparison
+## Pass-rate scorecard
 
-`--phase mermaid` uses the same low effort, selected examples, full capability
-contracts, unified proposal and parallel tests as `full`, changing only the
-workflow representation. The LLM returns a Mermaid flowchart string as
-`definition`; Python compiles it to the existing public Trama JSON. Repairs and
-compound proposals use the same representation. The switch is disabled by default.
-
-The supported [Mermaid syntax](https://mermaid.js.org/syntax/flowchart.html) is a
-restricted flowchart: one arrow/declaration per line, explicit next edges,
-indexed switch cases and split branches. `%% workflow {...}` holds metadata and
-`%% node ID {...}` holds capability/artifact arguments, predicates and advanced
-HTTP/callback/compensation fields. These annotations preserve information that
-visual edges do not express. Missing/ambiguous edges, unknown nodes and unsupported
-syntax fail validation instead of being guessed. No model is called to convert.
-The same typed graph and existing Trama validator check the result; returned and
-persisted artifacts retain their public format.
-
-The optional extended protocol runs workflow triage on each candidate, then five repetitions of the full
-20 scenarios for quality-qualified finalists at concurrency 1 and 2. Include
-`--tasks compounds --entrypoints plans` to assess new script dependencies. Keep
-raw results and source manifests separate from pre-Mermaid campaigns. Compare
-validity, p95, uncached responses, repairs and input/output tokens; familiarity
-with Mermaid is a hypothesis, not evidence of a latency improvement.
+`scorecard.sh` measures the checked-out revision with its shipped defaults through
+`/generate`: a 6-request smoke stage, then all 51 tasks × `REPS` after confirmation.
+Each stage has a hard estimated-spend cap (`run.py --max-usd`): before every
+request the worst observed request cost is reserved, and unknown usage is charged at
+that reservation. It needs `OPENAI_API_KEY`, podman (disposable Postgres) and
+exposes Telegram with placeholder settings, since capabilities are only listed to the
+model when their provider is configured; it aborts if a required provider is missing.
 
 ```bash
-python -m benchmarks.generation_latency.run --phase mermaid --model gpt-5.4-mini \
-  --tasks triage --kind trama_workflow --repetitions 3 --concurrency 1 \
-  --entrypoints specialized --output results/mermaid-triage.jsonl
-
-# Same code/evaluator for both formats, four models in triage, then best two per
-# format on all 20 scenarios and dependent plans, five repeats, concurrency 1/2.
-python -m benchmarks.generation_latency.formats_campaign \
-  --baseline-directory results/campaign-final-code-20261008 \
-  --output results/campaign-mermaid-20261008
+OPENAI_API_KEY=... SMOKE_USD=0.30 FULL_USD=2.00 REPS=3 \
+  benchmarks/generation_latency/scorecard.sh
+python -m benchmarks.generation_latency.scorecard results/<run>/full.jsonl
+# Map newer native fields (durationMillis, async callbacks) to the v2 grader's names:
+python -m benchmarks.generation_latency.regrade results/<run>/*.jsonl --exclude wf_artifact
 ```
+
+`wf_artifact` needs `art_benchmark_normalize` to exist in the registry and is
+excluded until the harness seeds it. The v2 grader still requires `stat.tick` and
+`max_iterations == 20` for some scenarios, which semantic plans express differently.
+
+2026-10-10 results (gpt-5-mini low, N=3, `wf_artifact` excluded):
+
+| Configuration | Luau valid | Workflow valid | Workflow p50 / p95 |
+|---|---:|---:|---:|
+| PR #6 head, compact graphs | 86% | 56% | 13.5 s / 30.0 s |
+| Primitive micro-examples (compact) | — | 53% | 15.2 s / 29.9 s |
+| Placeholder/null fixes | 89% | 63% | 10.8 s / 51.1 s |
+| Strict semantic plans + compiler fixes | 94% | 77% | 7.3 s / 17.4 s |
 
 Evaluator version 2 accepts `market.bitcoin_price` for BTC-only requests and
 detects cyclic counters that reset instead of advancing. The original campaign

@@ -308,7 +308,7 @@ def main():
     parser.add_argument("--url", default="http://127.0.0.1:8081")
     parser.add_argument(
         "--phase",
-        choices=("baseline", "model", "filtered", "full", "mermaid", "current"),
+        choices=("baseline", "model", "filtered", "full", "current"),
         required=True,
     )
     parser.add_argument("--target-seconds", type=float, default=10)
