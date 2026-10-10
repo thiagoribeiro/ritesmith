@@ -120,6 +120,9 @@ class WorkflowPlan(BaseModel):
     failureHandling: dict | None = None
 
 
+_COUNTERS = ("iteration", "remaining_iterations", "deadline_unix")
+
+
 def _repeat_state_aliases(plan):
     """Read retained state as {ref: <repeat id>, path: <state key>}.
 
@@ -146,10 +149,9 @@ def _repeat_state_aliases(plan):
                 return value
             if value.get("ref") in repeats and set(value) <= {"ref", "path"}:
                 path = value.get("path") or ""
-                return {
-                    "ref": value["ref"] + "_tick",
-                    "path": "state" + ("." + path if path else ""),
-                }
+                if path not in _COUNTERS and path != "state" and not path.startswith("state."):
+                    path = "state" + ("." + path if path else "")
+                return {"ref": value["ref"] + "_tick", "path": path}
             return {key: alias(item) for key, item in value.items()}
         return value
 
