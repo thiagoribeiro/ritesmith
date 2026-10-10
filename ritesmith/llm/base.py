@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 class LuaGenerationResponse(BaseModel):
@@ -45,7 +45,8 @@ class WorkflowRepairResponse(BaseModel):
 
 
 class GenerationProposal(BaseModel):
-    analysis: IntentAnalysis
+    # Artifact types are derived from the candidates, so the analysis is optional.
+    analysis: IntentAnalysis = Field(default_factory=IntentAnalysis)
     script: LuaGenerationResponse | None = None
     workflow: WorkflowGenerationResponse | None = None
     # Populated only by the service's independent intent/schema test generator.

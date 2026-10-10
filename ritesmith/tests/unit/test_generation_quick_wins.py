@@ -189,3 +189,30 @@ def test_repeat_id_reads_previous_state_inside_and_final_state_after():
         in inputs["min__rs_2"]["previous_min"]
     )
     assert "monitor_tick.response.body.output.state.minimum" in inputs["notify"]["text"]
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("minimum", "state.minimum"),
+        ("state.minimum", "state.minimum"),
+        ("iteration", "iteration"),
+    ],
+)
+def test_repeat_alias_keeps_explicit_state_prefix_and_counters(path, expected):
+    from ritesmith.workflows.semantic import _repeat_state_aliases
+
+    plan = {
+        "steps": [
+            {"kind": "repeat", "id": "m", "steps": [{"args": {"x": {"ref": "m", "path": path}}}]}
+        ]
+    }
+    aliased = _repeat_state_aliases(plan)["steps"][0]["steps"][0]["args"]["x"]
+    assert aliased == {"ref": "m_tick", "path": expected}
+
+
+@pytest.mark.asyncio
+async def test_proposal_without_analysis_is_accepted():
+    provider = _provider({"script": {"script": REFERENCE, "name": "n", "description": "d"}})
+    proposal, _ = await _propose(provider)
+    assert proposal.analysis.requires_lua and proposal.script.script == REFERENCE
