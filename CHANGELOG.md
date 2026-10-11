@@ -6,6 +6,11 @@ All notable changes to RiteSmith. The format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **Requires Trama 3.0.1.** Trama ≤ 3.0.0 drops the result of a node that runs right after
+  a `switch` once the execution resumes. Semantic repeats with a condition hit this on
+  their first resumed pass (thiagoribeiro/trama#56).
+
 ## [0.2.0] - 2026-10-10
 
 First tagged release. Generated workflows now require **Trama 3.0.0** (mandatory typed
