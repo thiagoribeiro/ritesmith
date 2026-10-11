@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ritesmith-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server exposing RiteSmith tools and generation meta-tools to the Agent Core"
 requires-python = ">=3.12"
 dependencies = [

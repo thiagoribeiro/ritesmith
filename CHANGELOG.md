@@ -1,20 +1,63 @@
 # Changelog
 
 All notable changes to RiteSmith. The format loosely follows
-[Keep a Changelog](https://keepachangelog.com/); this project has not cut tagged
-releases yet, so changes are grouped under `Unreleased`.
+[Keep a Changelog](https://keepachangelog.com/) and versions follow
+[Semantic Versioning](https://semver.org/) (pre-1.0: minor releases may break).
 
 ## [Unreleased]
+
+## [0.2.0] - 2026-10-10
+
+First tagged release. Generated workflows now require **Trama 3.0.0** (mandatory typed
+JSON rendering); see Upgrade notes.
+
+### Upgrade notes
+- **Upgrade Trama to 3.0.0 before or together with RiteSmith**, and roll them back
+  together. Workflows compiled by this release use typed JSON references and literal
+  envelopes that older Trama versions cannot render. Cancel running plans that
+  RiteSmith 0.1.x compiled with cyclic graphs (`POST /plans/{id}/cancel`); they may read
+  references that are no longer implicitly null.
+- **Run migration `0005`** (`alembic upgrade head`): artifact `usage_description`
+  and a reweighted full-text trigger for reuse recall.
+- **Settings.** `generation_semantic_workflows` defaults to `true` and
+  `generation_deadline_seconds` to 60. Removed `RITESMITH_GENERATION_MERMAID_WORKFLOWS`,
+  `..._STRUCTURED_OUTPUTS(_OPERATIONS)` and `..._PATTERN_PARAMETERS(_OPERATIONS)` are
+  ignored if still present. `generation_workflow_typed_json` is accepted but has no effect.
+- **Exhausted generation returns HTTP 422 `generation_failed`** on `/generate`, the
+  specialized endpoints, MCP and plan materialization, instead of an unusable artifact.
 
 ### Added
 - **Semantic workflow generation (default).** The model writes a semantic plan
   (calls, waits, conditions, parallel branches, bounded repeats); Python compiles
   counters, joins, first-pass seeds and continuation blocks into native Trama.
   Loop state is read as `{ref: <repeat id>, path: <key>}`. Requires Trama with
-  mandatory typed JSON rendering (Trama PR #54). `RITESMITH_GENERATION_SEMANTIC_WORKFLOWS=false`
+  mandatory typed JSON rendering (Trama 3.0.0). `RITESMITH_GENERATION_SEMANTIC_WORKFLOWS=false`
   falls back to model-written compact graphs.
 - **Generation scorecard.** `benchmarks/generation_latency/scorecard.sh` measures pass
   rate, latency and cost per valid artifact with a hard spend cap (`run.py --max-usd`).
+  2026-10-10 results: 94% valid Luau scripts and 77% valid workflows (p50 7.3 s), up
+  from 86% / 56% (p50 13.5 s) before the semantic-plan and parser fixes.
+- **Plan lifecycle.** `GET /plans` (status filter, limit), `POST /plans/{id}/cancel`,
+  and `callback_url` fired on terminal status (retry, SSRF guard,
+  `RITESMITH_CALLBACK_ALLOWED_HOSTS`). Executions carry an `X-RS-Plan` header and
+  `/trama/execute` returns 409 for cancelled plans, so running workflows stop. (#3)
+- **Certification tiers.** Luau artifacts are certified `strict`, `nonstrict` or `lua`;
+  `nonstrict` needs approval to execute and `RITESMITH_REQUIRE_STRICT_TYPECHECK` makes it
+  a generation failure. Medium+ risk artifacts must pass executed test cases
+  (`RITESMITH_REQUIRE_TESTS_MIN_RISK`), and `RITESMITH_REQUIRE_LUAU` makes a missing
+  LunarDyson runtime a startup failure. Luau budgets are split into VM CPU, per-tool
+  (`RITESMITH_LUAU_TOOL_TIMEOUT_MS`) and wall-clock (`RITESMITH_LUAU_WALL_CLOCK_MS`). (#2)
+- **Three-stage reuse.** Full-text recall over `usage_description`, a deterministic
+  contract-compatibility gate, then an LLM relevance judge (`RITESMITH_REUSE_LLM_JUDGE`). (#2)
+- **Faster generation.** Shared OpenAI client and recall, per-operation models and
+  effort (`RITESMITH_LLM_SCRIPT_MODEL`, `..._WORKFLOW_MODEL`, `..._EFFORT`), locally
+  selected examples, a unified intent + first-candidate proposal, independent tests in
+  parallel, and one bounded recovery controller with a request deadline. (#5)
+- **Typed test specifications.** Controlled tool fixtures and isolated LunarDyson
+  validation; fixture problems are reported as non-repairable diagnostics. (#5)
+- **Bounded continuation.** Long repeats run in blocks of at most 20 passes and
+  continue through `/plans`, preserving remaining work, state and the original deadline.
+  Compatible cached continuations compile locally without an LLM call. (#5, #6)
 - **Luau script runtime (LunarDyson).** New capabilities are generated as
   `luau_script` and executed by the embedded [LunarDyson](https://github.com/thiagoribeiro/lunardyson)
   runtime: type-checked (`--!strict`) against the tool signatures before execution,
@@ -36,6 +79,14 @@ releases yet, so changes are grouped under `Unreleased`.
 
 ### Changed
 - **Generation deadline** defaults to 60 s (was 30 s).
+- **Generation acceptance is truthful.** Exhausted generation returns HTTP 422
+  `generation_failed` with diagnostics and preserved rejected candidates; unusable
+  artifacts are not published and dependent plans are not marked ready. (#6)
+- **Trama transport.** The `X-Trama-Template-Mode` header is no longer sent; JSON
+  bodies rely on Trama's mandatory typed rendering. Missing or invalid references and
+  malformed graphs are rejected before acceptance. (#6)
+- **`ValidationPipeline`** no longer reports a policy check: `valid` means validated,
+  never approved; the PolicyEngine is the only execution gate. (#2)
 - **Default models** are now `gpt-5-mini` (generation) and `gpt-4.1-nano` (intent
   analysis), replacing `gpt-4.1` / `gpt-4o-mini`.
 - **PolicyEngine** honors `allow_unapproved_low_risk`, and artifacts created by hand
@@ -54,6 +105,8 @@ releases yet, so changes are grouped under `Unreleased`.
   (independent test generation read schema attributes built-in functions lack).
 - Count-only repeats no longer make final actions reachable before the last pass.
 - Copied prompt placeholders and null-valued keys no longer discard valid candidates.
+- A Luau tool timeout is reported as a timeout instead of a runtime error, so a slow
+  tool no longer auto-deprecates the artifact. (#2)
 - Any non-empty `approval_token` no longer bypasses approval — only a server-issued,
   version-bound token is accepted.
 - CI lint is green again: pre-existing `C408` findings (flagged by ruff 0.16) and
