@@ -21,22 +21,13 @@ from ritesmith.llm.base import (
     WorkflowRepairResponse,
 )
 from ritesmith.llm.generation_context import PROMPT_VERSION, prepare_catalog, proposal_kind
-from ritesmith.llm.response_contracts import (
-    SCHEMA_VERSION,
-    TRANSPORT_RULES,
-    decode_response,
-    packed,
-    response_model,
-)
 from ritesmith.llm.script_candidate import ASSEMBLY_RULES, expand_script
 from ritesmith.llm.spend_budget import current_spend_budget
-from ritesmith.llm.structured_output import strict_schema, supports_schema, unsupported_reason
 from ritesmith.observability.generation import current_trace
 from ritesmith.observability.metrics import llm_errors_total, llm_request_duration, llm_tokens_total
 from ritesmith.workflows.compact import compact_workflow, compile_workflow
-from ritesmith.workflows.constructors import CONSTRUCTOR_VERSION, PATTERN_RULES, compile_parameters
+from ritesmith.workflows.constructors import CONSTRUCTOR_VERSION
 from ritesmith.workflows.examples import workflow_system
-from ritesmith.workflows.mermaid import compile_mermaid, render_mermaid
 from ritesmith.workflows.semantic import compile_plan
 
 # gpt-5*/o* reasoning models reject `temperature` on Chat Completions and want
@@ -75,14 +66,15 @@ _INTENT_SCHEMA = json.dumps(
         "domain": "text|math|crypto|network|documents|general",
         "suggested_name": "domain.verb_noun",
         "summary": "<one sentence summary>",
-        "artifact_types": ["lua_script OR trama_workflow"],
+        # Pipe notation like "domain"; models copied "lua_script OR trama_workflow" verbatim.
+        "artifact_types": ["lua_script|trama_workflow"],
     },
     indent=2,
 )
 
 _WORKFLOW_RESPONSE_SCHEMA = json.dumps(
     {
-        "definition": {"<workflow definition object>": "..."},
+        "definition": {"name": "...", "entrypoint": "...", "nodes": []},
         "name": "<workflow_name>",
         "description": "<description>",
         "required_capabilities": ["<capability_id>"],
@@ -92,7 +84,7 @@ _WORKFLOW_RESPONSE_SCHEMA = json.dumps(
 
 _WORKFLOW_REPAIR_SCHEMA = json.dumps(
     {
-        "definition": {"<corrected workflow definition>": "..."},
+        "definition": {"name": "...", "entrypoint": "...", "nodes": []},
         "changes_made": "<brief explanation of what was fixed>",
     },
     indent=2,
@@ -111,11 +103,14 @@ def _script_schema(schema, assembled):
     return json.dumps(data, separators=(",", ":"))
 
 
-def _workflow_schema(schema: str, mermaid: bool) -> str:
-    if not mermaid:
+def _workflow_schema(schema: str, semantic: bool) -> str:
+    if not semantic:
         return schema
     data = json.loads(schema)
-    data["definition"] = "flowchart TD\n%% workflow {...}\n%% node ...\n..."
+    data["definition"] = {
+        "format": "semantic_plan",
+        "plan": {"version": "workflow-plan-v1", "name": "...", "steps": []},
+    }
     return json.dumps(data, separators=(",", ":"))
 
 
@@ -180,16 +175,6 @@ class OpenAIProvider(LLMProvider):
         if self.use_fallback or not self.settings.llm_fallback_enabled:
             return self
         return OpenAIProvider(self.settings, client=self.client, use_fallback=True)
-
-    def _enabled(self, feature, method):
-        enabled = getattr(self.settings, f"generation_{feature}")
-        option = (
-            "structured_output_operations"
-            if feature == "structured_outputs"
-            else "pattern_parameter_operations"
-        )
-        operations = getattr(self.settings, f"generation_{option}")
-        return enabled and (operations is None or method in operations)
 
     @staticmethod
     def _examples(stats, selected, contract_version="", format_version=""):
@@ -397,42 +382,7 @@ class OpenAIProvider(LLMProvider):
         method: str = "unknown",
     ) -> tuple[str, LLMCallStats]:
         _start = time.perf_counter()
-        structured = self._enabled("structured_outputs", method)
-        patterns = self._enabled("pattern_parameters", method) and method in (
-            "workflow_gen",
-            "workflow_repair",
-            "proposal_workflow",
-            "proposal_script",
-        )
-        model_type = response_model(method, patterns) if structured or patterns else None
-        schema = strict_schema(model_type) if model_type else None
-        reason = None
-        if schema is not None:
-            reason = unsupported_reason(schema)
-            if not supports_schema(model):
-                reason = "model_schema_support_not_declared"
-            if self.settings.generation_mermaid_workflows and "workflow" in method:
-                reason = "mermaid_keeps_legacy_transport"
-                model_type = None
-            if model_type is not None:
-                system += TRANSPORT_RULES
-                if patterns and PATTERN_RULES not in system:
-                    system += PATTERN_RULES
-                # The API carries the strict schema; avoid duplicating it in prompts.
-                if reason or not structured:
-                    system += "\nTRANSPORT SCHEMA: " + packed(schema)
-        elif structured:
-            reason = "operation_has_no_typed_contract"
         response_format = {"type": "json_object"}
-        if structured and schema is not None and reason is None:
-            response_format = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": method + "_v1",
-                    "strict": True,
-                    "schema": schema,
-                },
-            }
         system += "\nWrite code comments and documentation in English. Preserve explicitly requested message text and data.\n"
         try:
             create_kwargs: dict = {
@@ -515,18 +465,11 @@ class OpenAIProvider(LLMProvider):
             or 0,
             cached_tokens=getattr(getattr(usage, "prompt_tokens_details", None), "cached_tokens", 0)
             or 0,
-            variant="C" if patterns else "B" if structured else "A",
-            response_schema_version=SCHEMA_VERSION if model_type else "",
             constructor_version=CONSTRUCTOR_VERSION
-            if patterns
-            or (
-                self.settings.generation_semantic_workflows
-                and method in ("workflow_gen", "workflow_repair", "proposal_workflow")
-            )
+            if self.settings.generation_semantic_workflows
+            and method in ("workflow_gen", "workflow_repair", "proposal_workflow")
             else "",
             response_mode=response_format["type"],
-            schema_fallback_reason=reason,
-            locally_validated_json=model_type is not None,
         )
         elapsed = time.perf_counter() - _start
         llm_request_duration.labels(provider="openai", method=method).observe(elapsed)
@@ -554,27 +497,6 @@ class OpenAIProvider(LLMProvider):
                 },
             )
         content = response.choices[0].message.content or "{}"
-        if model_type is not None:
-            try:
-                content = decode_response(content, model_type)
-                data = json.loads(content)
-                definition = data.get("definition") or (data.get("workflow") or {}).get(
-                    "definition"
-                )
-                if isinstance(definition, dict):
-                    stats.representation = definition.get("format", "native_graph")
-                    stats.representation_fallback = (
-                        patterns and stats.representation != "pattern_parameters"
-                    )
-            except (ValueError, TypeError) as exc:
-                raise LLMError(
-                    "Invalid typed response: " + str(exc),
-                    details={
-                        "stats": stats.model_dump(),
-                        "category": "response",
-                        "candidate": content,
-                    },
-                ) from exc
         return content, stats
 
     async def generate_lua(
@@ -761,8 +683,9 @@ class OpenAIProvider(LLMProvider):
         contracts = [
             {
                 "name": name,
-                "input_schema": definition.input_schema,
-                "output_schema": definition.output_schema,
+                # Built-in sandbox functions carry no schemas; provider tools do.
+                "input_schema": getattr(definition, "input_schema", None),
+                "output_schema": getattr(definition, "output_schema", None),
             }
             for name, definition in luau_tools_for_profile(profile).items()
         ]
@@ -860,17 +783,6 @@ Return source="intent". The implementation is intentionally unavailable.
         constraints=None,
         context=None,
     ):
-        if isinstance(definition, dict) and definition.get("format") == "pattern_parameters":
-            if not self.settings.generation_pattern_parameters:
-                raise ValueError("pattern parameters disabled")
-            return compile_parameters(
-                definition,
-                base_url,
-                contract_version=contract_version,
-                intent=goal,
-                constraints=constraints,
-                continuation=(context or {}).get("continuation"),
-            )
         if isinstance(definition, dict) and definition.get("format") == "semantic_plan":
             if not self.settings.generation_semantic_workflows:
                 raise ValueError("semantic workflows disabled")
@@ -882,10 +794,24 @@ Return source="intent". The implementation is intentionally unavailable.
                 constraints=constraints,
                 continuation=(context or {}).get("continuation"),
             )
+        if self.settings.generation_semantic_workflows:
+            # One representation: a bare plan is accepted, any graph form is rejected so
+            # repair asks for a plan instead of silently compiling a hybrid as a graph.
+            if isinstance(definition, dict) and "steps" in definition and "nodes" not in definition:
+                return self._compile_definition(
+                    {"format": "semantic_plan", "plan": definition},
+                    base_url,
+                    contract_version,
+                    goal=goal,
+                    constraints=constraints,
+                    context=context,
+                )
+            raise ValueError(
+                'definition must be {"format":"semantic_plan","plan":{...}}; '
+                "graph nodes are compiled from the plan, not written directly"
+            )
         if isinstance(definition, dict) and definition.get("format") == "compact_graph":
             return compile_workflow(definition["graph"], base_url)
-        if self.settings.generation_mermaid_workflows:
-            return compile_mermaid(definition, base_url)
         if self.settings.generation_compact_workflows:
             return compile_workflow(definition, base_url)
         return definition
@@ -909,9 +835,11 @@ Return source="intent". The implementation is intentionally unavailable.
             constraints=constraints,
             similar_workflows=similar_workflows,
             response_schema=_workflow_schema(
-                _WORKFLOW_RESPONSE_SCHEMA, self.settings.generation_mermaid_workflows
+                _WORKFLOW_RESPONSE_SCHEMA,
+                self.settings.generation_semantic_workflows,
             ),
             context=context,
+            semantic=self.settings.generation_semantic_workflows,
         )
         user_msg += "\nCAPABILITY INVENTORY: " + json.dumps(
             catalog.inventory, separators=(",", ":")
@@ -921,7 +849,6 @@ Return source="intent". The implementation is intentionally unavailable.
         if (
             self.settings.generation_specialized_prompts
             or self.settings.generation_compact_workflows
-            or self.settings.generation_mermaid_workflows
             or self.settings.generation_semantic_workflows
             or "workflow_examples" in (context or {})
         ):
@@ -931,9 +858,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 ritesmith_base_url,
                 compact=self.settings.generation_compact_workflows,
                 filtered=self.settings.generation_specialized_prompts,
-                mermaid=self.settings.generation_mermaid_workflows,
                 semantic=self.settings.generation_semantic_workflows,
-                patterns=self._enabled("pattern_parameters", "workflow_gen"),
             )
         raw, stats = await self._chat_with_retry(
             model=self.model,
@@ -987,13 +912,7 @@ Return source="intent". The implementation is intentionally unavailable.
         available_capability_names: list[str] | None = None,
     ) -> tuple[WorkflowRepairResponse, LLMCallStats]:
         base_url = self.settings.public_url or "http://ritesmith:8081"
-        if self.settings.generation_mermaid_workflows and isinstance(current_definition, dict):
-            try:
-                current_definition = render_mermaid(compact_workflow(current_definition, base_url))
-            except ValueError:
-                # Keep an invalid candidate as repair evidence; output is Mermaid.
-                pass
-        elif (
+        if (
             self.settings.generation_compact_workflows
             and isinstance(current_definition, dict)
             and "nodes" in current_definition
@@ -1005,14 +924,14 @@ Return source="intent". The implementation is intentionally unavailable.
             validation_errors=validation_errors,
             attempt_number=attempt_number,
             response_schema=_workflow_schema(
-                _WORKFLOW_REPAIR_SCHEMA, self.settings.generation_mermaid_workflows
+                _WORKFLOW_REPAIR_SCHEMA,
+                self.settings.generation_semantic_workflows,
             ),
             available_capability_names=available_capability_names,
         )
         system = prompts.workflow_repair_system()
         if (
             self.settings.generation_compact_workflows
-            or self.settings.generation_mermaid_workflows
             or self.settings.generation_semantic_workflows
         ):
             system, _ = workflow_system(
@@ -1021,9 +940,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 base_url,
                 compact=True,
                 filtered=True,
-                mermaid=self.settings.generation_mermaid_workflows,
                 semantic=self.settings.generation_semantic_workflows,
-                patterns=self._enabled("pattern_parameters", "workflow_repair"),
             )
             system += "\nRepair the definition from the errors; return definition and changes_made."
         raw, stats = await self._chat_with_retry(
@@ -1096,9 +1013,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 base_url,
                 compact=self.settings.generation_compact_workflows,
                 filtered=self.settings.generation_specialized_prompts,
-                mermaid=self.settings.generation_mermaid_workflows,
                 semantic=self.settings.generation_semantic_workflows,
-                patterns=self._enabled("pattern_parameters", "proposal_workflow"),
             )
             system_parts.append(wf_system)
             user_parts.append(
@@ -1111,9 +1026,11 @@ Return source="intent". The implementation is intentionally unavailable.
                     {},
                     [],
                     _workflow_schema(
-                        _WORKFLOW_RESPONSE_SCHEMA, self.settings.generation_mermaid_workflows
+                        _WORKFLOW_RESPONSE_SCHEMA,
+                        self.settings.generation_semantic_workflows,
                     ),
                     context,
+                    semantic=self.settings.generation_semantic_workflows,
                 )
             )
         if kind != "workflow":
@@ -1159,6 +1076,8 @@ Return source="intent". The implementation is intentionally unavailable.
                 )
             )
         schemas = {"analysis": json.loads(_INTENT_SCHEMA)}
+        # Artifact types are derived from the candidates returned, not labelled separately.
+        del schemas["analysis"]["artifact_types"]
         if kind != "workflow":
             schemas["script"] = json.loads(
                 _script_schema(
@@ -1169,7 +1088,8 @@ Return source="intent". The implementation is intentionally unavailable.
         if kind != "script":
             schemas["workflow"] = json.loads(
                 _workflow_schema(
-                    _WORKFLOW_RESPONSE_SCHEMA, self.settings.generation_mermaid_workflows
+                    _WORKFLOW_RESPONSE_SCHEMA,
+                    self.settings.generation_semantic_workflows,
                 )
             )
         user_parts.append(
@@ -1224,6 +1144,10 @@ Return source="intent". The implementation is intentionally unavailable.
                     "single-artifact interface cannot materialize a new script dependency"
                 )
             types = proposal.analysis.artifact_types
+            if any(t not in ("lua_script", "luau_script", "trama_workflow") for t in types):
+                # The candidates themselves say what was produced; a malformed label
+                # must not discard an otherwise valid script or workflow.
+                types = []
             if not types:
                 types = (
                     ["lua_script" if language == "lua" else "luau_script"]

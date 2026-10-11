@@ -1,5 +1,8 @@
 # r2d2 generation deployment — 2026-10-08
 
+> **Superseded:** the current r2d2 deployment is recorded in
+> [deployment-r2d2-20261010.md](deployment-r2d2-20261010.md).
+
 The owner authorized a direct update of the single-user r2d2 deployment with an
 executable rollback. The update was deployed, then **withdrawn on October 8, 2026**
 after generation failures in the bounded typed-decisions comparison. The previous

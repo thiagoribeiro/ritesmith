@@ -120,11 +120,50 @@ class WorkflowPlan(BaseModel):
     failureHandling: dict | None = None
 
 
+_COUNTERS = ("iteration", "remaining_iterations", "deadline_unix")
+
+
+def _repeat_state_aliases(plan):
+    """Read retained state as {ref: <repeat id>, path: <state key>}.
+
+    Models naturally address loop state through the repeat itself; the compiler's
+    form is the repeat's tick state (previous pass inside the loop, final after it).
+    """
+    if not isinstance(plan, dict):
+        return plan
+    repeats = set()
+
+    def collect(steps):
+        for step in steps if isinstance(steps, list) else []:
+            if isinstance(step, dict):
+                if step.get("kind") == "repeat" and step.get("id"):
+                    repeats.add(step["id"])
+                for key in ("steps", "otherwise", "branches"):
+                    collect(step.get(key))
+
+    def alias(value):
+        if isinstance(value, list):
+            return [alias(item) for item in value]
+        if isinstance(value, dict):
+            if set(value) == {"__trama_literal_json__"}:
+                return value
+            if value.get("ref") in repeats and set(value) <= {"ref", "path"}:
+                path = value.get("path") or ""
+                if path not in _COUNTERS and path != "state" and not path.startswith("state."):
+                    path = "state" + ("." + path if path else "")
+                return {"ref": value["ref"] + "_tick", "path": path}
+            return {key: alias(item) for key, item in value.items()}
+        return value
+
+    collect(plan.get("steps"))
+    return alias(plan) if repeats else plan
+
+
 class PlanCompiler:
     def __init__(
         self, plan, base_url, contract_version="", continuation=None, intent=None, constraints=None
     ):
-        self.plan = WorkflowPlan.model_validate(plan)
+        self.plan = WorkflowPlan.model_validate(_repeat_state_aliases(plan))
         self.base_url = base_url
         self.contract_version = contract_version
         self.intent = intent or self.plan.name
@@ -150,7 +189,7 @@ class PlanCompiler:
             )
             if index > 0 and chunked:
                 raise ValueError(
-                    "Pre-repeat actions with continuation require compact_graph or payload state"
+                    "Semantic plans do not support actions before a continued repeat; move them after it"
                 )
 
     def _validate_shape(self, operations, in_loop=False, in_branch=False, depth=0):
@@ -158,7 +197,9 @@ class PlanCompiler:
             if operation.kind == "repeat":
                 self.repeat_count += 1
                 if in_loop or in_branch or self.repeat_count > 1 or depth > 0:
-                    raise ValueError("Nested/multiple/branch repeat requires compact_graph")
+                    raise ValueError(
+                        "Semantic plans support one top-level repeat, not nested/multiple/branch repeats"
+                    )
             self._validate_shape(
                 operation.steps, in_loop or operation.kind == "repeat", in_branch, depth + 1
             )
@@ -660,23 +701,28 @@ class PlanCompiler:
                 },
                 scope,
             )
-            self.add(
-                {
-                    "id": check,
-                    "kind": "switch",
-                    "cases": [
-                        {
-                            "name": "done",
-                            "when": {
-                                "==": [{"var": f"nodes.{tick}.response.body.output.done"}, True]
-                            },
-                            "target": exit_entry(index) if clock else after,
-                        }
-                    ],
-                    "default": next_entry,
-                },
-                scope,
-            )
+            # A count-only pass before the block's last cannot finish. Exiting from it
+            # would make final actions reachable before the last pass's results exist.
+            if clock is None and remaining is not None and index < chunk - 1:
+                self.nodes[-1]["next"] = next_entry
+            else:
+                self.add(
+                    {
+                        "id": check,
+                        "kind": "switch",
+                        "cases": [
+                            {
+                                "name": "done",
+                                "when": {
+                                    "==": [{"var": f"nodes.{tick}.response.body.output.done"}, True]
+                                },
+                                "target": exit_entry(index) if clock else after,
+                            }
+                        ],
+                        "default": next_entry,
+                    },
+                    scope,
+                )
             body = self.sequence(operations(op.steps, index), tick, scope)
             entry = body
             if clock:
@@ -727,9 +773,7 @@ class PlanCompiler:
                 None,
             )
             if index is None:
-                raise ValueError(
-                    "Continuation must resume a top-level repeat; advanced composition requires compact_graph"
-                )
+                raise ValueError("Continuation must resume a top-level repeat")
             steps = steps[index:]
         entry = self.sequence(steps)
         self.nodes = [
@@ -756,7 +800,9 @@ def compile_plan(
 
 
 SEMANTIC_RULES = """
-Prefer definition {format:"semantic_plan",plan:{version:"workflow-plan-v1",name,steps}}.
+ALWAYS return definition {format:"semantic_plan",plan:{version:"workflow-plan-v1",name,steps}}.
+Never return graph nodes, entrypoint, next, sleep, switch, split/join or max_iterations: the
+compiler derives all of them from the plan.
 Operations: call/state {id,capability_name OR artifact_id,args}; sequence {steps}; wait {seconds};
 condition {when:JSONLogic,steps,otherwise}; parallel {id,branches:[operations]};
 repeat {id,steps,interval_seconds, exactly ONE of count,duration_seconds,continuous:true,deadline_unix}.
@@ -765,6 +811,8 @@ For text combining references use {type:"template",parts:["BTC: ",{ref:"fetch",p
 the compiler emits a native string, never a template object passed to a tool.
 After parallel, only the last result of each branch is available through its terminal operation id.
 State across repeat chunks: repeat.state and explicit repeat.initial_state defaults.
+Read retained state as {ref:"<repeat id>",path:"<state key>"}: inside the repeat it is the
+previous pass's value (initial_state on the first pass); after the repeat it is the final value.
 The compiler overlays continuation.state on those defaults and initializes the first pass.
 Self-references need a repeat.state mapping and an explicit initial_state key; never use absent node results as null.
 Callback {id,kind:"callback",action} uses native async-http-callback contract.
@@ -774,7 +822,13 @@ do not use raw var paths, "greater", inline Mustache paths or mechanical counter
 Specify TOTAL work: seven days at four samples/day means count:28 and interval_seconds:21600.
 Do not cap count at 20, add manual advance_chain actions or build continuation yourself.
 Compiler constructs counters, scopes, joins, HTTP fields and continuation in blocks of 20.
-For nested/multiple repetitions, complex actions or unsupported topology return
-{format:"compact_graph",graph:{name,entrypoint,nodes,...}} using compact graph rules.
+Use only one top-level repeat; put actions that must happen once after it, not before it.
+Only declared capability input keys. Tools go through declared RiteSmith capabilities, never
+directly to provider APIs (no web.fetch to Telegram or similar). Array outputs use path "result".
+wait is for elapsed time only; later operations reference earlier ones directly.
+Content monitors compare snapshots via llm.evaluate, skip empty current snapshots, keep the
+previous snapshot in repeat.state and notify only when decision=notify.
+Async callbacks require timeoutMillis and successWhen. Add compensation only for a reversible effect.
+Preserve explicit schedule, trigger, duration, counts and continuation; never guess different values.
 Never drop requirements to fit a pattern. One response; no format classification call.
 """

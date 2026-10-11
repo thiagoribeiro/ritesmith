@@ -1,5 +1,9 @@
 # Typed decisions and Structured Outputs
 
+> **Removed.** Structured Outputs, pattern parameters and Mermaid were removed after the
+> 2026-10-10 scorecard showed no quality gain; semantic plans are the default instead.
+> This page is kept as a record of the experiment.
+
 This experiment borrows the principle of bounded decisions composed in code.
 It does not use Jev, the TypeSafe SDK, confidence scores, or a new classifier.
 Application types and constructors belong to RiteSmith; provider adapters own

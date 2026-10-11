@@ -16,7 +16,6 @@ from ritesmith.core.generation import _is_strict_clean
 from ritesmith.core.pending_tests import finish_pending_tests
 from ritesmith.llm import prompts
 from ritesmith.llm.openai_provider import OpenAIProvider
-from ritesmith.llm.response_contracts import decode_response, response_model
 from ritesmith.llm.script_candidate import ScriptCandidateError, expand_script
 from ritesmith.registry.models import Artifact as ArtifactORM
 from ritesmith.registry.models import GenerationJob
@@ -40,10 +39,9 @@ def scripts():
     for call in RAW_CALLS:
         if call["status"] != "settled":
             continue
-        raw = call["response_content"]
         if call["cell"].endswith(":B"):
-            raw = decode_response(raw, response_model(call["method"]))
-        data = json.loads(raw)
+            continue  # strict-schema transport was removed; plain JSON cells remain
+        data = json.loads(call["response_content"])
         script = data.get("script")
         if isinstance(script, dict) and "script" in script:
             data = script
