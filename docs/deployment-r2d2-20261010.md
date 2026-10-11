@@ -35,9 +35,11 @@ The USD/BRL one-week monitor (`plan_01M4BGABKAR50KA6PPT7KKF2FC`) was cancelled a
 recreated as `plan_01M4KXVP81PXFQSBW62Z3RW749`. Its compiled workflow ran under the
 new Trama: 15 passes every 6 h, against the original 4.995799 baseline from 07/10.
 
-The old workflow never captured its baseline: `initial_rate` stayed `""` in every pass,
-so its 10% alert could not fire. Its Trama execution fails at its next `/trama/execute`
-call, which refuses cancelled plans.
+The old workflow's state lost its baseline: `initial_rate` stayed `""` in every pass, so
+its 10% alert could not fire. The cause was a Trama engine bug, not generation. After a
+sleep, results of a node that ran right after a `switch` were dropped from the template
+context, and 2.x rendered the missing reference as empty text. Its Trama execution failed
+at its next `/trama/execute` call, which refuses cancelled plans, as intended.
 
 Brian plugin and LoomHarbor arrival workflows carry no body templates and are unaffected.
 A `brian-workflow-result` execution succeeded on the new engine right after the switch.
@@ -51,6 +53,11 @@ A `brian-workflow-result` execution succeeded on the new engine right after the 
 - `POST /plans` in execute mode for the monitor returned 201 in 11.0 s. The first pass
   executed in Trama with typed values: a numeric rate, the numeric baseline kept in loop
   state, and the counter moving from 15 to 14 remaining.
+
+**Update 2026-10-11.** The recreated monitor failed on its first resumed pass (04:10 UTC)
+with `missing key 'monitor_tick__rs_1'`, the same engine bug, which 3.0.0 now reports
+instead of hiding. It is fixed in Trama 3.0.1 (thiagoribeiro/trama#56). Until 3.0.1 is
+deployed, generated workflows with a condition inside a repeat fail when they resume.
 
 Known follow-up: the generated monitor compares the rate with `llm.evaluate`, which makes
 an LLM call per check. A deterministic JSONLogic condition can express the 10% threshold.
