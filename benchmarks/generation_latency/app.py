@@ -57,7 +57,7 @@ async def cold_search(*args, **kwargs):
 
 def workflow_user(*args, **kwargs):
     current = scope.get()
-    if current and current.phase not in ("full", "mermaid"):
+    if current and current.phase not in ("full", "current"):
         return baseline_user(*args, **kwargs)
     return _original_workflow_user(*args, **kwargs)
 
@@ -158,7 +158,8 @@ providers = {}
 def settings_for(request: Request):
     current = scope.get()
     settings = get_settings()
-    if current is None:
+    if current is None or current.phase == "current":
+        # "current" measures the configured defaults as shipped, with no overrides.
         return settings
     baseline = current.phase == "baseline"
     return settings.model_copy(
@@ -168,11 +169,10 @@ def settings_for(request: Request):
             "llm_workflow_model": None if baseline else current.model,
             "llm_reasoning_effort": None if baseline else "low",
             "llm_fallback_enabled": True,
-            "generation_specialized_prompts": current.phase in ("filtered", "full", "mermaid"),
-            "generation_compact_workflows": current.phase in ("full", "mermaid"),
-            "generation_mermaid_workflows": current.phase == "mermaid",
-            "generation_unified_proposal": current.phase in ("full", "mermaid"),
-            "generation_parallel_tests": current.phase in ("full", "mermaid"),
+            "generation_specialized_prompts": current.phase in ("filtered", "full"),
+            "generation_compact_workflows": current.phase == "full",
+            "generation_unified_proposal": current.phase == "full",
+            "generation_parallel_tests": current.phase == "full",
             "require_tests_min_risk": "medium",
         }
     )

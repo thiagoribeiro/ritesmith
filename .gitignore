@@ -50,3 +50,6 @@ ritesmith/storage/migrations/versions/__pycache__/
 
 # Generated offline Trama oracle classes, jars and machine-specific classpaths.
 benchmarks/generation_latency/native-oracle/
+
+# Raw scorecard runs (JSONL, server logs) stay local; summaries live in the benchmark README.
+benchmarks/generation_latency/results/scorecard-*/

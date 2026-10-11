@@ -1,5 +1,8 @@
 # Generation improvements
 
+> **Update 2026-10-10:** Mermaid, Structured Outputs and pattern parameters were removed
+> and semantic plans became the default; see the benchmark README scorecard section.
+
 The objective is 95% complete, valid deliveries within 10 seconds and at least
 50% lower cost per valid principal artifact than the preserved baseline.
 Dependencies, failures, repair, tests and requested persistence count. Ten seconds

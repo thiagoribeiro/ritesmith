@@ -217,7 +217,10 @@ async def test_lazy_process_provider_closes_without_requiring_api_key(monkeypatc
 async def test_unified_provider_normalizes_workflow_analysis_flags():
     import json
 
-    provider = OpenAIProvider(Settings(), client=SimpleNamespace())
+    # Graph-shaped candidate: exercise the compact fallback, not the semantic default.
+    provider = OpenAIProvider(
+        Settings(generation_semantic_workflows=False), client=SimpleNamespace()
+    )
     provider._chat_with_retry = AsyncMock(
         return_value=(
             json.dumps(

@@ -871,6 +871,7 @@ def workflow_generation_user(
     similar_workflows: list[dict],
     response_schema: str,
     context: dict | None = None,
+    semantic: bool = False,
 ) -> str:
     unique = {}
     for c in available_capabilities:
@@ -886,25 +887,49 @@ def workflow_generation_user(
     parts = [
         f"GOAL: {_sanitize_goal(goal)}",
         (
-            "AVAILABLE CAPABILITIES\n"
-            "Use 'capability_name' in the POST body to /trama/execute.\n"
-            "Access node output via: {{ nodes.<node_id>.response.body.output.<field> }}\n"
-            "  — If the capability returns a JSON object, <field> is a top-level key.\n"
-            "  — If the capability returns a JSON array, use the key 'result'.\n"
-            f"{caps_json}"
-        ),
+            (
+                "AVAILABLE CAPABILITIES\n"
+                "Reference an operation's output as {ref:'<operation_id>',path:'<field>'};\n"
+                "  — <field> is a top-level output key, or 'result' for a JSON array output.\n"
+            )
+            if semantic
+            else (
+                "AVAILABLE CAPABILITIES\n"
+                "Use 'capability_name' in the POST body to /trama/execute.\n"
+                "Access node output via: {{ nodes.<node_id>.response.body.output.<field> }}\n"
+                "  — If the capability returns a JSON object, <field> is a top-level key.\n"
+                "  — If the capability returns a JSON array, use the key 'result'.\n"
+            )
+        )
+        + caps_json,
     ]
 
     _mon_keys = ("schedule_hours", "duration_days", "runs_per_day", "trigger", "notify_style")
     _mon = {k: (context or {}).get(k) for k in _mon_keys if (context or {}).get(k) is not None}
     if _mon:
         _lines = ["USER-SPECIFIED PARAMETERS (use these EXACTLY — do NOT re-infer):"]
-        if _mon.get("schedule_hours"):
+        if semantic and _mon.get("schedule_hours"):
+            _lines.append(
+                f"- run every {_mon['schedule_hours']}h -> repeat interval_seconds = "
+                f"{int(_mon['schedule_hours']) * 3600}"
+            )
+        elif _mon.get("schedule_hours"):
             _lines.append(
                 f"- run every {_mon['schedule_hours']}h -> sleep node durationSeconds = "
                 f"{int(_mon['schedule_hours']) * 3600}"
             )
-        if _mon.get("duration_days") and _mon.get("runs_per_day"):
+        if semantic and _mon.get("duration_days") and _mon.get("runs_per_day"):
+            _lines.append(
+                f"- run for {_mon['duration_days']} days x {_mon['runs_per_day']}/day -> repeat "
+                f"count = {int(_mon['duration_days']) * int(_mon['runs_per_day'])} (TOTAL; the "
+                "compiler splits it into continued blocks)"
+            )
+        elif semantic and _mon.get("duration_days"):
+            _lines.append(
+                f"- run for {_mon['duration_days']} days -> repeat duration_seconds = "
+                f"{int(_mon['duration_days']) * 86400}"
+            )
+        elif _mon.get("duration_days") and _mon.get("runs_per_day"):
             _iters = int(_mon["duration_days"]) * int(_mon["runs_per_day"])
             _lines.append(
                 f"- run for {_mon['duration_days']} days x {_mon['runs_per_day']}/day -> "

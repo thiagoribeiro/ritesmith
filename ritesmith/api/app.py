@@ -243,7 +243,7 @@ class _MetricsMiddleware(BaseHTTPMiddleware):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="RiteSmith API",
-        version="0.1.0",
+        version="0.2.0",
         description="AI-assisted capability and workflow generation control plane",
         lifespan=_lifespan,
     )
