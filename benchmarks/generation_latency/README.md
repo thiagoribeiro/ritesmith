@@ -97,6 +97,16 @@ excluded until the harness seeds it. The v2 grader still requires `stat.tick` an
 | Placeholder/null fixes | 89% | 63% | 10.8 s / 51.1 s |
 | Strict semantic plans + compiler fixes | 94% | 77% | 7.3 s / 17.4 s |
 
+Grader v3 (2026-10-11) also checks task args and output references against the closed
+provider contracts. Regraded, the 0.2.0 row is **67%** valid workflows: its extra failures
+read `output.now` from `runtime.now`, a field the bridge never returns. 0.2.1 (closed
+contracts in validation, bridge and registry; corrected provider schemas):
+
+| Configuration (grader v3) | Luau valid | Workflow valid | Workflow p50 / p95 | Contract violations accepted |
+|---|---:|---:|---:|---:|
+| 0.2.0 | 94% | 67% | 7.3 s / 17.4 s | 6 workflows |
+| **0.2.1** | **96%** | **68%** | **8.5 s / 22.0 s** | **0** |
+
 Evaluator version 2 accepts `market.bitcoin_price` for BTC-only requests and
 detects cyclic counters that reset instead of advancing. The original campaign
 used version 1. `review.py` writes a separate assessment with hashes of the raw

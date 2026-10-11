@@ -6,10 +6,42 @@ All notable changes to RiteSmith. The format loosely follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-11
+
+Capability contracts are closed end to end. A workflow that passes an argument or reads a
+field its capability does not declare is rejected at generation (and repaired), not
+accepted and then broken in Trama. Requires **Trama 3.0.1**.
+
+### Fixed
+- **Workflows accepted with arguments or fields their capability does not have.** The
+  validator ignored unknown inputs and output fields unless a schema set
+  `additionalProperties: false`, which none did. Two r2d2 workflows failed this way
+  (`previous_state` passed to `llm.evaluate`; `output.result` read from
+  `market.exchange_rate`, whose field is `rate`). Unknown inputs and fields are now errors
+  that list what the contract accepts; array and scalar outputs are read as `output.result`.
+- **`/trama/execute` returned 500 for bad arguments.** It now checks the input against the
+  capability contract and returns **422** `invalid_input` (unknown/missing keys, or a
+  `TypeError` from the callable), which Trama does not retry. `report.*` single-argument
+  functions are called correctly.
+- **The capability registry stored empty schemas** for every provider capability, so
+  `/capabilities` and the MCP listing showed no contracts. Real input/output schemas and
+  descriptions are stored and refreshed on startup.
+- **Provider schemas that did not match the code.** 17 output schemas described an object
+  where the function returns a list, string or number (calendar, email, obsidian, duckdb,
+  runtime, web.fetch_json), and 5 input schemas differed from the callable
+  (`obsidian.read` takes `relative_path`; calendar `target`/`targets`; `telegram.send`
+  `parse_mode`). The contract test now checks both directions and the output type.
+
 ### Changed
 - **Requires Trama 3.0.1.** Trama ≤ 3.0.0 drops the result of a node that runs right after
   a `switch` once the execution resumes. Semantic repeats with a condition hit this on
   their first resumed pass (thiagoribeiro/trama#56).
+- Workflow prompts state the closed-contract rule and turn numeric thresholds into
+  `condition`s instead of `llm.evaluate` calls; repair receives the contracts of the
+  capabilities the failed candidate used.
+- Benchmark grader v3 checks args and references against the contracts. Regraded, the
+  0.2.0 configuration was 67% valid workflows (not 77%); 0.2.1 measures 68% workflows and
+  96% Luau scripts with **zero contract violations** in accepted workflows.
 
 ## [0.2.0] - 2026-10-10
 
