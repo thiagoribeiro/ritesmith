@@ -218,12 +218,21 @@ class CalendarProvider(ToolProvider):
             return False
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _events_output = {
+        _event = {
             "type": "object",
             "properties": {
-                "events": {"type": "array", "description": "List of calendar event objects"}
+                "id": {"type": "string"},
+                "summary": {"type": "string"},
+                "description": {"type": "string"},
+                "start": {"type": "string"},
+                "end": {"type": "string"},
+                "location": {"type": "string"},
+                "attendees": {"type": "array", "items": {"type": "string"}},
+                "html_link": {"type": "string"},
             },
         }
+        # The functions return the list itself (read through the bridge as output.result).
+        _events_output = {"type": "array", "items": _event}
         return {
             "calendar.get_today": HostFunctionDef(
                 "calendar.get_today",
@@ -270,10 +279,13 @@ class CalendarProvider(ToolProvider):
                 description="Search calendar events by text query.",
                 input_schema={
                     "type": "object",
-                    "required": ["query"],
+                    "required": ["target", "query"],
                     "properties": {
+                        "target": {
+                            "type": "string",
+                            "description": "Calendar name (default personal; all for every calendar)",
+                        },
                         "query": {"type": "string"},
-                        "max_results": {"type": "integer", "default": 10},
                     },
                 },
                 output_schema=_events_output,
@@ -285,13 +297,27 @@ class CalendarProvider(ToolProvider):
                 description="Find free time slots in the calendar.",
                 input_schema={
                     "type": "object",
-                    "required": ["date"],
+                    "required": ["targets", "duration_minutes"],
                     "properties": {
-                        "date": {"type": "string"},
-                        "duration_minutes": {"type": "integer", "default": 60},
+                        "targets": {"type": "array", "items": {"type": "string"}},
+                        "duration_minutes": {"type": "integer"},
+                        "after": {"type": "string", "description": "ISO-8601 start (default now)"},
+                        "before": {
+                            "type": "string",
+                            "description": "ISO-8601 end (default +7 days)",
+                        },
                     },
                 },
-                output_schema={"type": "object", "properties": {"slots": {"type": "array"}}},
+                output_schema={
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "calendar": {"type": "string"},
+                            "busy_slots": {"type": "array"},
+                        },
+                    },
+                },
             ),
             "calendar.create_event": HostFunctionDef(
                 "calendar.create_event",
@@ -300,18 +326,19 @@ class CalendarProvider(ToolProvider):
                 description="Create a new calendar event.",
                 input_schema={
                     "type": "object",
-                    "required": ["title", "start", "end"],
+                    "required": ["target", "title", "start", "end"],
                     "properties": {
+                        "target": {
+                            "type": "string",
+                            "description": "Calendar name (default personal; all for every calendar)",
+                        },
                         "title": {"type": "string"},
                         "start": {"type": "string"},
                         "end": {"type": "string"},
                         "description": {"type": "string"},
                     },
                 },
-                output_schema={
-                    "type": "object",
-                    "properties": {"event_id": {"type": "string"}, "ok": {"type": "boolean"}},
-                },
+                output_schema=_event,
             ),
             "calendar.delete_event": HostFunctionDef(
                 "calendar.delete_event",
@@ -321,9 +348,18 @@ class CalendarProvider(ToolProvider):
                 input_schema={
                     "type": "object",
                     "required": ["event_id"],
-                    "properties": {"event_id": {"type": "string"}},
+                    "properties": {
+                        "event_id": {"type": "string"},
+                        "target": {
+                            "type": "string",
+                            "description": "Calendar name (default personal; all for every calendar)",
+                        },
+                    },
                 },
-                output_schema={"type": "object", "properties": {"ok": {"type": "boolean"}}},
+                output_schema={
+                    "type": "object",
+                    "properties": {"ok": {"type": "boolean"}, "deleted": {"type": "string"}},
+                },
             ),
         }
 

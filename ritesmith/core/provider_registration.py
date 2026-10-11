@@ -45,12 +45,22 @@ async def register_all_providers(db: AsyncSession) -> None:
             await db.execute(stmt)
 
             if provider.is_available():
+                functions = provider.lua_functions()
                 for cap in provider.capabilities():
                     cap_id = (
                         f"{provider.namespace}.{cap['name']}"
                         if "." not in cap["name"]
                         else cap["name"]
                     )
+                    # The registry is read by /capabilities, MCP and workflow generation;
+                    # it must carry the same contracts the bridge enforces.
+                    fn_def = functions.get(cap_id)
+                    contract = {
+                        "description": (fn_def and fn_def.description)
+                        or cap.get("description", ""),
+                        "input_schema": (fn_def and fn_def.input_schema) or {},
+                        "output_schema": (fn_def and fn_def.output_schema) or {},
+                    }
                     cap_stmt = (
                         pg_insert(Capability)
                         .values(
@@ -58,9 +68,7 @@ async def register_all_providers(db: AsyncSession) -> None:
                             name=cap_id,
                             kind="script_function",
                             status="available",
-                            description=cap.get("description", ""),
-                            input_schema={},
-                            output_schema={},
+                            **contract,
                             risk_level=cap.get("risk_level", "low"),
                             tags=cap.get("tags", [provider.namespace]),
                             provider_id=provider.namespace,
@@ -68,7 +76,7 @@ async def register_all_providers(db: AsyncSession) -> None:
                         )
                         .on_conflict_do_update(
                             index_elements=["capability_id"],
-                            set_={"status": "available", "description": cap.get("description", "")},
+                            set_={"status": "available", **contract},
                         )
                     )
                     await db.execute(cap_stmt)

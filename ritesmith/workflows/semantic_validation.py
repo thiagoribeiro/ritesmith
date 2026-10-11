@@ -118,6 +118,27 @@ def uninitialized_reference_errors(definition):
     return errors
 
 
+# Tools report failures inline ({error, message}) without declaring them in every schema.
+_INLINE_FAILURE_FIELDS = ("error", "message")
+
+
+def _closed(schema):
+    """Contracts are closed: a schema that declares properties accepts only those,
+    unless it explicitly opts out with additionalProperties: true."""
+    return (
+        isinstance(schema, dict)
+        and bool(schema.get("properties"))
+        and schema.get("additionalProperties") is not True
+    )
+
+
+def unknown_inputs(schema, args):
+    """Argument names a closed input contract does not accept."""
+    if not _closed(schema) or not isinstance(args, dict):
+        return []
+    return sorted(set(args) - set(schema["properties"]))
+
+
 def reference_contract_errors(definition, registry):
     nodes = {node["id"]: node for node in definition.get("nodes", [])}
     branches = _branch_sets(list(nodes.values()))
@@ -183,16 +204,32 @@ def reference_contract_errors(definition, registry):
                     continue
                 target, suffix = terminal, suffix[3:]
             schema = contract(target).get("output_schema")
-            for part in suffix[3:]:
+            parts = suffix[3:]
+            # The bridge returns a non-object result as {"result": value}.
+            kind = schema.get("type") if isinstance(schema, dict) else None
+            if kind in ("array", "string", "number", "integer", "boolean") and parts:
+                if parts[0] != "result":
+                    errors.append(
+                        f"Node '{nid}': output of '{target['id']}' is a {kind}; "
+                        f"read it as output.result, not '{path}'"
+                    )
+                    continue
+                parts = parts[1:]
+            for depth, part in enumerate(parts):
                 if not isinstance(schema, dict):
+                    break
+                if depth == 0 and part in _INLINE_FAILURE_FIELDS:
                     break
                 if schema.get("type") == "array" and part.isdigit():
                     schema = schema.get("items")
                     continue
                 properties = schema.get("properties", {})
                 if part not in properties:
-                    if schema.get("additionalProperties") is False:
-                        errors.append(f"Node '{nid}': unknown output field '{part}' in '{path}'")
+                    if _closed(schema):
+                        errors.append(
+                            f"Node '{nid}': unknown output field '{part}' in '{path}'; "
+                            f"available: {', '.join(sorted(properties))}"
+                        )
                     break
                 schema = properties[part]
     return errors
@@ -257,6 +294,12 @@ def validate_semantics(definition, registry, *, check_graph=True):
         if contract:
             schema = contract.get("input_schema")
             args = body.get("input", {})
+            if body.get("capability_name"):
+                for key in unknown_inputs(schema, args):
+                    errors.append(
+                        f"Node '{nid}': unknown input '{key}' for {capability}; "
+                        f"accepted: {', '.join(sorted(schema['properties']))}"
+                    )
             if schema:
                 if not templated(args):
                     try:

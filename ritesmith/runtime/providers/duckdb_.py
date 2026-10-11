@@ -67,10 +67,8 @@ class DuckdbProvider(ToolProvider):
             return False
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _query_output = {
-            "type": "object",
-            "properties": {"rows": {"type": "array"}, "columns": {"type": "array"}},
-        }
+        # A list of row objects (column name -> value); errors are [{error}].
+        _query_output = {"type": "array", "items": {"type": "object"}}
         return {
             "duckdb.query": HostFunctionDef(
                 "duckdb.query",

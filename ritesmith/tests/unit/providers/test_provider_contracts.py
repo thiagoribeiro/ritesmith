@@ -63,22 +63,8 @@ def _uses_single_table_convention(fn) -> bool:
     return len(params) == 1 and params[0].name == "args"
 
 
-# Pre-existing provider bugs this invariant surfaced (2026-10-01). strict xfail so the
-# test flips to failing — alerting us — the moment a provider is fixed.
-_KNOWN_SCHEMA_MISMATCHES = {
-    "obsidian.read": "schema says 'path' but the callable takes 'relative_path'",
-    "calendar.search_events": "schema says 'max_results'; callable takes 'target' (missing from schema)",
-    "calendar.find_free_time": "schema says 'date'; callable takes 'targets'/'after'/'before'",
-}
-
-
-@pytest.mark.parametrize("fn_def", _schema_tools())
-def test_input_schema_properties_match_callable_params(fn_def, request):
-    """Every declared input property must be a real parameter (the deploy-time invariant)."""
-    if fn_def.name in _KNOWN_SCHEMA_MISMATCHES:
-        request.node.add_marker(
-            pytest.mark.xfail(strict=True, reason=_KNOWN_SCHEMA_MISMATCHES[fn_def.name])
-        )
+def _checked_props(fn_def) -> set[str] | None:
+    """Declared input properties, or None when the schema does not bind to parameters."""
     schema = getattr(fn_def, "input_schema", None) or {}
     props = set((schema.get("properties") or {}).keys())
     if (
@@ -86,9 +72,64 @@ def test_input_schema_properties_match_callable_params(fn_def, request):
         or _accepts_kwargs(fn_def.callable)
         or _uses_single_table_convention(fn_def.callable)
     ):
+        return None
+    return props
+
+
+@pytest.mark.parametrize("fn_def", _schema_tools())
+def test_input_schema_properties_match_callable_params(fn_def):
+    """Every declared input property must be a real parameter (the deploy-time invariant)."""
+    props = _checked_props(fn_def)
+    if props is None:
         return
     extra = props - _param_names(fn_def.callable)
     assert not extra, f"{fn_def.name}: input_schema declares non-parameters {extra}"
+
+
+@pytest.mark.parametrize("fn_def", _schema_tools())
+def test_required_callable_params_are_declared(fn_def):
+    """Contracts are closed, so a parameter the schema omits can never be supplied."""
+    props = _checked_props(fn_def)
+    if props is None:
+        return
+    required = {
+        p.name
+        for p in inspect.signature(fn_def.callable).parameters.values()
+        if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY) and p.default is p.empty
+    }
+    missing = required - props
+    assert not missing, f"{fn_def.name}: required parameters missing from input_schema {missing}"
+
+
+# The bridge returns a non-dict result as {"result": value}; the declared output type must
+# match what the callable returns so references validate against the real shape.
+_RETURN_TYPES = {
+    "list": "array",
+    "str": "string",
+    "float": "number",
+    "int": "integer",
+    "bool": "boolean",
+}
+
+# Namespaces whose functions do not declare output contracts yet (device/CASP payloads vary).
+_UNDECLARED_OUTPUT_NAMESPACES = {"casp", "home"}
+
+
+@pytest.mark.parametrize("fn_def", _schema_tools())
+def test_output_schema_matches_return_type(fn_def):
+    if fn_def.name.split(".")[0] in _UNDECLARED_OUTPUT_NAMESPACES:
+        return
+    schema = getattr(fn_def, "output_schema", None)
+    assert schema, f"{fn_def.name}: missing output_schema"
+    annotation = str(inspect.signature(fn_def.callable).return_annotation).strip("'\"")
+    base = annotation.split("[")[0]
+    if "|" in annotation or base not in {**_RETURN_TYPES, "dict": None}:
+        return  # unions / unannotated: nothing to compare
+    expected = _RETURN_TYPES.get(base, "object")
+    declared = schema.get("type") or ("object" if schema.get("properties") else None)
+    assert declared == expected, (
+        f"{fn_def.name}: returns {annotation} but output_schema declares {declared!r}"
+    )
 
 
 @pytest.mark.parametrize("provider", ALL)

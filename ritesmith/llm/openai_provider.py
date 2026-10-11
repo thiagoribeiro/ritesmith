@@ -910,6 +910,7 @@ Return source="intent". The implementation is intentionally unavailable.
         validation_errors: list[str],
         attempt_number: int,
         available_capability_names: list[str] | None = None,
+        capability_contracts: list[dict] | None = None,
     ) -> tuple[WorkflowRepairResponse, LLMCallStats]:
         base_url = self.settings.public_url or "http://ritesmith:8081"
         if (
@@ -928,6 +929,7 @@ Return source="intent". The implementation is intentionally unavailable.
                 self.settings.generation_semantic_workflows,
             ),
             available_capability_names=available_capability_names,
+            capability_contracts=capability_contracts,
         )
         system = prompts.workflow_repair_system()
         if (

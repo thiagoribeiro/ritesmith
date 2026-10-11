@@ -890,7 +890,8 @@ def workflow_generation_user(
             (
                 "AVAILABLE CAPABILITIES\n"
                 "Reference an operation's output as {ref:'<operation_id>',path:'<field>'};\n"
-                "  — <field> is a top-level output key, or 'result' for a JSON array output.\n"
+                "  — <field> must be a field of the capability's 'out' contract; when 'out' is an\n"
+                "    array or a scalar, use 'result'. Pass only the input keys listed in 'in'.\n"
             )
             if semantic
             else (
@@ -1016,6 +1017,7 @@ def workflow_repair_user(
     attempt_number: int,
     response_schema: str,
     available_capability_names: list[str] | None = None,
+    capability_contracts: list[dict] | None = None,
 ) -> str:
     errors_text = "\n".join(f"  [{i + 1}] {e}" for i, e in enumerate(validation_errors))
     parts = [
@@ -1028,6 +1030,11 @@ def workflow_repair_user(
         caps_list = "\n".join(f"  - {n}" for n in sorted(available_capability_names))
         parts.append(
             f"VALID CAPABILITY NAMES (use only these in capability_name field):\n{caps_list}"
+        )
+    if capability_contracts:
+        parts.append(
+            "CONTRACTS OF THE CAPABILITIES USED (pass only 'in' keys, read only 'out' fields):\n"
+            + json.dumps(capability_contracts, separators=(",", ":"), ensure_ascii=False)
         )
     parts.append(f"Fix the workflow and respond with JSON matching this schema:\n{response_schema}")
     return "\n\n".join(parts)

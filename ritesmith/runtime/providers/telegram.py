@@ -86,6 +86,10 @@ class TelegramProvider(ToolProvider):
                             "type": "string",
                             "description": "Override default chat (optional)",
                         },
+                        "parse_mode": {
+                            "type": "string",
+                            "description": "Telegram parse mode, e.g. MarkdownV2 (optional)",
+                        },
                     },
                 },
                 output_schema=_send_output,
