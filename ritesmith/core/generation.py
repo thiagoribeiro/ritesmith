@@ -1,22 +1,4 @@
-"""GenerationService — orquestra o loop: busca → reuso → gera → valida → repara.
-
-O idioma do script vem de req.language ou settings.script_language ("luau" por
-padrão, gerando luau_script executado pelo LunarDyson; cai para "lua" se a lib ou
-o provider de LLM não suportarem Luau). Em Luau, o type check strict é bloqueante
-em todas as tentativas menos a última, onde erros só-strict viram warnings.
-
-Fluxo principal (generate_lua):
-1. Busca FTS por artifacts similares
-2. Se match suficientemente bom e reuse_policy != force_new → retorna existente
-3. Cria GenerationJob
-4. Loop de até max_attempts:
-   a. Chama LLM.generate_lua()
-   b. Valida com ValidationPipeline
-   c. Se válido → break
-   d. Senão → chama LLM.repair_lua() e tenta de novo
-5. Se save=True e válido → persiste artifact
-6. Retorna GeneratedArtifactResponse
-"""
+"""Generate, validate and certify scripts with bounded recovery and truthful acceptance."""
 
 import asyncio
 import logging
@@ -28,9 +10,10 @@ from ritesmith.api.routes.artifacts import _build_artifact
 from ritesmith.config import Settings
 from ritesmith.core.audit import AuditLogger
 from ritesmith.core.diagnostics import validation_diagnostics
-from ritesmith.core.exceptions import LLMError
+from ritesmith.core.exceptions import GenerationFailedError, LLMError
 from ritesmith.core.generation_budget import bounded_generation
 from ritesmith.core.ids import generate_id
+from ritesmith.core.pending_tests import finish_pending_tests
 from ritesmith.core.repair import run_repair_loop
 from ritesmith.core.reuse import check_reuse
 from ritesmith.core.validation import ValidationPipeline
@@ -61,12 +44,10 @@ log = logging.getLogger(__name__)
 
 
 def _is_strict_clean(validation) -> bool:
-    """True when no strict-mode type errors remain (luau); always true for lua/trama."""
+    """True only when the Luau strict checker explicitly passed."""
     if validation is None:
         return False
-    return not any(
-        c.name == "strict_type_check" and c.status == "warning" for c in validation.checks
-    )
+    return any(c.name == "strict_type_check" and c.status == "passed" for c in validation.checks)
 
 
 def _certification(language: str, strict_clean: bool) -> str:
@@ -163,7 +144,7 @@ class GenerationService:
         # Similar artifacts for few-shot prompt context (same language only)
         search_results = [r for r in recall if r.artifact.artifact_type == artifact_type][:5]
 
-        # 3. Registra GenerationJob
+        # 3. Record the generation job
         job = await self._create_job(req, plan_id, artifact_type)
         log.info(
             "generation job created",
@@ -191,6 +172,7 @@ class GenerationService:
         active_llm = self.llm
         tests_task = None
         test_failure = None
+        candidate_failure = None
         if (
             self.settings.generation_parallel_tests
             and not effective_tests
@@ -210,23 +192,46 @@ class GenerationService:
         async def attempt_fn(attempt: int) -> bool:
             nonlocal last_script, last_validation, final_response
             nonlocal effective_tests, tests_attempted, active_llm, test_failure
+            nonlocal candidate_failure
             job.attempts = attempt
-            if attempt > 1 and last_script is None:
+            if attempt > 1 and last_script is None and candidate_failure is None:
                 active_llm = self.llm.fallback()
 
             if attempt == 1 and initial is not None:
                 llm_response, stats = initial
                 script = llm_response.script
             elif language == "luau" and (attempt == 1 or last_script is None):
-                llm_response, stats = await active_llm.generate_luau(
-                    goal=req.intent,
-                    input_schema=req.input_schema,
-                    output_schema=req.output_schema,
-                    tool_descriptions=tool_descriptions,
-                    type_declarations=type_declarations,
-                    similar_artifacts=similar_dicts,
-                    constraints=constraints,
-                )
+                try:
+                    llm_response, stats = await active_llm.generate_luau(
+                        goal=req.intent,
+                        input_schema=req.input_schema,
+                        output_schema=req.output_schema,
+                        tool_descriptions=tool_descriptions,
+                        type_declarations=type_declarations,
+                        similar_artifacts=similar_dicts,
+                        constraints={
+                            **constraints,
+                            **(
+                                {"generation_repair": candidate_failure}
+                                if candidate_failure
+                                else {}
+                            ),
+                        },
+                    )
+                except LLMError as exc:
+                    if exc.details.get("candidate") is not None:
+                        candidate_failure = {
+                            "candidate": exc.details["candidate"],
+                            "diagnostic": str(exc),
+                            "location": exc.details.get("location"),
+                        }
+                        await self._record_attempt(
+                            job.generation_id,
+                            attempt,
+                            str(exc.details["candidate"]),
+                            ValidationResult(valid=False, errors=[str(exc)], checks=[]),
+                        )
+                    raise
                 script = llm_response.script
             elif attempt == 1 or last_script is None:
                 llm_response, stats = await active_llm.generate_lua(
@@ -400,9 +405,25 @@ class GenerationService:
                 and not (require_strict and not strict_clean)
                 and tests_ok
             )
+            outcome(artifact_type, accepted)
             job.status = "completed" if accepted else "failed"
             job.finished_at = datetime.now(UTC)
             job.attempts = performed
+            if not accepted:
+                diagnostics = list(last_validation.errors) if last_validation else []
+                if candidate_failure:
+                    diagnostics.append(candidate_failure["diagnostic"])
+                if require_strict and not strict_clean:
+                    diagnostics.append("Strict certification required")
+                if not tests_ok:
+                    diagnostics.append("Functional tests required")
+                raise GenerationFailedError(
+                    "No acceptable script after bounded recovery",
+                    details={
+                        "diagnostics": diagnostics,
+                        "category": "response" if last_validation is None else "functional",
+                    },
+                )
             log.info(
                 "generation job finished status=%s",
                 job.status,
@@ -450,10 +471,7 @@ class GenerationService:
             )
             raise
         finally:
-            if tests_task is not None:
-                if not tests_task.done():
-                    tests_task.cancel()
-                await asyncio.gather(tests_task, return_exceptions=True)
+            await finish_pending_tests(tests_task)
             with stage("persist", artifact_type):
                 from ritesmith.core.generation_budget import current_budget
 

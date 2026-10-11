@@ -1,0 +1,6 @@
+# Preserve a coordinated engine candidate; never replace the production tag.
+FROM trama:2.2.1
+WORKDIR /app
+RUN rm -rf /app/bin /app/lib
+COPY bin/ /app/bin/
+COPY lib/ /app/lib/

@@ -1,0 +1,49 @@
+{
+  "revision_type": "post_campaign_offline_only",
+  "source_sha256": "3bf5ab4f390ea886ff58f9e70c3ee623c06bb5002309fd59feeebcf4d1255a0a",
+  "parent_frozen_source_sha256": "3d281777d0d956cc797ce41bdca644ebdecc381e424fc86fef1918abed3a54de",
+  "prompt_version": "generation-v5",
+  "additional_generation_requests": 0,
+  "additional_provider_calls": 0,
+  "deployment_authorized": false,
+  "paid_comparison_qualified": false,
+  "targeted_tests": {
+    "passed": 12,
+    "log_sha256": "b830d2379431aa3c729cc4208ddf0b7c1966af31de08bdac061f207ed087273a"
+  },
+  "lint": "passed",
+  "format": "passed",
+  "full_arm_regression": {
+    "passed": 924,
+    "skipped": 3,
+    "xfailed": 5,
+    "e2e_deselected": 14,
+    "duration_s": 133.52,
+    "log_sha256": "181f6fa7d205fa09fcb1c443b598fe5188c74447df822838adcc649edaf0e099",
+    "provider_key_present": false,
+    "isolated_database": "ritesmith_reliability_test",
+    "image": "ritesmith:reliability-native-20261008",
+    "readonly_source_overlays": [
+      "ritesmith/llm/generation_context.py",
+      "ritesmith/llm/prompts.py",
+      "ritesmith/tests/unit/test_notification_recovery.py"
+    ]
+  },
+  "correction_patch_sha256": "08a0a38d37fc582c1ab3ed07d50f2739c7fe0f20075b69b4b20e9dc0db23a689",
+  "frozen_source_archive_sha256": "44248410017f0d821e83c76b129548526febd1f54cf8f947cd14ec1d234c86e8",
+  "requires_new_paid_authorization": true,
+  "offline_checks_passed": true,
+  "cleanup": {
+    "temporary_databases_removed": true,
+    "temporary_role_removed": true,
+    "evaluation_credential_file_removed": true,
+    "evaluation_containers_removed": true,
+    "local_tunnel_closed": true,
+    "candidate_images_preserved": true,
+    "rollback_preserved": true,
+    "production_changed": false,
+    "strict_enabled": true,
+    "production_health": "ok",
+    "confirmed_at_utc": "2026-10-09T10:22:34Z"
+  }
+}

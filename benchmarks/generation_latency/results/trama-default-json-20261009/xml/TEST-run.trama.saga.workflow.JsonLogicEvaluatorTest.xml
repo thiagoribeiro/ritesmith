@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.JsonLogicEvaluatorTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:43.491Z" hostname="c3po" time="0.005">
+  <properties/>
+  <testcase name="string result is truthy when non-empty()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <testcase name="literal true and false rules()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <testcase name="logical operators compose()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.001"/>
+  <testcase name="joined list references and nullable counters match generated conditions()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.001"/>
+  <testcase name="missing variable evaluates to false()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <testcase name="unknown operator returns false instead of throwing()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <testcase name="in operator matches list membership()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.001"/>
+  <testcase name="nested var lookup reads from maps()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <testcase name="boolean result is returned as-is()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <testcase name="numeric result is truthy when non-zero()" classname="run.trama.saga.workflow.JsonLogicEvaluatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

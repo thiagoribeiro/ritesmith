@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.RetryPolicyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:33.446Z" hostname="c3po" time="0.011">
+  <properties/>
+  <testcase name="first failure starts at attempt 1()" classname="run.trama.saga.RetryPolicyTest" time="0.001"/>
+  <testcase name="backoff is capped at maxDelayMillis()" classname="run.trama.saga.RetryPolicyTest" time="0.001"/>
+  <testcase name="fixed retry allows exactly maxAttempts retries()" classname="run.trama.saga.RetryPolicyTest" time="0.001"/>
+  <testcase name="backoff jitter stays within ratio and never goes negative()" classname="run.trama.saga.RetryPolicyTest" time="0.003"/>
+  <testcase name="backoff stops after maxAttempts()" classname="run.trama.saga.RetryPolicyTest" time="0.001"/>
+  <testcase name="backoff without jitter grows geometrically()" classname="run.trama.saga.RetryPolicyTest" time="0.001"/>
+  <testcase name="maxAttempts zero never retries()" classname="run.trama.saga.RetryPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

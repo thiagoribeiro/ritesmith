@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.DefaultSagaExecutorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:26.729Z" hostname="c3po" time="0.031">
+  <properties/>
+  <testcase name="failed step starts compensation after retries exhausted()" classname="run.trama.saga.DefaultSagaExecutorTest" time="0.012"/>
+  <testcase name="callback timeout records CALLBACK step result with success=false()" classname="run.trama.saga.DefaultSagaExecutorTest" time="0.002"/>
+  <testcase name="re-enqueues after processing max nodes per execution()" classname="run.trama.saga.DefaultSagaExecutorTest" time="0.006"/>
+  <testcase name="async trigger step is recorded as success=true when 202 accepted()" classname="run.trama.saga.DefaultSagaExecutorTest" time="0.003"/>
+  <testcase name="retry enqueues when step fails()" classname="run.trama.saga.DefaultSagaExecutorTest" time="0.003"/>
+  <testcase name="successful execution stores final status()" classname="run.trama.saga.DefaultSagaExecutorTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

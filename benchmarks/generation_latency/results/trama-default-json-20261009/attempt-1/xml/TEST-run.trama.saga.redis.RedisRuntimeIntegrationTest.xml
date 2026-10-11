@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.redis.RedisRuntimeIntegrationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:35.844Z" hostname="c3po" time="0.042">
+  <properties/>
+  <testcase name="stop polling leaves unclaimed work on ready queue()" classname="run.trama.saga.redis.RedisRuntimeIntegrationTest" time="0.033"/>
+  <testcase name="membership handoff reassigns shards and new owner can claim queued work()" classname="run.trama.saga.redis.RedisRuntimeIntegrationTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -12,6 +12,18 @@ from dataclasses import dataclass, field
 _TEMPLATE = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
 
 
+class UnsupportedSimulation(ValueError):
+    """An engine-supported expression outside the controlled simulator subset."""
+
+
+@dataclass(frozen=True)
+class HttpFailure:
+    """An explicit failed transport response, distinct from a tool's JSON output."""
+
+    status: int = 500
+    message: str = "controlled HTTP failure"
+
+
 def lookup(data, path):
     value = data
     for part in path.split("."):
@@ -27,15 +39,43 @@ def lookup(data, path):
     return value
 
 
-def render(value, context):
+def render(value, context, native_templates=False):
     if isinstance(value, dict):
-        return {key: render(item, context) for key, item in value.items()}
+        if not native_templates and set(value) == {"__trama_literal_json__"}:
+            return deepcopy(value["__trama_literal_json__"])
+        return {key: render(item, context, native_templates) for key, item in value.items()}
     if isinstance(value, list):
-        return [render(item, context) for item in value]
+        return [render(item, context, native_templates) for item in value]
     if isinstance(value, str):
         match = _TEMPLATE.fullmatch(value)
         if match:
+            if native_templates:
+                path = match[1]
+                data = context
+                for part in path.split("."):
+                    if isinstance(data, list):
+                        raise UnsupportedSimulation(
+                            f"Trama Mustache does not support indexed list reference '{path}'"
+                        )
+                    data = data.get(part) if isinstance(data, dict) else None
+                if isinstance(data, (dict, list)):
+                    raise UnsupportedSimulation(
+                        f"Trama renders '{path}' as collection text, not typed JSON"
+                    )
+                return (
+                    ""
+                    if data is None
+                    else str(data).lower()
+                    if isinstance(data, bool)
+                    else str(data)
+                )
             return deepcopy(lookup(context, match[1]))
+        if native_templates:
+
+            def substitute(match):
+                return render(match[0], context, native_templates=True)
+
+            return _TEMPLATE.sub(substitute, value)
         return _TEMPLATE.sub(lambda match: str(lookup(context, match[1]) or ""), value)
     return value
 
@@ -57,6 +97,15 @@ def logic(expression, context):
         return any(values)
     if operator == "!":
         return not values[0]
+    if operator == "in":
+        return values[0] in values[1]
+    from ritesmith.workflows.expressions import OPERATORS
+
+    supported = {"==", "===", "!=", ">=", "<=", ">", "<", "+", "-", "*", "/"}
+    if operator not in supported:
+        if operator in OPERATORS:
+            raise UnsupportedSimulation(f"Engine-supported operator '{operator}' is not simulated")
+        raise ValueError(f"Unsupported JSONLogic operator: {operator}")
     a, b = values
     operations = {
         "==": lambda: a == b,
@@ -88,12 +137,24 @@ class SimulationResult:
 
 
 class WorkflowSimulator:
-    def __init__(self, definition, fixtures=None, *, payload=None, now=0, max_steps=10000):
+    def __init__(
+        self,
+        definition,
+        fixtures=None,
+        *,
+        payload=None,
+        now=0,
+        max_steps=10000,
+        native_templates=False,
+        transport=None,
+    ):
         self.definition = definition
         self.fixtures = deepcopy(fixtures or {})
         self.payload = payload or {}
         self.result = SimulationResult(clock=now)
         self.max_steps = max_steps
+        self.native_templates = native_templates
+        self.transport = transport
         self.node_map = {node["id"]: node for node in definition["nodes"]}
         self.fixture_offsets = Counter()
 
@@ -114,6 +175,13 @@ class WorkflowSimulator:
         self.walk(self.definition["entrypoint"], self.result.nodes)
         return self.result
 
+    def condition(self, expression, context):
+        return (
+            self.transport.condition(expression, context)
+            if self.transport
+            else logic(expression, context)
+        )
+
     def walk(self, entry, nodes):
         from ritesmith.runtime.providers.stat import (
             _advance_chain,
@@ -125,6 +193,7 @@ class WorkflowSimulator:
 
         current = entry
         last = None
+        compensation_stack = []
         while current != "end":
             self.result.steps += 1
             if self.result.steps > self.max_steps:
@@ -137,7 +206,11 @@ class WorkflowSimulator:
             }
             kind = node["kind"]
             if kind == "task":
-                action = render(node["action"], context)
+                action = (
+                    self.transport.action(node["action"], context)
+                    if self.transport
+                    else render(node["action"], context, self.native_templates)
+                )
                 body = action["request"].get("body", {})
                 capability = body.get("capability_name") or body.get("artifact_id")
                 args = body.get("input", {})
@@ -155,7 +228,11 @@ class WorkflowSimulator:
                         output = _max_value(**args)
                     else:
                         output = self.fixture(current, capability, args)
-                    last = {"output": output}
+                    last = (
+                        {"error": output.message, "status": output.status}
+                        if isinstance(output, HttpFailure)
+                        else {"output": output}
+                    )
                 elif action["request"]["url"].endswith("/plans"):
                     self.result.continuations.append(body)
                     last = {"plan_id": "simulation"}
@@ -164,22 +241,37 @@ class WorkflowSimulator:
                     last = {}
                 else:
                     last = self.fixture(current, current, body)
-                    if action.get("mode") == "async-http-callback" and not logic(
+                    if isinstance(last, HttpFailure):
+                        last = {"error": last.message, "status": last.status}
+                    if action.get("mode") == "async-http-callback" and not self.condition(
                         action["callback"]["successWhen"], {"callback": {"body": last}}
                     ):
                         raise ValueError("Callback fixture does not satisfy successWhen")
                 if isinstance(last, dict) and last.get("error"):
-                    if node.get("compensation"):
-                        self.result.compensations.append(render(node["compensation"], context))
+                    # Trama unwinds completed tasks; the failed task is never pushed.
+                    for compensation in reversed(compensation_stack):
+                        if self.transport:
+                            call = self.transport.action({"request": compensation}, context)[
+                                "request"
+                            ]
+                        else:
+                            call = render(compensation, context, self.native_templates)
+                        self.result.compensations.append(call)
                     raise ValueError(f"Task failed: {current}")
                 nodes[current] = {"response": {"body": last}}
+                if node.get("compensation"):
+                    compensation_stack.append(node["compensation"])
                 current = node.get("next", "end")
             elif kind == "sleep":
                 self.result.clock += node["durationSeconds"]
                 current = node.get("next", "end")
             elif kind == "switch":
                 current = next(
-                    (case["target"] for case in node["cases"] if logic(case["when"], context)),
+                    (
+                        case["target"]
+                        for case in node["cases"]
+                        if self.condition(case["when"], context)
+                    ),
                     node["default"],
                 )
             elif kind == "split":

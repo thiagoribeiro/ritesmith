@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.redis.RedisConsumerResilienceTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:28.205Z" hostname="c3po" time="4.616">
+  <properties/>
+  <testcase name="an item enqueued with a delay is claimed when due, without waiting for a full sweep()" classname="run.trama.saga.redis.RedisConsumerResilienceTest" time="0.717"/>
+  <testcase name="a claimer survives Redis errors and resumes consuming()" classname="run.trama.saga.redis.RedisConsumerResilienceTest" time="0.509"/>
+  <testcase name="the heartbeat fences a claim whose lease ran out()" classname="run.trama.saga.redis.RedisConsumerResilienceTest" time="0.66"/>
+  <testcase name="a live claim erased by a Redis data loss is restored, not fenced()" classname="run.trama.saga.redis.RedisConsumerResilienceTest" time="0.708"/>
+  <testcase name="a process never claims beyond its free capacity()" classname="run.trama.saga.redis.RedisConsumerResilienceTest" time="2.006"/>
+  <testcase name="claims keep working after Redis forgets its scripts()" classname="run.trama.saga.redis.RedisConsumerResilienceTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

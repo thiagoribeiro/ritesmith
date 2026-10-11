@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.callback.CallbackReceiverTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:28.144Z" hostname="c3po" time="0.029">
+  <properties/>
+  <testcase name="failure-condition callback inserts CALLBACK step result with success=false()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.003"/>
+  <testcase name="wrong signature returns 401()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.005"/>
+  <testcase name="valid callback for non-terminal node re-enqueues as InProgress targeting next node()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.003"/>
+  <testcase name="expired token returns 410()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.002"/>
+  <testcase name="malformed token returns 401()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.002"/>
+  <testcase name="attempt mismatch returns 409()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.002"/>
+  <testcase name="no waiting entry returns 410()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.001"/>
+  <testcase name="replay nonce returns 409()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.001"/>
+  <testcase name="successWhen sees the payload as both payload and input()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.003"/>
+  <testcase name="successful callback inserts CALLBACK step result with success=true and body()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.002"/>
+  <testcase name="valid callback for terminal node hands finalization to the executor()" classname="run.trama.saga.callback.CallbackReceiverTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

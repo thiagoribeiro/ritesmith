@@ -157,13 +157,49 @@ def test_workflow_assessment_accepts_bitcoin_only_for_btc_goal():
 def test_workflow_assessment_rejects_counter_reset_in_controlled_cycle():
     from benchmarks.generation_latency.tasks import workflow_checks
 
-    definition = example("bounded_polling")
+    # Retained cyclic artifacts still need counter-reset diagnostics even though
+    # current examples use explicitly initialized acyclic passes.
+    definition = {
+        "name": "legacy-loop",
+        "entrypoint": "fetch",
+        "max_iterations": 3,
+        "nodes": [
+            {
+                "id": "fetch",
+                "kind": "task",
+                "capability_name": "market.coin_price",
+                "input": {"symbol": "btc"},
+                "next": "track",
+            },
+            {
+                "id": "track",
+                "kind": "task",
+                "capability_name": "stat.tick",
+                "input": {"iteration": "{{ nodes.track.response.body.output.iteration }}"},
+                "next": "check",
+            },
+            {
+                "id": "check",
+                "kind": "switch",
+                "cases": [
+                    {
+                        "name": "done",
+                        "when": {">=": [{"var": "nodes.track.response.body.output.iteration"}, 3]},
+                        "target": "end",
+                    }
+                ],
+                "default": "wait",
+            },
+            {"id": "wait", "kind": "sleep", "durationSeconds": 60, "next": "fetch"},
+        ],
+    }
     task = {
         "id": "custom",
         "goal": "Check BTC three times",
         "caps": ["market.coin_price"],
         "sleeps": [60],
     }
+    assert not workflow_checks(task, compile_workflow(example("bounded_polling"), BASE))
     assert not workflow_checks(task, compile_workflow(definition, BASE))
     definition["nodes"][1]["input"] = {"state": {}}
     assert workflow_checks(task, compile_workflow(definition, BASE)) == [

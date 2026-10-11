@@ -1,0 +1,762 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.e2e.E2ESleepSagaTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:18.153Z" hostname="c3po" time="4.2">
+  <properties/>
+  <testcase name="sleep as the terminal node finishes the saga on its own()" classname="run.trama.e2e.E2ESleepSagaTest" time="0.715"/>
+  <testcase name="status API reports SLEEPING while the saga sleeps()" classname="run.trama.e2e.E2ESleepSagaTest" time="0.327"/>
+  <testcase name="sleep pauses between nodes and then completes()" classname="run.trama.e2e.E2ESleepSagaTest" time="1.693"/>
+  <testcase name="waking a terminal sleep finishes the saga()" classname="run.trama.e2e.E2ESleepSagaTest" time="0.662"/>
+  <testcase name="wake validates the execution id()" classname="run.trama.e2e.E2ESleepSagaTest" time="0.131"/>
+  <testcase name="wake endpoint cuts a long sleep short()" classname="run.trama.e2e.E2ESleepSagaTest" time="0.669"/>
+  <system-out><![CDATA[Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Liquibase: Update has been successful. Rows affected: 0
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Liquibase: Update has been successful. Rows affected: 0
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Liquibase: Update has been successful. Rows affected: 0
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Liquibase: Update has been successful. Rows affected: 0
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Liquibase: Update has been successful. Rows affected: 0
+Running Changeset: db/changelog/db.changelog-master.xml::001b-init-partitions::codex
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Running Changeset: db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama
+relation "saga_execution_202609" already exists, skipping
+relation "saga_step_result_202609" already exists, skipping
+relation "saga_step_call_202609" already exists, skipping
+relation "saga_execution_202610" already exists, skipping
+relation "saga_step_result_202610" already exists, skipping
+relation "saga_step_call_202610" already exists, skipping
+relation "saga_execution_202611" already exists, skipping
+relation "saga_step_result_202611" already exists, skipping
+relation "saga_step_call_202611" already exists, skipping
+relation "saga_execution_202612" already exists, skipping
+relation "saga_step_result_202612" already exists, skipping
+relation "saga_step_call_202612" already exists, skipping
+relation "saga_execution_202701" already exists, skipping
+relation "saga_step_result_202701" already exists, skipping
+relation "saga_step_call_202701" already exists, skipping
+relation "saga_execution_202702" already exists, skipping
+relation "saga_step_result_202702" already exists, skipping
+relation "saga_step_call_202702" already exists, skipping
+relation "saga_execution_202703" already exists, skipping
+relation "saga_step_result_202703" already exists, skipping
+relation "saga_step_call_202703" already exists, skipping
+relation "saga_execution_202704" already exists, skipping
+relation "saga_step_result_202704" already exists, skipping
+relation "saga_step_call_202704" already exists, skipping
+relation "saga_execution_202705" already exists, skipping
+relation "saga_step_result_202705" already exists, skipping
+relation "saga_step_call_202705" already exists, skipping
+relation "saga_execution_202706" already exists, skipping
+relation "saga_step_result_202706" already exists, skipping
+relation "saga_step_call_202706" already exists, skipping
+relation "saga_execution_202707" already exists, skipping
+relation "saga_step_result_202707" already exists, skipping
+relation "saga_step_call_202707" already exists, skipping
+relation "saga_execution_202708" already exists, skipping
+relation "saga_step_result_202708" already exists, skipping
+relation "saga_step_call_202708" already exists, skipping
+relation "saga_execution_202709" already exists, skipping
+relation "saga_step_result_202709" already exists, skipping
+relation "saga_step_call_202709" already exists, skipping
+relation "saga_execution_202710" already exists, skipping
+relation "saga_step_result_202710" already exists, skipping
+relation "saga_step_call_202710" already exists, skipping
+Liquibase: Update has been successful. Rows affected: 0
+]]></system-out>
+  <system-err><![CDATA[Oct 09, 2026 11:43:18 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:18 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:18 AM liquibase.command
+INFO: Using deploymentId: 1556963342
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 4ms
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 3ms
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Run:                          2
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Previously run:               9
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:18 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:18 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:18 AM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:43:18 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:18 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:18 AM liquibase.command
+INFO: Using deploymentId: 1556963342
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 5ms
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:18 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 3ms
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Run:                          2
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Previously run:               9
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:18 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:18 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:18 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:18 AM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:43:19 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:19 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:19 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:19 AM liquibase.command
+INFO: Using deploymentId: 1556963342
+Oct 09, 2026 11:43:19 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:19 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:19 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 5ms
+Oct 09, 2026 11:43:19 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:19 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 3ms
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: Run:                          2
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: Previously run:               9
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:19 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:19 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:19 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:19 AM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:43:20 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:20 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:20 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:20 AM liquibase.command
+INFO: Using deploymentId: 1556963342
+Oct 09, 2026 11:43:20 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:20 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:20 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 4ms
+Oct 09, 2026 11:43:20 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:20 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 3ms
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: Run:                          2
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: Previously run:               9
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:20 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:20 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:20 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:20 AM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:43:21 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:21 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:21 AM liquibase.command
+INFO: Using deploymentId: 1556963342
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 6ms
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 4ms
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Run:                          2
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Previously run:               9
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:21 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:21 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:21 AM liquibase.command
+INFO: Command execution complete
+Oct 09, 2026 11:43:21 AM liquibase.database
+INFO: Set default schema name to public
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:21 AM liquibase.lockservice
+INFO: Successfully acquired change log lock
+Oct 09, 2026 11:43:21 AM liquibase.command
+INFO: Using deploymentId: 1556972844
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: Reading from public.databasechangelog
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::001b-init-partitions::codex ran successfully in 4ms
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: SQL in file db/schema_partitions.sql executed
+Oct 09, 2026 11:43:21 AM liquibase.changelog
+INFO: ChangeSet db/changelog/db.changelog-master.xml::004b-step-call-partitions::trama ran successfully in 2ms
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: UPDATE SUMMARY
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Run:                          2
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Previously run:               9
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Filtered out:                 0
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: -------------------------------
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Total change sets:           11
+Oct 09, 2026 11:43:21 AM liquibase.util
+INFO: Update summary generated
+Oct 09, 2026 11:43:21 AM liquibase.command
+INFO: Update command completed successfully.
+Oct 09, 2026 11:43:21 AM liquibase.lockservice
+INFO: Successfully released change log lock
+Oct 09, 2026 11:43:21 AM liquibase.command
+INFO: Command execution complete
+]]></system-err>
+</testsuite>

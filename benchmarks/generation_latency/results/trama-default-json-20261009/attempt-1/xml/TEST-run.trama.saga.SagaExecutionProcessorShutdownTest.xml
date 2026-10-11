@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.SagaExecutionProcessorShutdownTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:27.854Z" hostname="c3po" time="0.096">
+  <properties/>
+  <testcase name="lost lease releases the claim without failing or acking it()" classname="run.trama.saga.SagaExecutionProcessorShutdownTest" time="0.014"/>
+  <testcase name="a failed execution is released, not acked, so its claim can expire and be re-delivered()" classname="run.trama.saga.SagaExecutionProcessorShutdownTest" time="0.013"/>
+  <testcase name="a worker exception feeds the rate limiter()" classname="run.trama.saga.SagaExecutionProcessorShutdownTest" time="0.012"/>
+  <testcase name="stale checkpoint acks the duplicate copy without failing it()" classname="run.trama.saga.SagaExecutionProcessorShutdownTest" time="0.012"/>
+  <testcase name="stop polling drains claimed work before workers exit()" classname="run.trama.saga.SagaExecutionProcessorShutdownTest" time="0.028"/>
+  <testcase name="a workflow that ends FAILED is acked and does not feed the rate limiter()" classname="run.trama.saga.SagaExecutionProcessorShutdownTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

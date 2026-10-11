@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.redis.RedisShardingTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:41.761Z" hostname="c3po" time="0.018">
+  <properties/>
+  <testcase name="keyspace keeps related keys on the same cluster slot()" classname="run.trama.saga.redis.RedisShardingTest" time="0.0"/>
+  <testcase name="enqueuer writes to the execution shard ready key()" classname="run.trama.saga.redis.RedisShardingTest" time="0.002"/>
+  <testcase name="empty, blank and duplicate pod lists are normalized()" classname="run.trama.saga.redis.RedisShardingTest" time="0.001"/>
+  <testcase name="removing a pod only moves the shards it owned()" classname="run.trama.saga.redis.RedisShardingTest" time="0.001"/>
+  <testcase name="sequentially named pods get a balanced share of shards()" classname="run.trama.saga.redis.RedisShardingTest" time="0.002"/>
+  <testcase name="every shard has exactly one owner across the pod set()" classname="run.trama.saga.redis.RedisShardingTest" time="0.006"/>
+  <testcase name="keyspace maps every execution into the configured shard range()" classname="run.trama.saga.redis.RedisShardingTest" time="0.003"/>
+  <testcase name="rendezvous ownership is deterministic()" classname="run.trama.saga.redis.RedisShardingTest" time="0.001"/>
+  <testcase name="adding a pod only moves a subset of shards()" classname="run.trama.saga.redis.RedisShardingTest" time="0.001"/>
+  <testcase name="a pod not in the active list owns nothing()" classname="run.trama.saga.redis.RedisShardingTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

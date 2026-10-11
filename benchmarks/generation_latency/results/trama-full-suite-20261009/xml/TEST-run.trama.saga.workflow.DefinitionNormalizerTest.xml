@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.DefinitionNormalizerTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:25.965Z" hostname="c3po" time="0.012">
+  <properties/>
+  <testcase name="v2 valid definition passes validation()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.001"/>
+  <testcase name="v2 switch node maps to SwitchNode IR()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.001"/>
+  <testcase name="v2 unknown entrypoint produces error()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v2 async task maps callbackConfig to IR()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.001"/>
+  <testcase name="v2 join node without next is terminal()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v2 async task without callbackConfig produces error()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v1 definitions sharing name and version but differing in content normalize independently()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v2 switch case pointing to unknown node produces error()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.001"/>
+  <testcase name="v1 three steps are chained in order()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v1 single step produces one terminal TaskNode()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.001"/>
+  <testcase name="v2 linear task nodes produce correct IR()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v1 metadata is preserved in IR()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.001"/>
+  <testcase name="v2 action successStatusCodes override HttpCall defaults()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v2 definitions sharing name and version but differing in content normalize independently()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v1 step up maps to action and down maps to compensation()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.0"/>
+  <testcase name="v2 split node maps to SplitNode IR()" classname="run.trama.saga.workflow.DefinitionNormalizerTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

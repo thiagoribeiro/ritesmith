@@ -1,0 +1,48 @@
+{
+  "source_sha256": "e005f511a6da6ec20bcee7a4e0fda6363afef8c5cc7110c3c0f3e1bc0ad32cbb",
+  "passed": false,
+  "reason": "native_template_transport_mismatch: indexed join references render empty; collection/state references do not preserve typed JSON. Native workflow execution is not qualified.",
+  "regression": {
+    "passed": 888,
+    "skipped": 3,
+    "xfailed": 5,
+    "e2e_deselected": 14,
+    "seconds": 259.91
+  },
+  "lint": "passed",
+  "format": "passed",
+  "trama_transport_verified": false,
+  "trama_source_revision": "1e77c341014cb30c255bdc1f5b282b1cdc6d9f20",
+  "trama_source_files": {
+    "app/main/kotlin/run/trama/saga/TemplateRenderer.kt": "86d38280af616683d0825c3db8d1540ced82a069fa953ba8f27e05cd740fb4f3",
+    "app/main/kotlin/run/trama/saga/JsonElementUtils.kt": "f8eac11066ab883e93483296629d02e435610ea8c84affbd08b9bd1b44f69433",
+    "app/main/kotlin/run/trama/saga/workflow/WorkflowExecutor.kt": "0eb69e4cd0f0fb308de7a086193548b35e6049809aeb072ae7cee8f855efb518",
+    "app/main/kotlin/run/trama/saga/workflow/JsonLogicEvaluator.kt": "f16601b6175972a699205e644ae5d41c4e3967aeb0d5aabeeb1fcd091f774f73"
+  },
+  "paid_requests": 0,
+  "paid_cost_usd": 0,
+  "candidate_image": "sha256:97e9d76947e541993ee6872f6034a288bae85186067994a907b17a6c36874e49",
+  "production_deployed": false,
+  "retained_evidence_sha256": "fa80c7bfb70c1d8d541b0b3bf9fa048836cc6a69b07275b95db7d8a37865daa0",
+  "trama_tests": {
+    "jsonlogic": 9,
+    "split_join": 9,
+    "failed": 0
+  },
+  "production_image": "sha256:463b35a0b22bc851aa2008451bfbf97c6d9747ac00dac805af904d3c04a3f09c",
+  "production_strict_enabled": true,
+  "trama_deployed_image": "sha256:1ef6c1ff34652e64a85d73fa6d5783815444e6bf3fe3b840b8de3ae19d106e9b",
+  "trama_deployed_jar_sha256": "6cdd70ff11923f725016fdf2038b5ff7fad05f55d30db079c27247559e3e23ea",
+  "arm_tests": {
+    "passed": 23,
+    "deselected": 5,
+    "seconds": 10.69
+  },
+  "dockerfile_sha256": "82b53b0d9f9edab34a98adc05efd578615121b7e8b668c02878c0f1eefd617cb",
+  "rollback_image": "sha256:463b35a0b22bc851aa2008451bfbf97c6d9747ac00dac805af904d3c04a3f09c",
+  "rollback_configuration": "/home/thiago/ritesmith/deploy/docker-compose.strict-rollback-20261008.yml",
+  "production_health": "ok",
+  "production_image_unchanged": true,
+  "candidate_tag": "ritesmith:reliability-candidate-20261008",
+  "candidate_source_matches_freeze": true
+}

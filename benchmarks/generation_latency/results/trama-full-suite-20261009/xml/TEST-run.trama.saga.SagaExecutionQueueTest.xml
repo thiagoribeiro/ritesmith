@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.SagaExecutionQueueTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:16.272Z" hostname="c3po" time="0.005">
+  <properties/>
+  <testcase name="enqueue and receive()" classname="run.trama.saga.SagaExecutionQueueTest" time="0.002"/>
+  <testcase name="tryReceive returns value when available()" classname="run.trama.saga.SagaExecutionQueueTest" time="0.001"/>
+  <testcase name="tryReceive returns null when empty()" classname="run.trama.saga.SagaExecutionQueueTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.TemplateContextBuilderTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:16.394Z" hostname="c3po" time="0.003">
+  <properties/>
+  <testcase name="steps list is in index order()" classname="run.trama.saga.TemplateContextBuilderTest" time="0.001"/>
+  <testcase name="prev reflects last completed step()" classname="run.trama.saga.TemplateContextBuilderTest" time="0.0"/>
+  <testcase name="step lookup by name uses newest entry when step name is repeated at different indices()" classname="run.trama.saga.TemplateContextBuilderTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

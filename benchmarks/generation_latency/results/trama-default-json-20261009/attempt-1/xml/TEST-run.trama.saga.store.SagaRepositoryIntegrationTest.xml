@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.store.SagaRepositoryIntegrationTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:37.152Z" hostname="c3po" time="0.435">
+  <properties/>
+  <testcase name="stalled join barrier is found only while the parent is still WAITING_JOIN()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.017"/>
+  <testcase name="definitions list, lookup by name-version and delete()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.009"/>
+  <testcase name="listExecutions filters by name and status and orders newest first()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.018"/>
+  <testcase name="POSTGRES store keeps a sleep sentinel that can be peeked and consumed once()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.014"/>
+  <testcase name="executions older than the 15-day read window are invisible to status lookups()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.005"/>
+  <testcase name="failure, warning and retry bookkeeping round-trip()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.018"/>
+  <testcase name="a definition deleted by another pod stops being served once the cache TTL elapses()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.306"/>
+  <testcase name="upsert on an existing execution resets it to IN_PROGRESS and keeps the stored definition()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.012"/>
+  <testcase name="unknown execution id returns null everywhere()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.016"/>
+  <testcase name="step results and step calls are returned in insertion order with parsed fields()" classname="run.trama.saga.store.SagaRepositoryIntegrationTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -8,9 +8,10 @@ import os
 import sys
 from typing import Any
 
+import httpx
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 # Ensure the ritesmith package is importable when server.py is run directly
 _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -203,7 +204,20 @@ async def list_tools() -> list[Tool]:
 
 
 @server.call_tool()
-async def call_tool(name: str, arguments: dict | None) -> list[TextContent]:
+async def call_tool(name: str, arguments: dict | None) -> list[TextContent] | CallToolResult:
+    try:
+        return await invoke_tool(name, arguments)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 422:
+            body = exc.response.json()
+            if body.get("error") == "generation_failed":
+                return CallToolResult(
+                    isError=True, content=[TextContent(type="text", text=json.dumps(body))]
+                )
+        raise
+
+
+async def invoke_tool(name: str, arguments: dict | None) -> list[TextContent]:
     args: dict[str, Any] = arguments or {}
 
     # Domain tools from providers

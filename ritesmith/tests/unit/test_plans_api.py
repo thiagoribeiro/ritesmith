@@ -58,6 +58,9 @@ class MockPlanLLM(LLMProvider):
 class MockHighRiskLLM(MockPlanLLM):
     """Returns high-risk artifact to trigger require_approval policy."""
 
+    async def generate_validation_tests(self, *args, **kwargs):
+        return [{"input": {}, "expected_output": {"ok": True}, "source": "intent"}], _stats()
+
     async def generate_lua(
         self, goal: str = "", **kwargs
     ) -> tuple[LuaGenerationResponse, LLMCallStats]:

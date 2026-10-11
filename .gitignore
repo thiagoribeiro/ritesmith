@@ -47,3 +47,6 @@ Thumbs.db
 
 # Alembic
 ritesmith/storage/migrations/versions/__pycache__/
+
+# Generated offline Trama oracle classes, jars and machine-specific classpaths.
+benchmarks/generation_latency/native-oracle/

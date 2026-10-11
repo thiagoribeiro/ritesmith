@@ -1,0 +1,656 @@
+......................................F.F                                [100%]
+=================================== FAILURES ===================================
+__ test_invalid_cached_continuation_is_422_without_model_recovery[contracts] ___
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_utils.py", line 107, in create_collapsing_task_group
+  |     async with anyio.create_task_group() as tg:
+  |                ~~~~~~~~~~~~~~~~~~~~~~~^^
+  |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  |         "unhandled errors in a TaskGroup", self._exceptions
+  |     ) from None
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/runner.py", line 361, in from_call
+    |     result: TResult | None = func()
+    |                              ~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/runner.py", line 250, in <lambda>
+    |     lambda: runtest_hook(item=item, **kwds),
+    |             ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_hooks.py", line 512, in __call__
+    |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+    |            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_manager.py", line 120, in _hookexec
+    |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+    |            ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 167, in _multicall
+    |     raise exception
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     teardown.throw(exception)
+    |     ~~~~~~~~~~~~~~^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/logging.py", line 865, in pytest_runtest_call
+    |     yield
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     teardown.throw(exception)
+    |     ~~~~~~~~~~~~~~^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/capture.py", line 900, in pytest_runtest_call
+    |     return (yield)
+    |             ^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     teardown.throw(exception)
+    |     ~~~~~~~~~~~~~~^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 53, in run_old_style_hookwrapper
+    |     return result.get_result()
+    |            ~~~~~~~~~~~~~~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_result.py", line 103, in get_result
+    |     raise exc.with_traceback(tb)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 38, in run_old_style_hookwrapper
+    |     res = yield
+    |           ^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     teardown.throw(exception)
+    |     ~~~~~~~~~~~~~~^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 53, in run_old_style_hookwrapper
+    |     return result.get_result()
+    |            ~~~~~~~~~~~~~~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_result.py", line 103, in get_result
+    |     raise exc.with_traceback(tb)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 38, in run_old_style_hookwrapper
+    |     res = yield
+    |           ^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     teardown.throw(exception)
+    |     ~~~~~~~~~~~~~~^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/skipping.py", line 268, in pytest_runtest_call
+    |     return (yield)
+    |             ^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 121, in _multicall
+    |     res = hook_impl.function(*args)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/runner.py", line 184, in pytest_runtest_call
+    |     item.runtest()
+    |     ~~~~~~~~~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py", line 569, in runtest
+    |     super().runtest()
+    |     ~~~~~~~~~~~~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/python.py", line 1707, in runtest
+    |     self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+    |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_hooks.py", line 512, in __call__
+    |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+    |            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_manager.py", line 120, in _hookexec
+    |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+    |            ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 167, in _multicall
+    |     raise exception
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 139, in _multicall
+    |     teardown.throw(exception)
+    |     ~~~~~~~~~~~~~~^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 53, in run_old_style_hookwrapper
+    |     return result.get_result()
+    |            ~~~~~~~~~~~~~~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_result.py", line 103, in get_result
+    |     raise exc.with_traceback(tb)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 38, in run_old_style_hookwrapper
+    |     res = yield
+    |           ^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pluggy/_callers.py", line 121, in _multicall
+    |     res = hook_impl.function(*args)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/_pytest/python.py", line 167, in pytest_pyfunc_call
+    |     result = testfunction(**testargs)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py", line 905, in inner
+    |     runner.run(coro, context=context)
+    |     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/usr/lib/python3.14/asyncio/runners.py", line 128, in run
+    |     return self._loop.run_until_complete(task)
+    |            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+    |   File "/usr/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    |     return future.result()
+    |            ~~~~~~~~~~~~~^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/unit/test_workflow_review.py", line 226, in test_invalid_cached_continuation_is_422_without_model_recovery
+    |     response = await client.post(
+    |                ^^^^^^^^^^^^^^^^^^
+    |     ...<5 lines>...
+    |     )
+    |     ^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1859, in post
+    |     return await self.request(
+    |            ^^^^^^^^^^^^^^^^^^^
+    |     ...<13 lines>...
+    |     )
+    |     ^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1540, in request
+    |     return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1629, in send
+    |     response = await self._send_handling_auth(
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     ...<4 lines>...
+    |     )
+    |     ^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    |     response = await self._send_handling_redirects(
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     ...<3 lines>...
+    |     )
+    |     ^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    |     response = await self._send_single_request(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    |     response = await transport.handle_async_request(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_transports/asgi.py", line 170, in handle_async_request
+    |     await self.app(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/applications.py", line 1216, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/applications.py", line 96, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+    |     await self.app(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 197, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/api/app.py", line 126, in dispatch
+    |     response = await call_next(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 173, in call_next
+    |     raise app_exc from app_exc.__cause__ or app_exc.__context__
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 197, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/api/app.py", line 157, in dispatch
+    |     response = await call_next(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 173, in call_next
+    |     raise app_exc from app_exc.__cause__ or app_exc.__context__
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 197, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/middleware.py", line 124, in dispatch
+    |     return await call_next(request)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 173, in call_next
+    |     raise app_exc from app_exc.__cause__ or app_exc.__context__
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    |     await self.app(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/routing.py", line 676, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 2786, in app
+    |     await route.handle(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1817, in handle
+    |     await self.original_router.handle(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 2869, in handle
+    |     await included_router._handle_selected(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1843, in _handle_selected
+    |     await original_route.handle(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1308, in handle
+    |     await effective_context.app(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 165, in app
+    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    |     raise exc
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    |     await app(scope, receive, sender)
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 151, in app
+    |     response = await f(request)
+    |                ^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 727, in app
+    |     raw_response = await run_endpoint_function(
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     ...<3 lines>...
+    |     )
+    |     ^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 360, in run_endpoint_function
+    |     return await dependant.call(**values)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py", line 737, in async_wrapper
+    |     response = await func(*args, **kwargs)  # type: ignore
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/api/routes/generations.py", line 54, in generate_workflow
+    |     return await service.generate_workflow(req)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/generation_budget.py", line 53, in wrapped
+    |     return await fn(self, *args, **kwargs)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/workflow_generation.py", line 407, in generate_workflow
+    |     await run_repair_loop(
+    |     ...<10 lines>...
+    |     )
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/repair.py", line 72, in run_repair_loop
+    |     success = await attempt_fn(attempt)
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/workflow_generation.py", line 285, in attempt_fn
+    |     llm_resp, stats = await active_llm.generate_workflow(
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     ...<6 lines>...
+    |     )
+    |     ^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/fakes/llm.py", line 99, in generate_workflow
+    |     return self._next("generate_workflow", kwargs)
+    |            ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/fakes/llm.py", line 73, in _next
+    |     raise UnexpectedLLMCall(f"unexpected {method}() call (nothing queued)")
+    | ritesmith.tests.fakes.llm.UnexpectedLLMCall: unexpected generate_workflow() call (nothing queued)
+    +------------------------------------
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/unit/test_workflow_review.py", line 226, in test_invalid_cached_continuation_is_422_without_model_recovery
+    response = await client.post(
+               ^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1859, in post
+    return await self.request(
+           ^^^^^^^^^^^^^^^^^^^
+    ...<13 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1540, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/httpx/_transports/asgi.py", line 170, in handle_async_request
+    await self.app(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/applications.py", line 1216, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 197, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/api/app.py", line 126, in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 173, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 197, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/api/app.py", line 157, in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 173, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 197, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/middleware.py", line 124, in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 173, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/base.py", line 149, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/routing.py", line 676, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 2786, in app
+    await route.handle(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1817, in handle
+    await self.original_router.handle(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 2869, in handle
+    await included_router._handle_selected(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1843, in _handle_selected
+    await original_route.handle(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1308, in handle
+    await effective_context.app(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 165, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 151, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 727, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 360, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py", line 737, in async_wrapper
+    response = await func(*args, **kwargs)  # type: ignore
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/api/routes/generations.py", line 54, in generate_workflow
+    return await service.generate_workflow(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/generation_budget.py", line 53, in wrapped
+    return await fn(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/workflow_generation.py", line 407, in generate_workflow
+    await run_repair_loop(
+    ...<10 lines>...
+    )
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/repair.py", line 72, in run_repair_loop
+    success = await attempt_fn(attempt)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/workflow_generation.py", line 285, in attempt_fn
+    llm_resp, stats = await active_llm.generate_workflow(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/fakes/llm.py", line 99, in generate_workflow
+    return self._next("generate_workflow", kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/fakes/llm.py", line 73, in _next
+    raise UnexpectedLLMCall(f"unexpected {method}() call (nothing queued)")
+ritesmith.tests.fakes.llm.UnexpectedLLMCall: unexpected generate_workflow() call (nothing queued)
+
+The above exception was the direct cause of the following exception:
+
+make_client = <function make_client.<locals>.factory at 0x7fc23017eb90>
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x7fc23039e5d0>
+failure = 'contracts'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("failure", ["counter", "state", "contracts", "plan", "container"])
+    async def test_invalid_cached_continuation_is_422_without_model_recovery(
+        make_client, db_session, failure
+    ):
+        from ritesmith.llm.generation_context import prepare_catalog
+        from ritesmith.registry.models import GenerationJob
+        from ritesmith.runtime.host_functions import get_available_provider_capabilities
+        from ritesmith.workflows.semantic import FORMAT_VERSION
+    
+        goal = "Retain the minimum across three samples"
+        cached = {
+            "version": FORMAT_VERSION,
+            "intent": goal,
+            "plan": semantic_example("state_tracking"),
+            "completed_repeat": "monitor",
+            "contract_version": prepare_catalog(goal, get_available_provider_capabilities()).version,
+        }
+        state = {"remaining_iterations": 2, "state": {"minimum": 3}}
+        if failure == "counter":
+            state.pop("remaining_iterations")
+        elif failure == "state":
+            state["state"] = {}
+        elif failure == "contracts":
+            cached["contract_version"] = "outdated"
+        elif failure == "plan":
+            cached.pop("plan")
+        else:
+            cached = ["invalid"]
+        llm = ScriptedLLM()
+        async with make_client(
+            llm=llm, settings=Settings(generation_semantic_workflows=True)
+        ) as client:
+>           response = await client.post(
+                "/generate/trama-workflow",
+                json={
+                    "intent": goal,
+                    "context": {"workflow_continuation": cached, "continuation": state},
+                },
+            )
+
+ritesmith/tests/unit/test_workflow_review.py:226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx/_client.py:1859: in post
+    return await self.request(
+.venv/lib/python3.14/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/applications.py:1216: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:197: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/api/app.py:126: in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:173: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:149: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:197: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/api/app.py:157: in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:173: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:149: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:197: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/slowapi/middleware.py:124: in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:173: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+.venv/lib/python3.14/site-packages/starlette/middleware/base.py:149: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/routing.py:676: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:2786: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:1817: in handle
+    await self.original_router.handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:2869: in handle
+    await included_router._handle_selected(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:1843: in _handle_selected
+    await original_route.handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:1308: in handle
+    await effective_context.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:165: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:151: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/fastapi/routing.py:727: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.14/site-packages/fastapi/routing.py:360: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/slowapi/extension.py:737: in async_wrapper
+    response = await func(*args, **kwargs)  # type: ignore
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/api/routes/generations.py:54: in generate_workflow
+    return await service.generate_workflow(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/core/generation_budget.py:53: in wrapped
+    return await fn(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/core/workflow_generation.py:407: in generate_workflow
+    await run_repair_loop(
+ritesmith/core/repair.py:72: in run_repair_loop
+    success = await attempt_fn(attempt)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/core/workflow_generation.py:285: in attempt_fn
+    llm_resp, stats = await active_llm.generate_workflow(
+ritesmith/tests/fakes/llm.py:99: in generate_workflow
+    return self._next("generate_workflow", kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <ritesmith.tests.fakes.llm.ScriptedLLM object at 0x7fc23039cd70>
+method = 'generate_workflow'
+kwargs = {'goal': 'Retain the minimum across three samples', 'available_capabilities': [{'capability_name': 'grafana.get_dashbo...4h': {'type': 'number'}, 'currency': {'type': 'string'}, ...}}}, ...], 'constraints': {}, 'similar_workflows': [], ...}
+
+    def _next(self, method: str, kwargs: dict):
+        self.calls.append((method, kwargs))
+        if not self._queues[method]:
+>           raise UnexpectedLLMCall(f"unexpected {method}() call (nothing queued)")
+E           ritesmith.tests.fakes.llm.UnexpectedLLMCall: unexpected generate_workflow() call (nothing queued)
+
+ritesmith/tests/fakes/llm.py:73: UnexpectedLLMCall
+------------------------------ Captured log call -------------------------------
+ERROR    ritesmith.core.workflow_generation:workflow_generation.py:490 workflow generation failed with exception
+Traceback (most recent call last):
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/workflow_generation.py", line 407, in generate_workflow
+    await run_repair_loop(
+    ...<10 lines>...
+    )
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/repair.py", line 72, in run_repair_loop
+    success = await attempt_fn(attempt)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/core/workflow_generation.py", line 285, in attempt_fn
+    llm_resp, stats = await active_llm.generate_workflow(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/fakes/llm.py", line 99, in generate_workflow
+    return self._next("generate_workflow", kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/thiago/Documents/projects/ritesmith/ritesmith/tests/fakes/llm.py", line 73, in _next
+    raise UnexpectedLLMCall(f"unexpected {method}() call (nothing queued)")
+ritesmith.tests.fakes.llm.UnexpectedLLMCall: unexpected generate_workflow() call (nothing queued)
+__ test_invalid_cached_continuation_is_422_without_model_recovery[container] ___
+
+make_client = <function make_client.<locals>.factory at 0x7fc2304a8040>
+db_session = <sqlalchemy.ext.asyncio.session.AsyncSession object at 0x7fc2302c09f0>
+failure = 'container'
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("failure", ["counter", "state", "contracts", "plan", "container"])
+    async def test_invalid_cached_continuation_is_422_without_model_recovery(
+        make_client, db_session, failure
+    ):
+        from ritesmith.llm.generation_context import prepare_catalog
+        from ritesmith.registry.models import GenerationJob
+        from ritesmith.runtime.host_functions import get_available_provider_capabilities
+        from ritesmith.workflows.semantic import FORMAT_VERSION
+    
+        goal = "Retain the minimum across three samples"
+        cached = {
+            "version": FORMAT_VERSION,
+            "intent": goal,
+            "plan": semantic_example("state_tracking"),
+            "completed_repeat": "monitor",
+            "contract_version": prepare_catalog(goal, get_available_provider_capabilities()).version,
+        }
+        state = {"remaining_iterations": 2, "state": {"minimum": 3}}
+        if failure == "counter":
+            state.pop("remaining_iterations")
+        elif failure == "state":
+            state["state"] = {}
+        elif failure == "contracts":
+            cached["contract_version"] = "outdated"
+        elif failure == "plan":
+            cached.pop("plan")
+        else:
+            cached = ["invalid"]
+        llm = ScriptedLLM()
+        async with make_client(
+            llm=llm, settings=Settings(generation_semantic_workflows=True)
+        ) as client:
+            response = await client.post(
+                "/generate/trama-workflow",
+                json={
+                    "intent": goal,
+                    "context": {"workflow_continuation": cached, "continuation": state},
+                },
+            )
+        assert response.status_code == 422
+>       assert response.json()["error"] == "generation_failed"
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'error'
+
+ritesmith/tests/unit/test_workflow_review.py:234: KeyError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+  /home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py:720: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ritesmith/tests/unit/test_workflow_review.py::test_invalid_cached_continuation_is_422_without_model_recovery[contracts]
+FAILED ritesmith/tests/unit/test_workflow_review.py::test_invalid_cached_continuation_is_422_without_model_recovery[container]
+2 failed, 39 passed, 3 warnings in 1.40s

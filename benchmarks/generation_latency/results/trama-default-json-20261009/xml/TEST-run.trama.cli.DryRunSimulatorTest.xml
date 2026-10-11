@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.cli.DryRunSimulatorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:44:58.184Z" hostname="c3po" time="0.033">
+  <properties/>
+  <testcase name="split branch failure marks the whole simulation failed()" classname="run.trama.cli.DryRunSimulatorTest" time="0.005"/>
+  <testcase name="switch conditions see the same names in the dry-run as in production()" classname="run.trama.cli.DryRunSimulatorTest" time="0.021"/>
+  <testcase name="nested split inside a branch is simulated recursively()" classname="run.trama.cli.DryRunSimulatorTest" time="0.001"/>
+  <testcase name="dry run preserves typed JSON request values without a mode header()" classname="run.trama.cli.DryRunSimulatorTest" time="0.001"/>
+  <testcase name="simulates split branches and continues after join()" classname="run.trama.cli.DryRunSimulatorTest" time="0.001"/>
+  <testcase name="dry run rejects missing JSON references instead of simulating a null value()" classname="run.trama.cli.DryRunSimulatorTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

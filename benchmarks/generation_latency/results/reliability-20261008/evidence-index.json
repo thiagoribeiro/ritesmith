@@ -1,0 +1,18 @@
+{
+  "RESULTS.md": "3bfdf6baccbd70e69199ab61d6e61a0d89b8d2524df33d53ec029d85c54baebf",
+  "arm-tests.log": "b063af7a5a47614d920d8f5d29f616a9f689287c4d4fadc9b4d9ab8f33c218f1",
+  "base-revision.txt": "5614d68762569385f57282398df3e489afdd541d17ef1d555799ca560611898d",
+  "deployed-trama-template-oracle.txt": "61493d8eb766bcf1afa961ba5ccff376def38aa6295ccfeba1777d8ff8e7288f",
+  "format.log": "a8974443d12f9736423157c869f658ab1b4fc18c2ff99f12bf2cb579052f9e5b",
+  "lint.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+  "manifest.json": "982d694688ab70bcace09f0b41deda7f84ce25fbd76e96bd3602fa61b8697e85",
+  "native-template-oracle.txt": "61493d8eb766bcf1afa961ba5ccff376def38aa6295ccfeba1777d8ff8e7288f",
+  "preserved-response-replays.json": "b6d8126ef15ae16077eab794ee3cdb968ecab75d01a79c7de1d109a6e748bd5b",
+  "regression.log": "510aef7197c326548778782e60740ed2a94c31597781f259a9d5494533e889bb",
+  "report.json": "dd0b24cfa6bf8675c5ac24c05ed01d5913ce728c4149636632afad77d4f49590",
+  "source-changes.patch": "14e6d211fb185012bca4cebcdb771fd5ad0011a204fbeb79bc42f4488e5e2deb",
+  "trama-join-tests.xml": "c3b281c5ecc72bbb1f6295e629162349cd497f82c9d4f55e092787f370422e2e",
+  "trama-jsonlogic-tests.xml": "11bd82be999e14e24cf00f060f7c90968f83b438f76bd2649afd678d2e40f379",
+  "trama-tests.log": "556e78edd4a1e4dcc68545b0ce75290fe0d2601748d71b0bb0ad40dc4d7b72b3",
+  "verification.json": "4771185feca52733321aa395a8a70e00d667ce3d0f098386c52005f71e6df78c"
+}

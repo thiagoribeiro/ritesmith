@@ -1,0 +1,1546 @@
+..................................E.....E..EEE..E....................... [ 79%]
+...................                                                      [100%]
+==================================== ERRORS ====================================
+_ ERROR at setup of test_semantic_continuation_materializes_without_a_model_call _
+
+self = <Coroutine test_semantic_continuation_materializes_without_a_model_call>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:944: in pytest_fixture_setup
+    hook_result = yield
+                  ^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:407: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:403: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/tests/conftest.py:95: in db_engine
+    async with engine.begin() as conn:
+               ^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:1086: in begin
+    async with conn:
+               ^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py:152: in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:283: in start
+    await greenlet_spawn(self.sync_engine.connect)
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:210: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3263: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:149: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3287: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:445: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:1303: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:709: in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:176: in _do_get
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:174: in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:386: in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:671: in __init__
+    self.__connect()
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:906: in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:902: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py:645: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:869: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:967: in connect
+    return await_(
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:167: in await_
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:205: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:378: in create
+    cls._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:841: in _handle_exception_no_connection
+    super()._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:409: in _handle_exception_no_connection
+    raise error.with_traceback(exc_info[2])
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:376: in create
+    connection = await connection_awaitable
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connection.py:2498: in connect
+    return await connect_utils._connect(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1307: in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1278: in _connect
+    conn = await _connect_addr(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1092: in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1162: in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:996: in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_UnixSelectorEventLoop running=False closed=False debug=False>
+protocol_factory = <function _create_ssl_connection.<locals>.<lambda> at 0x7f547dac7110>
+host = 'localhost', port = 5432, ssl = None, family = 0, proto = 0, flags = 0
+sock = None, local_addr = None, server_hostname = None
+ssl_handshake_timeout = None, ssl_shutdown_timeout = None
+happy_eyeballs_delay = None, interleave = None, all_errors = False
+
+    async def create_connection(
+            self, protocol_factory, host=None, port=None,
+            *, ssl=None, family=0,
+            proto=0, flags=0, sock=None,
+            local_addr=None, server_hostname=None,
+            ssl_handshake_timeout=None,
+            ssl_shutdown_timeout=None,
+            happy_eyeballs_delay=None, interleave=None,
+            all_errors=False):
+        """Connect to a TCP server.
+    
+        Create a streaming transport connection to a given internet host and
+        port: socket family AF_INET or socket.AF_INET6 depending on host (or
+        family if specified), socket type SOCK_STREAM. protocol_factory must
+        be a callable returning a protocol instance.
+    
+        This method is a coroutine which will try to establish the
+        connection in the background.  When successful, the coroutine
+        returns a (transport, protocol) pair.
+        """
+        if server_hostname is not None and not ssl:
+            raise ValueError('server_hostname is only meaningful with ssl')
+    
+        if server_hostname is None and ssl:
+            # Use host as default for server_hostname.  It is an error
+            # if host is empty or not set, e.g. when an
+            # already-connected socket was passed or when only a port
+            # is given.  To avoid this error, you can pass
+            # server_hostname='' -- this will bypass the hostname
+            # check.  (This also means that if host is a numeric
+            # IP/IPv6 address, we will attempt to verify that exact
+            # address; this will probably fail, but it is possible to
+            # create a certificate for a specific IP address, so we
+            # don't judge it here.)
+            if not host:
+                raise ValueError('You must set server_hostname '
+                                 'when using ssl without a host')
+            server_hostname = host
+    
+        if ssl_handshake_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_handshake_timeout is only meaningful with ssl')
+    
+        if ssl_shutdown_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_shutdown_timeout is only meaningful with ssl')
+    
+        if sock is not None:
+            _check_ssl_socket(sock)
+    
+        if happy_eyeballs_delay is not None and interleave is None:
+            # If using happy eyeballs, default to interleave addresses by family
+            interleave = 1
+    
+        if host is not None or port is not None:
+            if sock is not None:
+                raise ValueError(
+                    'host/port and sock can not be specified at the same time')
+    
+            infos = await self._ensure_resolved(
+                (host, port), family=family,
+                type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+            if not infos:
+                raise OSError('getaddrinfo() returned empty list')
+    
+            if local_addr is not None:
+                laddr_infos = await self._ensure_resolved(
+                    local_addr, family=family,
+                    type=socket.SOCK_STREAM, proto=proto,
+                    flags=flags, loop=self)
+                if not laddr_infos:
+                    raise OSError('getaddrinfo() returned empty list')
+            else:
+                laddr_infos = None
+    
+            if interleave:
+                infos = _interleave_addrinfos(infos, interleave)
+    
+            exceptions = []
+            if happy_eyeballs_delay is None:
+                # not using happy eyeballs
+                for addrinfo in infos:
+                    try:
+                        sock = await self._connect_sock(
+                            exceptions, addrinfo, laddr_infos)
+                        break
+                    except OSError:
+                        continue
+            else:  # using happy eyeballs
+                sock = (await staggered.staggered_race(
+                    (
+                        # can't use functools.partial as it keeps a reference
+                        # to exceptions
+                        lambda addrinfo=addrinfo: self._connect_sock(
+                            exceptions, addrinfo, laddr_infos
+                        )
+                        for addrinfo in infos
+                    ),
+                    happy_eyeballs_delay,
+                    loop=self,
+                ))[0]  # can't use sock, _, _ as it keeks a reference to exceptions
+    
+            if sock is None:
+                exceptions = [exc for sub in exceptions for exc in sub]
+                try:
+                    if all_errors:
+                        raise ExceptionGroup("create_connection failed", exceptions)
+                    if len(exceptions) == 1:
+                        raise exceptions[0]
+                    elif exceptions:
+                        # If they all have the same str(), raise one.
+                        model = str(exceptions[0])
+                        if all(str(exc) == model for exc in exceptions):
+                            raise exceptions[0]
+                        # Raise a combined exception so the user can see all
+                        # the various error messages.
+>                       raise OSError('Multiple exceptions: {}'.format(
+                            ', '.join(str(exc) for exc in exceptions)))
+E                           OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 5432, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 5432)
+
+/usr/lib/python3.14/asyncio/base_events.py:1177: OSError
+_ ERROR at setup of test_fixture_failure_does_not_repair_the_generated_script __
+
+self = <Coroutine test_fixture_failure_does_not_repair_the_generated_script>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:407: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:403: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/tests/conftest.py:95: in db_engine
+    async with engine.begin() as conn:
+               ^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:1086: in begin
+    async with conn:
+               ^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py:152: in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:283: in start
+    await greenlet_spawn(self.sync_engine.connect)
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:210: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3263: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:149: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3287: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:445: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:1303: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:709: in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:176: in _do_get
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:174: in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:386: in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:671: in __init__
+    self.__connect()
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:906: in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:902: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py:645: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:869: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:967: in connect
+    return await_(
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:167: in await_
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:205: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:378: in create
+    cls._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:841: in _handle_exception_no_connection
+    super()._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:409: in _handle_exception_no_connection
+    raise error.with_traceback(exc_info[2])
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:376: in create
+    connection = await connection_awaitable
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connection.py:2498: in connect
+    return await connect_utils._connect(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1307: in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1278: in _connect
+    conn = await _connect_addr(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1092: in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1162: in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:996: in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_UnixSelectorEventLoop running=False closed=False debug=False>
+protocol_factory = <function _create_ssl_connection.<locals>.<lambda> at 0x7f547dac7110>
+host = 'localhost', port = 5432, ssl = None, family = 0, proto = 0, flags = 0
+sock = None, local_addr = None, server_hostname = None
+ssl_handshake_timeout = None, ssl_shutdown_timeout = None
+happy_eyeballs_delay = None, interleave = None, all_errors = False
+
+    async def create_connection(
+            self, protocol_factory, host=None, port=None,
+            *, ssl=None, family=0,
+            proto=0, flags=0, sock=None,
+            local_addr=None, server_hostname=None,
+            ssl_handshake_timeout=None,
+            ssl_shutdown_timeout=None,
+            happy_eyeballs_delay=None, interleave=None,
+            all_errors=False):
+        """Connect to a TCP server.
+    
+        Create a streaming transport connection to a given internet host and
+        port: socket family AF_INET or socket.AF_INET6 depending on host (or
+        family if specified), socket type SOCK_STREAM. protocol_factory must
+        be a callable returning a protocol instance.
+    
+        This method is a coroutine which will try to establish the
+        connection in the background.  When successful, the coroutine
+        returns a (transport, protocol) pair.
+        """
+        if server_hostname is not None and not ssl:
+            raise ValueError('server_hostname is only meaningful with ssl')
+    
+        if server_hostname is None and ssl:
+            # Use host as default for server_hostname.  It is an error
+            # if host is empty or not set, e.g. when an
+            # already-connected socket was passed or when only a port
+            # is given.  To avoid this error, you can pass
+            # server_hostname='' -- this will bypass the hostname
+            # check.  (This also means that if host is a numeric
+            # IP/IPv6 address, we will attempt to verify that exact
+            # address; this will probably fail, but it is possible to
+            # create a certificate for a specific IP address, so we
+            # don't judge it here.)
+            if not host:
+                raise ValueError('You must set server_hostname '
+                                 'when using ssl without a host')
+            server_hostname = host
+    
+        if ssl_handshake_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_handshake_timeout is only meaningful with ssl')
+    
+        if ssl_shutdown_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_shutdown_timeout is only meaningful with ssl')
+    
+        if sock is not None:
+            _check_ssl_socket(sock)
+    
+        if happy_eyeballs_delay is not None and interleave is None:
+            # If using happy eyeballs, default to interleave addresses by family
+            interleave = 1
+    
+        if host is not None or port is not None:
+            if sock is not None:
+                raise ValueError(
+                    'host/port and sock can not be specified at the same time')
+    
+            infos = await self._ensure_resolved(
+                (host, port), family=family,
+                type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+            if not infos:
+                raise OSError('getaddrinfo() returned empty list')
+    
+            if local_addr is not None:
+                laddr_infos = await self._ensure_resolved(
+                    local_addr, family=family,
+                    type=socket.SOCK_STREAM, proto=proto,
+                    flags=flags, loop=self)
+                if not laddr_infos:
+                    raise OSError('getaddrinfo() returned empty list')
+            else:
+                laddr_infos = None
+    
+            if interleave:
+                infos = _interleave_addrinfos(infos, interleave)
+    
+            exceptions = []
+            if happy_eyeballs_delay is None:
+                # not using happy eyeballs
+                for addrinfo in infos:
+                    try:
+                        sock = await self._connect_sock(
+                            exceptions, addrinfo, laddr_infos)
+                        break
+                    except OSError:
+                        continue
+            else:  # using happy eyeballs
+                sock = (await staggered.staggered_race(
+                    (
+                        # can't use functools.partial as it keeps a reference
+                        # to exceptions
+                        lambda addrinfo=addrinfo: self._connect_sock(
+                            exceptions, addrinfo, laddr_infos
+                        )
+                        for addrinfo in infos
+                    ),
+                    happy_eyeballs_delay,
+                    loop=self,
+                ))[0]  # can't use sock, _, _ as it keeks a reference to exceptions
+    
+            if sock is None:
+                exceptions = [exc for sub in exceptions for exc in sub]
+                try:
+                    if all_errors:
+                        raise ExceptionGroup("create_connection failed", exceptions)
+                    if len(exceptions) == 1:
+                        raise exceptions[0]
+                    elif exceptions:
+                        # If they all have the same str(), raise one.
+                        model = str(exceptions[0])
+                        if all(str(exc) == model for exc in exceptions):
+                            raise exceptions[0]
+                        # Raise a combined exception so the user can see all
+                        # the various error messages.
+>                       raise OSError('Multiple exceptions: {}'.format(
+                            ', '.join(str(exc) for exc in exceptions)))
+E                           OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 5432, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 5432)
+
+/usr/lib/python3.14/asyncio/base_events.py:1177: OSError
+_ ERROR at setup of test_http_rejects_malformed_test_specs_without_a_model_call[/generate] _
+
+self = <Coroutine test_http_rejects_malformed_test_specs_without_a_model_call[/generate]>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:407: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:403: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/tests/conftest.py:95: in db_engine
+    async with engine.begin() as conn:
+               ^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:1086: in begin
+    async with conn:
+               ^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py:152: in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:283: in start
+    await greenlet_spawn(self.sync_engine.connect)
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:210: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3263: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:149: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3287: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:445: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:1303: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:709: in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:176: in _do_get
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:174: in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:386: in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:671: in __init__
+    self.__connect()
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:906: in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:902: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py:645: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:869: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:967: in connect
+    return await_(
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:167: in await_
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:205: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:378: in create
+    cls._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:841: in _handle_exception_no_connection
+    super()._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:409: in _handle_exception_no_connection
+    raise error.with_traceback(exc_info[2])
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:376: in create
+    connection = await connection_awaitable
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connection.py:2498: in connect
+    return await connect_utils._connect(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1307: in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1278: in _connect
+    conn = await _connect_addr(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1092: in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1162: in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:996: in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_UnixSelectorEventLoop running=False closed=False debug=False>
+protocol_factory = <function _create_ssl_connection.<locals>.<lambda> at 0x7f547dac7110>
+host = 'localhost', port = 5432, ssl = None, family = 0, proto = 0, flags = 0
+sock = None, local_addr = None, server_hostname = None
+ssl_handshake_timeout = None, ssl_shutdown_timeout = None
+happy_eyeballs_delay = None, interleave = None, all_errors = False
+
+    async def create_connection(
+            self, protocol_factory, host=None, port=None,
+            *, ssl=None, family=0,
+            proto=0, flags=0, sock=None,
+            local_addr=None, server_hostname=None,
+            ssl_handshake_timeout=None,
+            ssl_shutdown_timeout=None,
+            happy_eyeballs_delay=None, interleave=None,
+            all_errors=False):
+        """Connect to a TCP server.
+    
+        Create a streaming transport connection to a given internet host and
+        port: socket family AF_INET or socket.AF_INET6 depending on host (or
+        family if specified), socket type SOCK_STREAM. protocol_factory must
+        be a callable returning a protocol instance.
+    
+        This method is a coroutine which will try to establish the
+        connection in the background.  When successful, the coroutine
+        returns a (transport, protocol) pair.
+        """
+        if server_hostname is not None and not ssl:
+            raise ValueError('server_hostname is only meaningful with ssl')
+    
+        if server_hostname is None and ssl:
+            # Use host as default for server_hostname.  It is an error
+            # if host is empty or not set, e.g. when an
+            # already-connected socket was passed or when only a port
+            # is given.  To avoid this error, you can pass
+            # server_hostname='' -- this will bypass the hostname
+            # check.  (This also means that if host is a numeric
+            # IP/IPv6 address, we will attempt to verify that exact
+            # address; this will probably fail, but it is possible to
+            # create a certificate for a specific IP address, so we
+            # don't judge it here.)
+            if not host:
+                raise ValueError('You must set server_hostname '
+                                 'when using ssl without a host')
+            server_hostname = host
+    
+        if ssl_handshake_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_handshake_timeout is only meaningful with ssl')
+    
+        if ssl_shutdown_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_shutdown_timeout is only meaningful with ssl')
+    
+        if sock is not None:
+            _check_ssl_socket(sock)
+    
+        if happy_eyeballs_delay is not None and interleave is None:
+            # If using happy eyeballs, default to interleave addresses by family
+            interleave = 1
+    
+        if host is not None or port is not None:
+            if sock is not None:
+                raise ValueError(
+                    'host/port and sock can not be specified at the same time')
+    
+            infos = await self._ensure_resolved(
+                (host, port), family=family,
+                type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+            if not infos:
+                raise OSError('getaddrinfo() returned empty list')
+    
+            if local_addr is not None:
+                laddr_infos = await self._ensure_resolved(
+                    local_addr, family=family,
+                    type=socket.SOCK_STREAM, proto=proto,
+                    flags=flags, loop=self)
+                if not laddr_infos:
+                    raise OSError('getaddrinfo() returned empty list')
+            else:
+                laddr_infos = None
+    
+            if interleave:
+                infos = _interleave_addrinfos(infos, interleave)
+    
+            exceptions = []
+            if happy_eyeballs_delay is None:
+                # not using happy eyeballs
+                for addrinfo in infos:
+                    try:
+                        sock = await self._connect_sock(
+                            exceptions, addrinfo, laddr_infos)
+                        break
+                    except OSError:
+                        continue
+            else:  # using happy eyeballs
+                sock = (await staggered.staggered_race(
+                    (
+                        # can't use functools.partial as it keeps a reference
+                        # to exceptions
+                        lambda addrinfo=addrinfo: self._connect_sock(
+                            exceptions, addrinfo, laddr_infos
+                        )
+                        for addrinfo in infos
+                    ),
+                    happy_eyeballs_delay,
+                    loop=self,
+                ))[0]  # can't use sock, _, _ as it keeks a reference to exceptions
+    
+            if sock is None:
+                exceptions = [exc for sub in exceptions for exc in sub]
+                try:
+                    if all_errors:
+                        raise ExceptionGroup("create_connection failed", exceptions)
+                    if len(exceptions) == 1:
+                        raise exceptions[0]
+                    elif exceptions:
+                        # If they all have the same str(), raise one.
+                        model = str(exceptions[0])
+                        if all(str(exc) == model for exc in exceptions):
+                            raise exceptions[0]
+                        # Raise a combined exception so the user can see all
+                        # the various error messages.
+>                       raise OSError('Multiple exceptions: {}'.format(
+                            ', '.join(str(exc) for exc in exceptions)))
+E                           OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 5432, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 5432)
+
+/usr/lib/python3.14/asyncio/base_events.py:1177: OSError
+_ ERROR at setup of test_http_rejects_malformed_test_specs_without_a_model_call[/generate/lua] _
+
+self = <Coroutine test_http_rejects_malformed_test_specs_without_a_model_call[/generate/lua]>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:407: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:403: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/tests/conftest.py:95: in db_engine
+    async with engine.begin() as conn:
+               ^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:1086: in begin
+    async with conn:
+               ^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py:152: in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:283: in start
+    await greenlet_spawn(self.sync_engine.connect)
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:210: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3263: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:149: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3287: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:445: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:1303: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:709: in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:176: in _do_get
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:174: in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:386: in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:671: in __init__
+    self.__connect()
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:906: in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:902: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py:645: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:869: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:967: in connect
+    return await_(
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:167: in await_
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:205: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:378: in create
+    cls._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:841: in _handle_exception_no_connection
+    super()._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:409: in _handle_exception_no_connection
+    raise error.with_traceback(exc_info[2])
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:376: in create
+    connection = await connection_awaitable
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connection.py:2498: in connect
+    return await connect_utils._connect(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1307: in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1278: in _connect
+    conn = await _connect_addr(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1092: in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1162: in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:996: in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_UnixSelectorEventLoop running=False closed=False debug=False>
+protocol_factory = <function _create_ssl_connection.<locals>.<lambda> at 0x7f547dac7110>
+host = 'localhost', port = 5432, ssl = None, family = 0, proto = 0, flags = 0
+sock = None, local_addr = None, server_hostname = None
+ssl_handshake_timeout = None, ssl_shutdown_timeout = None
+happy_eyeballs_delay = None, interleave = None, all_errors = False
+
+    async def create_connection(
+            self, protocol_factory, host=None, port=None,
+            *, ssl=None, family=0,
+            proto=0, flags=0, sock=None,
+            local_addr=None, server_hostname=None,
+            ssl_handshake_timeout=None,
+            ssl_shutdown_timeout=None,
+            happy_eyeballs_delay=None, interleave=None,
+            all_errors=False):
+        """Connect to a TCP server.
+    
+        Create a streaming transport connection to a given internet host and
+        port: socket family AF_INET or socket.AF_INET6 depending on host (or
+        family if specified), socket type SOCK_STREAM. protocol_factory must
+        be a callable returning a protocol instance.
+    
+        This method is a coroutine which will try to establish the
+        connection in the background.  When successful, the coroutine
+        returns a (transport, protocol) pair.
+        """
+        if server_hostname is not None and not ssl:
+            raise ValueError('server_hostname is only meaningful with ssl')
+    
+        if server_hostname is None and ssl:
+            # Use host as default for server_hostname.  It is an error
+            # if host is empty or not set, e.g. when an
+            # already-connected socket was passed or when only a port
+            # is given.  To avoid this error, you can pass
+            # server_hostname='' -- this will bypass the hostname
+            # check.  (This also means that if host is a numeric
+            # IP/IPv6 address, we will attempt to verify that exact
+            # address; this will probably fail, but it is possible to
+            # create a certificate for a specific IP address, so we
+            # don't judge it here.)
+            if not host:
+                raise ValueError('You must set server_hostname '
+                                 'when using ssl without a host')
+            server_hostname = host
+    
+        if ssl_handshake_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_handshake_timeout is only meaningful with ssl')
+    
+        if ssl_shutdown_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_shutdown_timeout is only meaningful with ssl')
+    
+        if sock is not None:
+            _check_ssl_socket(sock)
+    
+        if happy_eyeballs_delay is not None and interleave is None:
+            # If using happy eyeballs, default to interleave addresses by family
+            interleave = 1
+    
+        if host is not None or port is not None:
+            if sock is not None:
+                raise ValueError(
+                    'host/port and sock can not be specified at the same time')
+    
+            infos = await self._ensure_resolved(
+                (host, port), family=family,
+                type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+            if not infos:
+                raise OSError('getaddrinfo() returned empty list')
+    
+            if local_addr is not None:
+                laddr_infos = await self._ensure_resolved(
+                    local_addr, family=family,
+                    type=socket.SOCK_STREAM, proto=proto,
+                    flags=flags, loop=self)
+                if not laddr_infos:
+                    raise OSError('getaddrinfo() returned empty list')
+            else:
+                laddr_infos = None
+    
+            if interleave:
+                infos = _interleave_addrinfos(infos, interleave)
+    
+            exceptions = []
+            if happy_eyeballs_delay is None:
+                # not using happy eyeballs
+                for addrinfo in infos:
+                    try:
+                        sock = await self._connect_sock(
+                            exceptions, addrinfo, laddr_infos)
+                        break
+                    except OSError:
+                        continue
+            else:  # using happy eyeballs
+                sock = (await staggered.staggered_race(
+                    (
+                        # can't use functools.partial as it keeps a reference
+                        # to exceptions
+                        lambda addrinfo=addrinfo: self._connect_sock(
+                            exceptions, addrinfo, laddr_infos
+                        )
+                        for addrinfo in infos
+                    ),
+                    happy_eyeballs_delay,
+                    loop=self,
+                ))[0]  # can't use sock, _, _ as it keeks a reference to exceptions
+    
+            if sock is None:
+                exceptions = [exc for sub in exceptions for exc in sub]
+                try:
+                    if all_errors:
+                        raise ExceptionGroup("create_connection failed", exceptions)
+                    if len(exceptions) == 1:
+                        raise exceptions[0]
+                    elif exceptions:
+                        # If they all have the same str(), raise one.
+                        model = str(exceptions[0])
+                        if all(str(exc) == model for exc in exceptions):
+                            raise exceptions[0]
+                        # Raise a combined exception so the user can see all
+                        # the various error messages.
+>                       raise OSError('Multiple exceptions: {}'.format(
+                            ', '.join(str(exc) for exc in exceptions)))
+E                           OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 5432, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 5432)
+
+/usr/lib/python3.14/asyncio/base_events.py:1177: OSError
+_ ERROR at setup of test_http_rejects_malformed_test_specs_without_a_model_call[/plans] _
+
+self = <Coroutine test_http_rejects_malformed_test_specs_without_a_model_call[/plans]>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:407: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:403: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/tests/conftest.py:95: in db_engine
+    async with engine.begin() as conn:
+               ^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:1086: in begin
+    async with conn:
+               ^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py:152: in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:283: in start
+    await greenlet_spawn(self.sync_engine.connect)
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:210: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3263: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:149: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3287: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:445: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:1303: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:709: in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:176: in _do_get
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:174: in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:386: in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:671: in __init__
+    self.__connect()
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:906: in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:902: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py:645: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:869: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:967: in connect
+    return await_(
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:167: in await_
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:205: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:378: in create
+    cls._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:841: in _handle_exception_no_connection
+    super()._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:409: in _handle_exception_no_connection
+    raise error.with_traceback(exc_info[2])
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:376: in create
+    connection = await connection_awaitable
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connection.py:2498: in connect
+    return await connect_utils._connect(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1307: in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1278: in _connect
+    conn = await _connect_addr(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1092: in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1162: in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:996: in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_UnixSelectorEventLoop running=False closed=False debug=False>
+protocol_factory = <function _create_ssl_connection.<locals>.<lambda> at 0x7f547dac7110>
+host = 'localhost', port = 5432, ssl = None, family = 0, proto = 0, flags = 0
+sock = None, local_addr = None, server_hostname = None
+ssl_handshake_timeout = None, ssl_shutdown_timeout = None
+happy_eyeballs_delay = None, interleave = None, all_errors = False
+
+    async def create_connection(
+            self, protocol_factory, host=None, port=None,
+            *, ssl=None, family=0,
+            proto=0, flags=0, sock=None,
+            local_addr=None, server_hostname=None,
+            ssl_handshake_timeout=None,
+            ssl_shutdown_timeout=None,
+            happy_eyeballs_delay=None, interleave=None,
+            all_errors=False):
+        """Connect to a TCP server.
+    
+        Create a streaming transport connection to a given internet host and
+        port: socket family AF_INET or socket.AF_INET6 depending on host (or
+        family if specified), socket type SOCK_STREAM. protocol_factory must
+        be a callable returning a protocol instance.
+    
+        This method is a coroutine which will try to establish the
+        connection in the background.  When successful, the coroutine
+        returns a (transport, protocol) pair.
+        """
+        if server_hostname is not None and not ssl:
+            raise ValueError('server_hostname is only meaningful with ssl')
+    
+        if server_hostname is None and ssl:
+            # Use host as default for server_hostname.  It is an error
+            # if host is empty or not set, e.g. when an
+            # already-connected socket was passed or when only a port
+            # is given.  To avoid this error, you can pass
+            # server_hostname='' -- this will bypass the hostname
+            # check.  (This also means that if host is a numeric
+            # IP/IPv6 address, we will attempt to verify that exact
+            # address; this will probably fail, but it is possible to
+            # create a certificate for a specific IP address, so we
+            # don't judge it here.)
+            if not host:
+                raise ValueError('You must set server_hostname '
+                                 'when using ssl without a host')
+            server_hostname = host
+    
+        if ssl_handshake_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_handshake_timeout is only meaningful with ssl')
+    
+        if ssl_shutdown_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_shutdown_timeout is only meaningful with ssl')
+    
+        if sock is not None:
+            _check_ssl_socket(sock)
+    
+        if happy_eyeballs_delay is not None and interleave is None:
+            # If using happy eyeballs, default to interleave addresses by family
+            interleave = 1
+    
+        if host is not None or port is not None:
+            if sock is not None:
+                raise ValueError(
+                    'host/port and sock can not be specified at the same time')
+    
+            infos = await self._ensure_resolved(
+                (host, port), family=family,
+                type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+            if not infos:
+                raise OSError('getaddrinfo() returned empty list')
+    
+            if local_addr is not None:
+                laddr_infos = await self._ensure_resolved(
+                    local_addr, family=family,
+                    type=socket.SOCK_STREAM, proto=proto,
+                    flags=flags, loop=self)
+                if not laddr_infos:
+                    raise OSError('getaddrinfo() returned empty list')
+            else:
+                laddr_infos = None
+    
+            if interleave:
+                infos = _interleave_addrinfos(infos, interleave)
+    
+            exceptions = []
+            if happy_eyeballs_delay is None:
+                # not using happy eyeballs
+                for addrinfo in infos:
+                    try:
+                        sock = await self._connect_sock(
+                            exceptions, addrinfo, laddr_infos)
+                        break
+                    except OSError:
+                        continue
+            else:  # using happy eyeballs
+                sock = (await staggered.staggered_race(
+                    (
+                        # can't use functools.partial as it keeps a reference
+                        # to exceptions
+                        lambda addrinfo=addrinfo: self._connect_sock(
+                            exceptions, addrinfo, laddr_infos
+                        )
+                        for addrinfo in infos
+                    ),
+                    happy_eyeballs_delay,
+                    loop=self,
+                ))[0]  # can't use sock, _, _ as it keeks a reference to exceptions
+    
+            if sock is None:
+                exceptions = [exc for sub in exceptions for exc in sub]
+                try:
+                    if all_errors:
+                        raise ExceptionGroup("create_connection failed", exceptions)
+                    if len(exceptions) == 1:
+                        raise exceptions[0]
+                    elif exceptions:
+                        # If they all have the same str(), raise one.
+                        model = str(exceptions[0])
+                        if all(str(exc) == model for exc in exceptions):
+                            raise exceptions[0]
+                        # Raise a combined exception so the user can see all
+                        # the various error messages.
+>                       raise OSError('Multiple exceptions: {}'.format(
+                            ', '.join(str(exc) for exc in exceptions)))
+E                           OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 5432, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 5432)
+
+/usr/lib/python3.14/asyncio/base_events.py:1177: OSError
+_____ ERROR at setup of test_mcp_generation_metrics_are_separate_from_http _____
+
+self = <Coroutine test_mcp_generation_metrics_are_separate_from_http>
+
+    def setup(self) -> None:
+        runner_fixture_id = f"_{self._loop_scope}_scoped_runner"
+        if runner_fixture_id not in self.fixturenames:
+            self.fixturenames.append(runner_fixture_id)
+        # When loop factories are configured, resolve the loop factory
+        # fixture early so that a factory variant change cascades cache
+        # invalidation before any async fixture checks its cache.
+        hook_caller = self.config.hook.pytest_asyncio_loop_factories
+        if hook_caller.get_hookimpls():
+            _ = self._request.getfixturevalue(_asyncio_loop_factory.__name__)
+>       return super().setup()
+               ^^^^^^^^^^^^^^^
+
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:558: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:407: in _asyncgen_fixture_wrapper
+    result = runner.run(setup(), context=context)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.14/asyncio/base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:403: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+ritesmith/tests/conftest.py:95: in db_engine
+    async with engine.begin() as conn:
+               ^^^^^^^^^^^^^^
+/usr/lib/python3.14/contextlib.py:214: in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:1086: in begin
+    async with conn:
+               ^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py:152: in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py:283: in start
+    await greenlet_spawn(self.sync_engine.connect)
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:210: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3263: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:149: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py:3287: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:445: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:1303: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:709: in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:176: in _do_get
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py:174: in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:386: in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:671: in __init__
+    self.__connect()
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:906: in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py:166: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py:902: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py:645: in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py:869: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:967: in connect
+    return await_(
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:167: in await_
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/util/concurrency.py:205: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:378: in create
+    cls._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:841: in _handle_exception_no_connection
+    super()._handle_exception_no_connection(dbapi, error)
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:409: in _handle_exception_no_connection
+    raise error.with_traceback(exc_info[2])
+.venv/lib/python3.14/site-packages/sqlalchemy/connectors/asyncio.py:376: in create
+    connection = await connection_awaitable
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connection.py:2498: in connect
+    return await connect_utils._connect(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1307: in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1278: in _connect
+    conn = await _connect_addr(
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1092: in _connect_addr
+    return await __connect_addr(params, True, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:1162: in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py:996: in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_UnixSelectorEventLoop running=False closed=False debug=False>
+protocol_factory = <function _create_ssl_connection.<locals>.<lambda> at 0x7f547dac7110>
+host = 'localhost', port = 5432, ssl = None, family = 0, proto = 0, flags = 0
+sock = None, local_addr = None, server_hostname = None
+ssl_handshake_timeout = None, ssl_shutdown_timeout = None
+happy_eyeballs_delay = None, interleave = None, all_errors = False
+
+    async def create_connection(
+            self, protocol_factory, host=None, port=None,
+            *, ssl=None, family=0,
+            proto=0, flags=0, sock=None,
+            local_addr=None, server_hostname=None,
+            ssl_handshake_timeout=None,
+            ssl_shutdown_timeout=None,
+            happy_eyeballs_delay=None, interleave=None,
+            all_errors=False):
+        """Connect to a TCP server.
+    
+        Create a streaming transport connection to a given internet host and
+        port: socket family AF_INET or socket.AF_INET6 depending on host (or
+        family if specified), socket type SOCK_STREAM. protocol_factory must
+        be a callable returning a protocol instance.
+    
+        This method is a coroutine which will try to establish the
+        connection in the background.  When successful, the coroutine
+        returns a (transport, protocol) pair.
+        """
+        if server_hostname is not None and not ssl:
+            raise ValueError('server_hostname is only meaningful with ssl')
+    
+        if server_hostname is None and ssl:
+            # Use host as default for server_hostname.  It is an error
+            # if host is empty or not set, e.g. when an
+            # already-connected socket was passed or when only a port
+            # is given.  To avoid this error, you can pass
+            # server_hostname='' -- this will bypass the hostname
+            # check.  (This also means that if host is a numeric
+            # IP/IPv6 address, we will attempt to verify that exact
+            # address; this will probably fail, but it is possible to
+            # create a certificate for a specific IP address, so we
+            # don't judge it here.)
+            if not host:
+                raise ValueError('You must set server_hostname '
+                                 'when using ssl without a host')
+            server_hostname = host
+    
+        if ssl_handshake_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_handshake_timeout is only meaningful with ssl')
+    
+        if ssl_shutdown_timeout is not None and not ssl:
+            raise ValueError(
+                'ssl_shutdown_timeout is only meaningful with ssl')
+    
+        if sock is not None:
+            _check_ssl_socket(sock)
+    
+        if happy_eyeballs_delay is not None and interleave is None:
+            # If using happy eyeballs, default to interleave addresses by family
+            interleave = 1
+    
+        if host is not None or port is not None:
+            if sock is not None:
+                raise ValueError(
+                    'host/port and sock can not be specified at the same time')
+    
+            infos = await self._ensure_resolved(
+                (host, port), family=family,
+                type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+            if not infos:
+                raise OSError('getaddrinfo() returned empty list')
+    
+            if local_addr is not None:
+                laddr_infos = await self._ensure_resolved(
+                    local_addr, family=family,
+                    type=socket.SOCK_STREAM, proto=proto,
+                    flags=flags, loop=self)
+                if not laddr_infos:
+                    raise OSError('getaddrinfo() returned empty list')
+            else:
+                laddr_infos = None
+    
+            if interleave:
+                infos = _interleave_addrinfos(infos, interleave)
+    
+            exceptions = []
+            if happy_eyeballs_delay is None:
+                # not using happy eyeballs
+                for addrinfo in infos:
+                    try:
+                        sock = await self._connect_sock(
+                            exceptions, addrinfo, laddr_infos)
+                        break
+                    except OSError:
+                        continue
+            else:  # using happy eyeballs
+                sock = (await staggered.staggered_race(
+                    (
+                        # can't use functools.partial as it keeps a reference
+                        # to exceptions
+                        lambda addrinfo=addrinfo: self._connect_sock(
+                            exceptions, addrinfo, laddr_infos
+                        )
+                        for addrinfo in infos
+                    ),
+                    happy_eyeballs_delay,
+                    loop=self,
+                ))[0]  # can't use sock, _, _ as it keeks a reference to exceptions
+    
+            if sock is None:
+                exceptions = [exc for sub in exceptions for exc in sub]
+                try:
+                    if all_errors:
+                        raise ExceptionGroup("create_connection failed", exceptions)
+                    if len(exceptions) == 1:
+                        raise exceptions[0]
+                    elif exceptions:
+                        # If they all have the same str(), raise one.
+                        model = str(exceptions[0])
+                        if all(str(exc) == model for exc in exceptions):
+                            raise exceptions[0]
+                        # Raise a combined exception so the user can see all
+                        # the various error messages.
+>                       raise OSError('Multiple exceptions: {}'.format(
+                            ', '.join(str(exc) for exc in exceptions)))
+E                           OSError: Multiple exceptions: [Errno 111] Connect call failed ('::1', 5432, 0, 0), [Errno 111] Connect call failed ('127.0.0.1', 5432)
+
+/usr/lib/python3.14/asyncio/base_events.py:1177: OSError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+  /home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py:720: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR ritesmith/tests/unit/test_generation_improvements.py::test_semantic_continuation_materializes_without_a_model_call
+ERROR ritesmith/tests/unit/test_generation_improvements.py::test_fixture_failure_does_not_repair_the_generated_script
+ERROR ritesmith/tests/unit/test_generation_improvements.py::test_http_rejects_malformed_test_specs_without_a_model_call[/generate]
+ERROR ritesmith/tests/unit/test_generation_improvements.py::test_http_rejects_malformed_test_specs_without_a_model_call[/generate/lua]
+ERROR ritesmith/tests/unit/test_generation_improvements.py::test_http_rejects_malformed_test_specs_without_a_model_call[/plans]
+ERROR ritesmith/tests/unit/test_generation_improvements.py::test_mcp_generation_metrics_are_separate_from_http
+85 passed, 3 warnings, 6 errors in 2.59s

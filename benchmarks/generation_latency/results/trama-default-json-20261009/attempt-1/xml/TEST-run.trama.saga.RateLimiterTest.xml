@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.RateLimiterTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:26.788Z" hostname="c3po" time="0.571">
+  <properties/>
+  <testcase name="rate limiter fails open while Redis is unavailable()" classname="run.trama.saga.RateLimiterTest" time="0.004"/>
+  <testcase name="rate limiter blocks after max failures()" classname="run.trama.saga.RateLimiterTest" time="0.003"/>
+  <testcase name="callbacks skip the nonce check while Redis is unavailable()" classname="run.trama.saga.RateLimiterTest" time="0.563"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

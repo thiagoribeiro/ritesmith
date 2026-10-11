@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.TaskNodeHandlerTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:15:26.043Z" hostname="c3po" time="0.042">
+  <properties/>
+  <testcase name="typed transport sends joined numeric values and continuation state through HTTP()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.006"/>
+  <testcase name="invalid typed templates fail before HTTP without retrying transport()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="async node with status outside acceptedStatusCodes fails without waiting()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="status outside successStatusCodes is a failure carrying status and body()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="async node injects callback url and token and waits()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.004"/>
+  <testcase name="custom successStatusCodes are honored()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.002"/>
+  <testcase name="compensate without compensation call is a no-op success()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.002"/>
+  <testcase name="async node without callback service fails non-retryably()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.001"/>
+  <testcase name="url, headers and body are rendered from payload()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="transport exception becomes a retryable failure with error message()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="compensate calls compensation request()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="default success codes depend on verb()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.003"/>
+  <testcase name="async attempt number comes from retry state()" classname="run.trama.saga.workflow.TaskNodeHandlerTest" time="0.002"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-09T11:15:26.056392663-03:00","@version":"1","message":"node completed","logger_name":"run.trama.saga.workflow.TaskNodeHandler","thread_name":"Test worker @coroutine#8923","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"09f99161-e2ce-420e-97c9-3cb007df8507","nodeId":"a","phase":"UP","status":200}
+{"@timestamp":"2026-10-09T11:15:26.059366731-03:00","@version":"1","message":"node completed","logger_name":"run.trama.saga.workflow.TaskNodeHandler","thread_name":"Test worker @coroutine#8925","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"4df3d9a2-307d-4078-99d9-653f126282d6","nodeId":"a","phase":"UP","status":409}
+{"@timestamp":"2026-10-09T11:15:26.076059139-03:00","@version":"1","message":"node failed","logger_name":"run.trama.saga.workflow.TaskNodeHandler","thread_name":"Test worker @coroutine#8935","level":"WARN","level_value":30000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"f30b5a4f-fa01-46f1-8b02-04480669fd1b","nodeId":"a","phase":"UP","error":"connection refused"}
+{"@timestamp":"2026-10-09T11:15:26.082423221-03:00","@version":"1","message":"node completed","logger_name":"run.trama.saga.workflow.TaskNodeHandler","thread_name":"Test worker @coroutine#8939","level":"INFO","level_value":20000,"traceId":"00000000000000000000000000000000","spanId":"0000000000000000","sagaId":"779dcef9-d01f-44e0-a360-a7f4fe6fcc68","nodeId":"a","phase":"UP","status":201}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

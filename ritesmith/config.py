@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     generation_typed_prompts: bool = True
     generation_luau_assembly: bool = False
     generation_semantic_workflows: bool = False
+    # Deprecated compatibility setting; it no longer selects JSON rendering behavior.
+    generation_workflow_typed_json: bool = False
+    generation_structured_outputs: bool = False
+    generation_structured_output_operations: list[str] | None = None
+    generation_pattern_parameters: bool = False
+    generation_pattern_parameter_operations: list[str] | None = None
     generation_bounded_recovery: bool = True
     generation_deadline_seconds: float = Field(default=30, gt=0)
     generation_recovery_min_seconds: float = Field(default=3, ge=0)

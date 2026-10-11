@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from ritesmith.config import Settings
+from ritesmith.core.exceptions import GenerationFailedError
 from ritesmith.core.generation import GenerationService
 from ritesmith.core.generation_dispatcher import GenerationDispatcher
 from ritesmith.core.planning import PlanBuilder
@@ -287,7 +288,7 @@ async def test_exhausted_credit_is_not_retried_or_sent_to_fallback():
             "ritesmith.core.workflow_generation.WorkflowGenerationService._get_capabilities",
             AsyncMock(return_value=[]),
         ),
-        pytest.raises(LLMError),
+        pytest.raises(GenerationFailedError),
     ):
         await prepare_proposal(None, provider, settings, goal="test", constraints={})
     provider.fallback.assert_not_called()
@@ -574,16 +575,18 @@ async def test_failed_primary_generation_uses_fallback_and_counts_attempts(db_se
 
 @pytest.mark.asyncio
 async def test_all_failed_workflow_calls_are_invalid(db_session):
-    from ritesmith.core.exceptions import LLMError
+    from ritesmith.core.exceptions import GenerationFailedError, LLMError
     from ritesmith.core.workflow_generation import WorkflowGenerationService
 
     llm = ScriptedLLM().queue("generate_workflow", *[LLMError("invalid JSON") for _ in range(2)])
-    response = await WorkflowGenerationService(db_session, llm, Settings()).generate_workflow(
-        GenerateWorkflowRequest(
-            intent="failed workflow unique", constraints={"reuse_policy": "force_new"}, save=True
+    with pytest.raises(GenerationFailedError):
+        await WorkflowGenerationService(db_session, llm, Settings()).generate_workflow(
+            GenerateWorkflowRequest(
+                intent="failed workflow unique",
+                constraints={"reuse_policy": "force_new"},
+                save=True,
+            )
         )
-    )
-    assert not response.validation.valid
     assert len(llm.calls) == 2
 
 

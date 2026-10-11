@@ -120,3 +120,49 @@ functional workflow execution in Trama. Typical prompts below 3,000 tokens are
 not demonstrated for automatic interfaces with the full catalog. At this stage,
 required groups failed the combined target and quality preservation, so no
 promotion or seven-day production observation began as part of this evaluation.
+
+## Subsequent typed-decisions experiment
+
+The separate [typed-decisions comparison](results/typed-decisions-20261008/RESULTS.md)
+tested current JSON mode, strict schemas and parameterized constructors after
+offline verification. It stopped at 8 of 12 authorized requests when cancellation
+left one independent test call's usage unknown. One parameterized parallel
+workflow was valid in 6.65 seconds; the other seven requests failed. Known usage
+was US$0.067389, with US$0.003147 still reserved for the unknown call. Neither
+feature was promoted. These results do not replace the historical measurements
+above or qualify the general latency/cost target.
+
+## Reliability recovery qualification — 2026-10-08
+
+[Recovery report and frozen stage manifests](results/reliability-20261008/RESULTS.md)
+record 888 passing local regression checks and the native Trama transport blocker.
+No new paid request was dispatched; neither stage supplies a measured generation
+success percentage. Production remains on the restored strict-enabled image.
+
+A subsequent probe against the deployed Trama renderer found that the earlier
+parallel C oracle did not establish native execution: indexed join references
+render empty, and a Telegram message object was accepted as text. The historical
+comparison report and responses are preserved; its valid row cannot qualify
+production functionality. Further work must correct native typed transport
+before spending on the frozen progressive verification.
+
+## Native transport recovery verification — 2026-10-09
+
+The [new frozen report](results/reliability-native-20261008/RESULTS.md) preserves
+the previous evidence and records a coordinated isolated Trama/RiteSmith transport
+correction. Offline qualification passed 912 local checks, 46 ARM checks and 68
+directed Trama tests before provider dispatch.
+
+Stage 1 executed **two of three** authorized requests: Celsius passed strict and
+functional checks in **5.499 seconds**; inactive-customer generation returned
+**HTTP 422 in 7.716 seconds**, with strict union errors and inconsistent independent
+test expectations. Known cost for all three nested calls was **US$0.00817635**.
+The campaign stopped immediately. Weekly monitoring and all 24 Stage 2 cells
+remain unexecuted. No production generation accuracy follows from this 1/2 sample.
+
+Offline follow-up corrects quantified-customer routing, tool-result discriminant
+instructions, failed-attempt counting instructions and fixture expectation rules.
+Hash-linked regressions preserve the rejection and verify a corrected strict
+reference against unchanged expectations. This is a separate source revision,
+without further paid calls or a deployment. Retain restored production; the
+3/3 gate was not met, and latency/cost targets remain unqualified.

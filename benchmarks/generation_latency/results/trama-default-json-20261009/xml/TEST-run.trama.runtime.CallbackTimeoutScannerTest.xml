@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.runtime.CallbackTimeoutScannerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:45:31.943Z" hostname="c3po" time="0.003">
+  <properties/>
+  <testcase name="scan claims with the configured grace period and batch size()" classname="run.trama.runtime.CallbackTimeoutScannerTest" time="0.001"/>
+  <testcase name="scan re-enqueues expired waiting executions()" classname="run.trama.runtime.CallbackTimeoutScannerTest" time="0.001"/>
+  <testcase name="scan returns 0 when no expired executions found()" classname="run.trama.runtime.CallbackTimeoutScannerTest" time="0.0"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-09T11:45:31.945990521-03:00","@version":"1","message":"callback timeout fallback: re-enqueued","logger_name":"run.trama.runtime.CallbackTimeoutScanner","thread_name":"Test worker @coroutine#8972","level":"INFO","level_value":20000,"executionId":"d2b1dcbe-5811-4fe0-8d91-dd56342a142d","nodeId":"pay"}
+{"@timestamp":"2026-10-09T11:45:31.946053039-03:00","@version":"1","message":"callback timeout fallback: re-enqueued","logger_name":"run.trama.runtime.CallbackTimeoutScanner","thread_name":"Test worker @coroutine#8972","level":"INFO","level_value":20000,"executionId":"1324a2d8-5096-4f50-9dfc-aa14cae6cd04","nodeId":"notify"}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

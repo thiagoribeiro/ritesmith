@@ -1,0 +1,58 @@
+{
+  "protocol": "reliability-v1",
+  "source_sha256": "e005f511a6da6ec20bcee7a4e0fda6363afef8c5cc7110c3c0f3e1bc0ad32cbb",
+  "stages": [
+    {
+      "stage": 1,
+      "executed": 0,
+      "planned": 3,
+      "correct_within_10s": 0,
+      "calls": 0,
+      "cost_usd": 0,
+      "unexecuted": [
+        "stage1:0:t1_celsius_to_fahrenheit",
+        "stage1:1:t3_notify_inactive",
+        "stage1:2:wf_week"
+      ]
+    },
+    {
+      "stage": 2,
+      "executed": 0,
+      "planned": 24,
+      "correct_within_10s": 0,
+      "calls": 0,
+      "cost_usd": 0,
+      "unexecuted": [
+        "stage2:0:t1_celsius_to_fahrenheit",
+        "stage2:1:wf_reminder",
+        "stage2:2:plan_t1_celsius_to_fahrenheit",
+        "stage2:3:t3_notify_inactive",
+        "stage2:4:wf_threshold",
+        "stage2:5:t1_percent_change",
+        "stage2:6:wf_parallel_prices",
+        "stage2:7:wf_news",
+        "stage2:8:t1_group_totals",
+        "stage2:9:wf_week",
+        "stage2:10:plan_t1_slugify",
+        "stage2:11:wf_four_samples",
+        "stage2:12:t2_customer_summary",
+        "stage2:13:wf_chain",
+        "stage2:14:t3_notify_inactive",
+        "stage2:15:wf_minimum",
+        "stage2:16:t4_balanced_brackets",
+        "stage2:17:wf_held_callback",
+        "stage2:18:wf_parallel_prices",
+        "stage2:19:plan_t1_celsius_to_fahrenheit",
+        "stage2:20:wf_held_compensation",
+        "stage2:21:t1_celsius_to_fahrenheit",
+        "stage2:22:wf_news",
+        "stage2:23:wf_week"
+      ]
+    }
+  ],
+  "stopping_reason": "offline_qualification_failed: native_template_transport_mismatch: indexed join references render empty; collection/state references do not preserve typed JSON. Native workflow execution is not qualified.",
+  "recommendation": "retain_restored_production",
+  "production_changed": false,
+  "general_slo_qualified": false,
+  "rows": []
+}

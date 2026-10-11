@@ -1,0 +1,2225 @@
+{
+  "source_sha256": "550751034fc0bf4e09b92df0122b743a0517fbd64a2b39bb8e59df5587ce109c",
+  "command": "DOCKER_HOST=unix:///run/user/1000/podman/podman.sock ./gradlew test --offline --rerun-tasks",
+  "gradle_exit_code": 0,
+  "build": "successful",
+  "duration_s": 71,
+  "classes": 57,
+  "totals": {
+    "tests": 326,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "e2e": {
+    "tests": 69,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "source_unchanged": true,
+  "production_changed": false,
+  "provider_calls": 0,
+  "details": [
+    {
+      "class": "run.trama.app.ApplicationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 6.632,
+      "cases": [
+        {
+          "name": "healthz()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "an API-only process accepts and persists runs for the workers()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.app.OpenApiRoutesContractTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.013,
+      "cases": [
+        {
+          "name": "every route in Application kt is documented in openapi json()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.cli.DryRunSimulatorTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.035,
+      "cases": [
+        {
+          "name": "split branch failure marks the whole simulation failed()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "switch conditions see the same names in the dry-run as in production()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "nested split inside a branch is simulated recursively()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "simulates split branches and continues after join()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.config.ConfigLoaderTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.136,
+      "cases": [
+        {
+          "name": "partial callback override keeps the other callback fields()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "invalid redis topology is ignored()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "system properties override yaml values()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "redis cluster can be configured through overrides()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "partial database override keeps the remaining yaml fields()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "fields without an explicit override can be set via hoplite config override properties()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "invalid values are ignored instead of crashing()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "defaults come from application yaml()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EAdvancedFlowTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 9.861,
+      "cases": [
+        {
+          "name": "url, headers and body are rendered from payload and previous node responses()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "JSON bodies carry values with quotes, backslashes and newlines intact()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async callback not matching successWhen fails the saga()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "join waits for a sleeping branch()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "backoff retries maxAttempts times with growing delays()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "switch conditions on input route like payload()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "join fires when a branch ends with an async node()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "nested split inside a branch joins inner and outer barriers()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "join waits for an async branch until its callback arrives()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async callback matching successWhen resumes the saga()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EAsyncCallbackTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 3.917,
+      "cases": [
+        {
+          "name": "async callback timeout moves saga to failure()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async step receiving non-accepted status code triggers failure path()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "valid callback resumes saga to SUCCEEDED()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async node pauses execution in WAITING_CALLBACK state()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "callback with wrong token returns 401()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "callback nonce replay returns 409 on second call()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2ECallbackHooksTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 2.047,
+      "cases": [
+        {
+          "name": "failing success hook leaves the saga SUCCEEDED with a callbackWarning()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "failure hook fires after compensations complete()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "success hook fires when the last node is async()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "success hook receives the rendered body once the saga succeeds()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EDefinitionApiTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.923,
+      "cases": [
+        {
+          "name": "duplicate name version returns 409()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "post definition returns 200 and is retrievable by id()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "get saga returns status and id fields()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "run stored definition saga succeeds()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EDefinitionLifecycleTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.11,
+      "cases": [
+        {
+          "name": "DELETE removes the definition from every lookup path()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "unknown definitions return 204()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 definition is stored, listed and fetched by name and version()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "PUT creates with an explicit id and is insert-only()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "running a stored v1 definition passes the payload to templates()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "invalid definitions are rejected with 400 and a list of errors()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "running a stored v2 definition is rejected as not yet supported()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EExecutionQueryTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 4.169,
+      "cases": [
+        {
+          "name": "inline runs with the same name and version execute their own graph()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "steps endpoint returns steps in execution order()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "steps endpoint shows forward and compensation phases()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "step latency reflects the step itself, not the rest of the saga()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "list filters by name and status and paginates newest first()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "query endpoints validate ids and handle unknown executions()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "step calls endpoint records rendered requests and one entry per attempt()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EOpsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.843,
+      "cases": [
+        {
+          "name": "metrics endpoint is absent when metrics are disabled()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "metrics endpoint exposes the enqueue counter()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "healthz and readyz report ok on a running runtime()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "metrics endpoint exposes saga metrics after an execution()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2EPostgresStoreTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 3.561,
+      "cases": [
+        {
+          "name": "async callback resumes the saga and a replayed callback is rejected()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "wake cuts a long sleep short()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "sync saga with compensation completes and records ordered steps()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "short sleep surfaces SLEEPING and completes()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2ERetryEndpointTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.8,
+      "cases": [
+        {
+          "name": "retry of a v2 saga is rejected as unsupported()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "retry keeps the original payload()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "retrying a FAILED v1 saga re-runs it from the start and can succeed()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "retry refuses sagas that did not fail()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "retry validates the execution id()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2ESleepSagaTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 4.351,
+      "cases": [
+        {
+          "name": "sleep as the terminal node finishes the saga on its own()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "status API reports SLEEPING while the saga sleeps()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "sleep pauses between nodes and then completes()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "waking a terminal sleep finishes the saga()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "wake validates the execution id()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "wake endpoint cuts a long sleep short()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2ESplitJoinSagaTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.855,
+      "cases": [
+        {
+          "name": "split fans out and join resumes after both branches succeed()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "join surfaces a partial branch failure without blocking the barrier()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2ESwitchSagaTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.061,
+      "cases": [
+        {
+          "name": "switch routes to default branch for unknown paymentMethod()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "switch routes to card branch when paymentMethod is card()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "switch definition without default field is rejected with 400()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "switch routes to pix branch when paymentMethod is pix()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.e2e.E2ESyncSagaTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 2.097,
+      "cases": [
+        {
+          "name": "retries exhausted triggers compensation and FAILED()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "compensation calls happen in reverse node order()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v1 linear saga all steps succeed()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "step failure retried then succeeds()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 linear saga all nodes succeed()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 node B sees node A response body via template without sleep()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.runtime.CallbackTimeoutScannerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.003,
+      "cases": [
+        {
+          "name": "scan claims with the configured grace period and batch size()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "scan re-enqueues expired waiting executions()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "scan returns 0 when no expired executions found()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.runtime.JoinCompletionScannerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.004,
+      "cases": [
+        {
+          "name": "an exception for one parent does not stop the others()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "nothing stalled resumes nothing()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "counts only joins that were actually resumed()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.runtime.PartitionMaintenanceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.828,
+      "cases": [
+        {
+          "name": "createPartitions also covers saga_step_call()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "dropOldPartitions also prunes saga_step_call()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "createPartitions extends the window Liquibase created and is idempotent()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "createPartitions works when the JVM time zone is not UTC()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "dropOldPartitions drops months past retention and keeps the current one()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.DefaultSagaExecutorTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.029,
+      "cases": [
+        {
+          "name": "failed step starts compensation after retries exhausted()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "callback timeout records CALLBACK step result with success=false()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "re-enqueues after processing max nodes per execution()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async trigger step is recorded as success=true when 202 accepted()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "retry enqueues when step fails()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "successful execution stores final status()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.MsgPackRoundTripTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.002,
+      "cases": [
+        {
+          "name": "saga execution msgpack roundtrip()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.PostgresRepositoryIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.021,
+      "cases": [
+        {
+          "name": "persist and fetch saga status()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.RateLimiterTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.559,
+      "cases": [
+        {
+          "name": "rate limiter fails open while Redis is unavailable()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "rate limiter blocks after max failures()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "callbacks skip the nonce check while Redis is unavailable()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.RedisConsumerIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.111,
+      "cases": [
+        {
+          "name": "claim moves items to in-flight and ack removes()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.RetryPolicyTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.012,
+      "cases": [
+        {
+          "name": "first failure starts at attempt 1()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "backoff is capped at maxDelayMillis()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "fixed retry allows exactly maxAttempts retries()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "backoff jitter stays within ratio and never goes negative()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "backoff stops after maxAttempts()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "backoff without jitter grows geometrically()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "maxAttempts zero never retries()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.RunStoredSagaRequestTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.002,
+      "cases": [
+        {
+          "name": "payload supports native json types()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.SagaDefinitionCrudTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.314,
+      "cases": [
+        {
+          "name": "insertDefinition saves definition decoded from direct-content json()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "getDefinition reads from cache when available()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "insertDefinition saves square chain definition with template placeholders()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "getDefinitionByNameVersion reads from cache when available()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.SagaDefinitionValidatorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.004,
+      "cases": [
+        {
+          "name": "invalid definition returns errors()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "valid definition passes()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.SagaExecutionProcessorShutdownTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.098,
+      "cases": [
+        {
+          "name": "lost lease releases the claim without failing or acking it()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a failed execution is released, not acked, so its claim can expire and be re-delivered()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a worker exception feeds the rate limiter()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "stale checkpoint acks the duplicate copy without failing it()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "stop polling drains claimed work before workers exit()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a workflow that ends FAILED is acked and does not feed the rate limiter()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.SagaExecutionQueueTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.005,
+      "cases": [
+        {
+          "name": "enqueue and receive()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "tryReceive returns value when available()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "tryReceive returns null when empty()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.SagaRepositoryStoreTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.117,
+      "cases": [
+        {
+          "name": "delegates to repository()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.TemplateContextBuilderTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.003,
+      "cases": [
+        {
+          "name": "steps list is in index order()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "prev reflects last completed step()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "step lookup by name uses newest entry when step name is repeated at different indices()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.TemplateRendererTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.013,
+      "cases": [
+        {
+          "name": "missing variables render as empty string()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "form bodies url-encode values()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "URLs get the literal value()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "payload scalars and nested objects render()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "prev, step by name, step by index and nodes resolve previous bodies()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "body escaping follows Content-Type, or the body shape when absent()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "header values are literal but can never contain line breaks()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "saga metadata is available()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "triple mustache is always raw()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "sections iterate over steps list()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "JSON bodies escape values as JSON string content()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "XML bodies keep entity escaping()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.TemplateStringSerializerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.003,
+      "cases": [
+        {
+          "name": "TemplateString encoding remains wrapped with value()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "TemplateString accepts wrapped object()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "TemplateString accepts direct string()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "TemplateString accepts raw object and stores it as json string()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.TypedJsonTemplateTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.01,
+      "cases": [
+        {
+          "name": "values round trip escaped text without interpreting injected placeholders()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "unsupported expressions and embedded collections fail without stringifying Java objects()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "legacy mode remains unchanged and typed mode requires explicit version and JSON()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "whole values preserve scalar and collection types including missing self references()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "dot and bracket indexes resolve real join output envelopes()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.WaitingCallbackStoreTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.021,
+      "cases": [
+        {
+          "name": "waiting callback round-trips through real Postgres()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.callback.CallbackReceiverTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.041,
+      "cases": [
+        {
+          "name": "failure-condition callback inserts CALLBACK step result with success=false()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "wrong signature returns 401()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "valid callback for non-terminal node re-enqueues as InProgress targeting next node()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "expired token returns 410()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "malformed token returns 401()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "attempt mismatch returns 409()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "no waiting entry returns 410()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "replay nonce returns 409()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "successWhen sees the payload as both payload and input()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "successful callback inserts CALLBACK step result with success=true and body()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "valid callback for terminal node hands finalization to the executor()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.callback.CallbackTokenServiceTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.015,
+      "cases": [
+        {
+          "name": "generate and validate round trip succeeds()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "validate returns 410 for expired token()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "parseToken handles uuid nonce with hyphens()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "validate fails when nodeId differs()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "different secrets produce different signatures()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "validate returns 401 for wrong signature()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "parseToken returns null for malformed token()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.OrphanedShardMigratorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.036,
+      "cases": [
+        {
+          "name": "queued work moves to the shard it maps to under the new count, keeping its due time()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "live claims in a removed shard are left to their owner until their lease expires()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.RedisConsumerResilienceTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 4.625,
+      "cases": [
+        {
+          "name": "an item enqueued with a delay is claimed when due, without waiting for a full sweep()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a claimer survives Redis errors and resumes consuming()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "the heartbeat fences a claim whose lease ran out()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a live claim erased by a Redis data loss is restored, not fenced()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a process never claims beyond its free capacity()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "claims keep working after Redis forgets its scripts()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.RedisCrashRecoveryTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 3.033,
+      "cases": [
+        {
+          "name": "the claim heartbeat keeps work that is still being processed from being re-delivered()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a released claim stops being renewed and is re-delivered()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "work claimed by a crashed pod is re-delivered by the owner's claim pass()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.RedisRuntimeIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.044,
+      "cases": [
+        {
+          "name": "stop polling leaves unclaimed work on ready queue()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "membership handoff reassigns shards and new owner can claim queued work()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.RedisShardingTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.014,
+      "cases": [
+        {
+          "name": "keyspace keeps related keys on the same cluster slot()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "enqueuer writes to the execution shard ready key()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "empty, blank and duplicate pod lists are normalized()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "removing a pod only moves the shards it owned()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "sequentially named pods get a balanced share of shards()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "every shard has exactly one owner across the pod set()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "keyspace maps every execution into the configured shard range()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "rendezvous ownership is deterministic()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "adding a pod only moves a subset of shards()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a pod not in the active list owns nothing()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.RedisSleepAndMembershipTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 1.038,
+      "cases": [
+        {
+          "name": "saveSleeping ignores executions that are not in Sleeping state()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "pods see each other and split all shards between them()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "concurrent wake attempts never both win()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "readiness goes stale when refresh stops for longer than the TTL()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "readiness reflects membership lifecycle()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "sleep entry can be peeked repeatedly but consumed exactly once()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a pod that stops heartbeating expires after the TTL and its shards are taken over()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.redis.RedisSplitJoinStoreTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.06,
+      "cases": [
+        {
+          "name": "only one of N concurrent arrivals observes the barrier satisfied()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "redelivering the same child's arrival is a no-op, not a double count()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "getJoinBranches returns what was registered()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "waiting join round-trips exactly once()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "concurrent consume attempts on the same waiting join never both win()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.store.CheckpointRepositoryIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.126,
+      "cases": [
+        {
+          "name": "responses that are not JSON are stored as JSON strings()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a join whose branches all finished is found even if no arrival was recorded()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "parking records the parked state with the checkpoint()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "an execution waiting out a retry delay is not stalled()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a finished execution can be neither checkpointed nor finalized again()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "JSON responses keep their structure()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a checkpoint only applies on top of the seq it was based on()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "an expired callback wait is claimed for its timeout()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a stored checkpoint rebuilds the execution()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a stalled running execution is claimed once, at a new seq()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.store.SagaRepositoryIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.446,
+      "cases": [
+        {
+          "name": "stalled join barrier is found only while the parent is still WAITING_JOIN()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "definitions list, lookup by name-version and delete()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "listExecutions filters by name and status and orders newest first()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "POSTGRES store keeps a sleep sentinel that can be peeked and consumed once()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "executions older than the 15-day read window are invisible to status lookups()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "failure, warning and retry bookkeeping round-trip()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a definition deleted by another pod stops being served once the cache TTL elapses()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "upsert on an existing execution resets it to IN_PROGRESS and keeps the stored definition()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "unknown execution id returns null everywhere()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "step results and step calls are returned in insertion order with parsed fields()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.CheckpointFencingTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.031,
+      "cases": [
+        {
+          "name": "each completed node advances the durable checkpoint()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a redelivered carrier resumes from the checkpoint its dead worker reached()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "parking hands the execution to the enqueued item()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a worker overtaken mid-node cannot fail or compensate the execution()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a finished execution is never reopened by an old copy()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a lease marked lost by the heartbeat fences the worker at its next checkpoint()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a worker whose claim lease ran out stops before the next call()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a copy behind the checkpoint and not its carrier is dropped before any call()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.DefinitionNormalizerTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.012,
+      "cases": [
+        {
+          "name": "v2 valid definition passes validation()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 switch node maps to SwitchNode IR()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 unknown entrypoint produces error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 async task maps callbackConfig to IR()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 join node without next is terminal()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 async task without callbackConfig produces error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v1 definitions sharing name and version but differing in content normalize independently()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 switch case pointing to unknown node produces error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v1 three steps are chained in order()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v1 single step produces one terminal TaskNode()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 linear task nodes produce correct IR()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v1 metadata is preserved in IR()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 action successStatusCodes override HttpCall defaults()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 definitions sharing name and version but differing in content normalize independently()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v1 step up maps to action and down maps to compensation()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "v2 split node maps to SplitNode IR()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.JsonLogicEvaluatorTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.012,
+      "cases": [
+        {
+          "name": "string result is truthy when non-empty()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "literal true and false rules()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "logical operators compose()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "joined list references and nullable counters match generated conditions()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "missing variable evaluates to false()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "unknown operator returns false instead of throwing()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "in operator matches list membership()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "nested var lookup reads from maps()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "boolean result is returned as-is()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "numeric result is truthy when non-zero()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.SplitJoinWorkflowExecutorTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.048,
+      "cases": [
+        {
+          "name": "split spawns one child per branch and parks the parent in WaitingJoin()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a join whose joinNodeId no longer resolves is finalized as CORRUPTED instead of retried forever()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "split redelivery reconstructs deterministic children instead of a fresh random batch()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a failed branch is reflected in the join result without blocking the barrier()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a failure inside resumeAfterJoin restores the WaitingJoin pointer instead of losing it()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "redelivering the split step itself does not re-enqueue already-registered branches()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "redelivering a branch before its sibling arrives does not inflate the arrival count()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "join only fires once the last branch arrives, then resumes the parent()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a failure during the commit phase does not resurrect the WaitingJoin pointer()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.SwitchNodeHandlerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.005,
+      "cases": [
+        {
+          "name": "matching on step by index works()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "input is an alias of payload()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "first case matches returns first target()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "matching on prev body works()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "no case matches uses default target()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "matching on step by name works()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "matching on node response body works()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "second case matches when first is false()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.TaskNodeHandlerTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.042,
+      "cases": [
+        {
+          "name": "typed transport sends joined numeric values and continuation state through HTTP()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "invalid typed templates fail before HTTP without retrying transport()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async node with status outside acceptedStatusCodes fails without waiting()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "status outside successStatusCodes is a failure carrying status and body()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async node injects callback url and token and waits()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "custom successStatusCodes are honored()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "compensate without compensation call is a no-op success()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async node without callback service fails non-retryably()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "url, headers and body are rendered from payload()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "transport exception becomes a retryable failure with error message()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "compensate calls compensation request()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "default success codes depend on verb()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "async attempt number comes from retry state()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.WorkflowDefinitionValidatorTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.006,
+      "cases": [
+        {
+          "name": "valid split and join definition passes validation()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "join next referencing unknown node produces error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "cyclic workflow with compensation is rejected()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "nested split inside a branch is valid()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "cyclic workflow via switch default is detected()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "split join must reference an actual join node()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "two splits cannot share the same join()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "only the owning split may reference a join node()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "split join referencing unknown node produces error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "cyclic workflow without compensation is valid()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "split with fewer than two branches is rejected()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "split branch referencing unknown node produces error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "non-cyclic workflow with compensation is valid()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.saga.workflow.WorkflowExecutorBehaviorTest",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.066,
+      "cases": [
+        {
+          "name": "sleep node parks the execution and enqueues the first chunk()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "early sleeping delivery without sentinel is discarded as stale()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a woken terminal sleep (re-delivered with wakeAt = now) finishes the v2 saga()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "waking after wakeAt continues at next node and consumes the sentinel()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "onFailureCallback fires after compensation and saga ends FAILED()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "terminal sleep finishes the saga on wake()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "compensation that keeps failing ends CORRUPTED()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "compensation runs in reverse order and skips nodes without compensation()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "failing onSuccessCallback records a warning but saga still succeeds()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a sleep item past wakeAt whose sentinel was already consumed is discarded()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "long compensation stack checkpoints after maxNodesPerExecution()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "unreachable onSuccessCallback records a warning with the error()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "onSuccessCallback fires with rendered body after the last node()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "short sleep enqueues exactly its duration()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "compensation failure is retried per failureHandling before giving up()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "node durations are recorded per node kind and mode()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a Succeeded execution from a terminal async callback is finished with hooks()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "a delayed retry checkpoints the time it is due()",
+          "skipped": false,
+          "failed": false
+        },
+        {
+          "name": "early sleeping delivery re-enqueues when sentinel still exists()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    },
+    {
+      "class": "run.trama.telemetry.DashboardMetricsContractTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 0.019,
+      "cases": [
+        {
+          "name": "every series the Grafana dashboard queries is emitted by the runtime()",
+          "skipped": false,
+          "failed": false
+        }
+      ]
+    }
+  ]
+}

@@ -1019,14 +1019,11 @@ def test_completion_step_not_injected_into_branches():
 
 def test_prompt_split_join_example_passes_validator():
     import json
-    import re
 
     from ritesmith.llm import prompts
     from ritesmith.workflows.validator import WorkflowValidator
 
     spec = prompts.workflow_generation_system()
     start = spec.index("EXAMPLE — compare three coin prices in parallel")
-    raw = spec[spec.index("{", start) : spec.index("\nPATTERN A", start)]
-    raw = re.sub(r"\s+$", "", raw)
-    definition = json.loads(raw)
+    definition, _ = json.JSONDecoder().raw_decode(spec[spec.index("{", start) :])
     assert WorkflowValidator().validate(definition) == []

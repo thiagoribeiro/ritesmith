@@ -63,12 +63,12 @@ class LuaScriptRuntime(BaseRuntime):
         )
 
     def validate_syntax(self, content: str) -> list[str]:
-        """Tenta carregar o script em Lua e retorna erros de sintaxe."""
+        """Compile without executing top-level statements or external effects."""
         try:
             from lupa import LuaRuntime
 
             lua = LuaRuntime(unpack_returned_tuples=False)
-            lua.execute(content)
+            lua.compile(content)
             return []
         except Exception as e:
             return [str(e)]

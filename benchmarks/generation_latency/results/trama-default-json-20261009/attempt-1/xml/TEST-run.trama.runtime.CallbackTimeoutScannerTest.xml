@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.runtime.CallbackTimeoutScannerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:25.985Z" hostname="c3po" time="0.004">
+  <properties/>
+  <testcase name="scan claims with the configured grace period and batch size()" classname="run.trama.runtime.CallbackTimeoutScannerTest" time="0.001"/>
+  <testcase name="scan re-enqueues expired waiting executions()" classname="run.trama.runtime.CallbackTimeoutScannerTest" time="0.001"/>
+  <testcase name="scan returns 0 when no expired executions found()" classname="run.trama.runtime.CallbackTimeoutScannerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

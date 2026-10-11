@@ -1,0 +1,16 @@
+# Isolated ARM validation image; never tag or deploy this image as production.
+FROM trama:2.2.1 AS trama_java
+FROM ritesmith:generation-20261008-144227
+WORKDIR /app
+RUN rm -rf /app/ritesmith /app/benchmarks /app/mcp-server /app/deploy
+RUN pip install --no-cache-dir 'pytest>=9.1' 'pytest-asyncio>=1.4' 'pytest-httpx>=0.36' 'pytest-timeout>=2.3' 'hypothesis>=6.100' 'ruff>=0.16'
+COPY ritesmith/ ritesmith/
+COPY benchmarks/ benchmarks/
+COPY mcp-server/ mcp-server/
+COPY deploy/ deploy/
+COPY pyproject.toml pyproject.toml
+COPY --from=trama_java /opt/java/openjdk/ /opt/java/openjdk/
+COPY benchmarks/generation_latency/native-oracle/runtime/ /app/native-oracle/
+ENV TRAMA_ORACLE_JAVA=/opt/java/openjdk/bin/java
+ENV TRAMA_ORACLE_CLASSPATH=/app/native-oracle:/app/native-oracle/*
+CMD ["python", "-m", "benchmarks.generation_latency.reliability", "--output", "/verification"]

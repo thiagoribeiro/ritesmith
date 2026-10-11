@@ -17,7 +17,7 @@ from typing import Any
 import httpx
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 from starlette.responses import Response
 from starlette.routing import get_route_path
 
@@ -214,7 +214,20 @@ async def _list_tools() -> list[Tool]:
 
 
 @_mcp_server.call_tool()
-async def _call_tool(name: str, arguments: dict | None) -> list[TextContent]:
+async def _call_tool(name: str, arguments: dict | None) -> list[TextContent] | CallToolResult:
+    try:
+        return await _invoke_tool(name, arguments)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 422:
+            body = exc.response.json()
+            if body.get("error") == "generation_failed":
+                return CallToolResult(
+                    isError=True, content=[TextContent(type="text", text=json.dumps(body))]
+                )
+        raise
+
+
+async def _invoke_tool(name: str, arguments: dict | None) -> list[TextContent]:
     args: dict[str, Any] = arguments or {}
 
     if name in _tool_registry:

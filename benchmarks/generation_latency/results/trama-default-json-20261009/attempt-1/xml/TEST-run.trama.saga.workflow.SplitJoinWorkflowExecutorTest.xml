@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-09T14:43:37.631Z" hostname="c3po" time="0.042">
+  <properties/>
+  <testcase name="split spawns one child per branch and parks the parent in WaitingJoin()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.003"/>
+  <testcase name="a join whose joinNodeId no longer resolves is finalized as CORRUPTED instead of retried forever()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.006"/>
+  <testcase name="split redelivery reconstructs deterministic children instead of a fresh random batch()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.002"/>
+  <testcase name="a failed branch is reflected in the join result without blocking the barrier()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.004"/>
+  <testcase name="a failure inside resumeAfterJoin restores the WaitingJoin pointer instead of losing it()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.006"/>
+  <testcase name="redelivering the split step itself does not re-enqueue already-registered branches()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.003"/>
+  <testcase name="redelivering a branch before its sibling arrives does not inflate the arrival count()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.005"/>
+  <testcase name="join only fires once the last branch arrives, then resumes the parent()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.006"/>
+  <testcase name="a failure during the commit phase does not resurrect the WaitingJoin pointer()" classname="run.trama.saga.workflow.SplitJoinWorkflowExecutorTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

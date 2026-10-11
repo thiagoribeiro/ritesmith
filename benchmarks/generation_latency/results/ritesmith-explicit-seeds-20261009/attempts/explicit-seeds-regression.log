@@ -1,0 +1,78 @@
+............................................................x....xx..... [  7%]
+........................................................................ [ 15%]
+..............................................................s......... [ 22%]
+........................................................................ [ 30%]
+........................................................................ [ 38%]
+...............................s.....s.................................. [ 45%]
+.......................................F................................ [ 53%]
+........................................................................ [ 61%]
+........................................................................ [ 68%]
+.....................xx................................................. [ 76%]
+........................................................................ [ 83%]
+........................................................................ [ 91%]
+...................................................................F.... [ 99%]
+........                                                                 [100%]
+=================================== FAILURES ===================================
+______ test_workflow_assessment_rejects_counter_reset_in_controlled_cycle ______
+
+    def test_workflow_assessment_rejects_counter_reset_in_controlled_cycle():
+        from benchmarks.generation_latency.tasks import workflow_checks
+    
+        definition = example("bounded_polling")
+        task = {
+            "id": "custom",
+            "goal": "Check BTC three times",
+            "caps": ["market.coin_price"],
+            "sleeps": [60],
+        }
+        assert not workflow_checks(task, compile_workflow(definition, BASE))
+        definition["nodes"][1]["input"] = {"state": {}}
+>       assert workflow_checks(task, compile_workflow(definition, BASE)) == [
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            "counter-controlled cycle resets iteration at track"
+        ]
+
+ritesmith/tests/unit/test_mermaid_workflows.py:169: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+definition = {'name': 'bounded_polling', 'version': '2.0.0', 'entrypoint': 'fetch__rs_1', 'nodes': [{'id': 'fetch__rs_1', 'kind': '...tch', 'cases': [{'name': 'done', 'when': {'==': [...]}, 'target': 'end'}], 'default': 'monitor_wait__rs_2'}, ...], ...}
+base_url = 'http://ritesmith:8081'
+
+    def compile_workflow(definition: dict, base_url: str) -> dict:
+        """Type validation precedes expansion; callers must also run WorkflowValidator."""
+>       compact = CompactWorkflow.model_validate(definition)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for CompactWorkflow
+E       nodes.1.switch.input
+E         Extra inputs are not permitted [type=extra_forbidden, input_value={'state': {}}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+ritesmith/workflows/compact.py:104: ValidationError
+_______________ test_prompt_split_join_example_passes_validator ________________
+
+    def test_prompt_split_join_example_passes_validator():
+        import json
+        import re
+    
+        from ritesmith.llm import prompts
+        from ritesmith.workflows.validator import WorkflowValidator
+    
+        spec = prompts.workflow_generation_system()
+        start = spec.index("EXAMPLE — compare three coin prices in parallel")
+>       raw = spec[spec.index("{", start) : spec.index("\nPATTERN A", start)]
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       ValueError: substring not found
+
+ritesmith/tests/unit/test_workflow_generation.py:1029: ValueError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+.venv/lib/python3.14/site-packages/slowapi/extension.py:720
+  /home/thiago/Documents/projects/ritesmith/.venv/lib/python3.14/site-packages/slowapi/extension.py:720: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ritesmith/tests/unit/test_mermaid_workflows.py::test_workflow_assessment_rejects_counter_reset_in_controlled_cycle
+FAILED ritesmith/tests/unit/test_workflow_generation.py::test_prompt_split_join_example_passes_validator
+2 failed, 934 passed, 3 skipped, 14 deselected, 5 xfailed, 3 warnings in 9.78s

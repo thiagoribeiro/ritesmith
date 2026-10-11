@@ -1,0 +1,473 @@
+{
+  "classes": [
+    {
+      "name": "run.trama.app.ApplicationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.app.OpenApiRoutesContractTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.cli.DryRunSimulatorTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.config.ConfigLoaderTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2EAdvancedFlowTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2EAsyncCallbackTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2ECallbackHooksTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2EDefinitionApiTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2EDefinitionLifecycleTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2EExecutionQueryTest",
+      "tests": 7,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": [
+        {
+          "test": "list filters by name and status and paginates newest first()",
+          "message": "org.opentest4j.AssertionFailedError: status filter; full list: [{\"id\":\"d67307de-2e82-449f-8ff5-e862d36e00af\",\"name\":\"query-750ac82c\",\"version\":\"v1\",\"status\":\"FAILED\",\"failureDescription\":\"node=a template rendering failed: JSON body $.order: reference 'payload.orderId' is missing key 'orderId'\",\"startedAt\":\"2026-10-09T14:43:09.131112Z\",\"completedAt\":\"2026-10-09T14:43:09.208907Z\",\"updatedAt\":\"2026-10-09T14:43:09.208907Z\"},{\"id\":\"67f13d03-1703-4246-b670-adad2725f433\",\"name\":\"query-750ac82c\",\"version\":\"v1\",\"status\":\"FAILED\",\"failureDescription\":\"node=a template rendering failed: JSON body $.order: reference 'payload.orderId' is missing key 'orderId'\",\"startedAt\":\"2026-10-09T14:43:08.919561Z\",\"completedAt\":\"2026-10-09T14:43:09.005812Z\",\"updatedAt\":\"2026-10-09T14:43:09.005812Z\"},{\"id\":\"8c734d8e-75c8-41ae-b818-0377403c69d9\",\"name\":\"query-750ac82c\",\"version\":\"v1\",\"status\":\"FAILED\",\"failureDescription\":\"node=a template rendering failed: JSON body $.order: reference 'payload.orderId' is missing key 'orderId'\",\"startedAt\":\"2026-10-09T14:43:08.698460Z\",\"completedAt\":\"2026-10-09T14:43:08.806281Z\",\"updatedAt\":\"2026-10-09T14:43:08.806281Z\"}] ==> expected: <[67f13d03-1703-4246-b670-adad2725f433]> but was: <[d67307de-2e82-449f-8ff5-e862d36e00af, 67f13d03-1703-4246-b670-adad2725f433, 8c734d8e-75c8-41ae-b818-0377403c69d9]>",
+          "trace": "org.opentest4j.AssertionFailedError: status filter; full list: [{\"id\":\"d67307de-2e82-449f-8ff5-e862d36e00af\",\"name\":\"query-750ac82c\",\"version\":\"v1\",\"status\":\"FAILED\",\"failureDescription\":\"node=a template rendering failed: JSON body $.order: reference 'payload.orderId' is missing key 'orderId'\",\"startedAt\":\"2026-10-09T14:43:09.131112Z\",\"completedAt\":\"2026-10-09T14:43:09.208907Z\",\"updatedAt\":\"2026-10-09T14:43:09.208907Z\"},{\"id\":\"67f13d03-1703-4246-b670-adad2725f433\",\"name\":\"query-750ac82c\",\"version\":\"v1\",\"status\":\"FAILED\",\"failureDescription\":\"node=a template rendering failed: JSON body $.order: reference 'payload.orderId' is missing key 'orderId'\",\"startedAt\":\"2026-10-09T14:43:08.919561Z\",\"completedAt\":\"2026-10-09T14:43:09.005812Z\",\"updatedAt\":\"2026-10-09T14:43:09.005812Z\"},{\"id\":\"8c734d8e-75c8-41ae-b818-0377403c69d9\",\"name\":\"query-750ac82c\",\"version\":\"v1\",\"status\":\"FAILED\",\"failureDescription\":\"node=a template rendering failed: JSON body $.order: reference 'payload.orderId' is missing key 'orderId'\",\"startedAt\":\"2026-10-09T14:43:08.698460Z\",\"completedAt\":\"2026-10-09T14:43:08.806281Z\",\"updatedAt\":\"2026-10-09T14:43:08.806281Z\"}] ==> expected: <[67f13d03-1703-4246-b670-adad2725f433]> but was: <[d67307de-2e82-449f-8ff5-e862d36e00af, 67f13d03-1703-4246-b670-adad2725f433, 8c734d8e-75c8-41ae-b818-0377403c69d9]>\n\tat kotlin.test.junit5.JUnit5Asserter.assertEquals(JUnitSupport.kt:32)\n\tat kotlin.test.AssertionsKt__AssertionsKt.assertEquals(Assertions.kt:63)\n\tat kotlin.test.AssertionsKt.assertEquals(Unknown Source)\n\tat run.trama.e2e.E2EExecutionQueryTest$list filters by name and status and paginates newest first$1.invokeSuspend(E2EExecutionQueryTest.kt:76)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)\n\tat kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)\n\tat kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)\n\tat kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:807)\n\tat kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)\n\tat kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)\n"
+        }
+      ]
+    },
+    {
+      "name": "run.trama.e2e.E2EOpsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2EPostgresStoreTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2ERetryEndpointTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2ESleepSagaTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2ESplitJoinSagaTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2ESwitchSagaTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.e2e.E2ESyncSagaTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.runtime.CallbackTimeoutScannerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.runtime.JoinCompletionScannerTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.runtime.PartitionMaintenanceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.DefaultSagaExecutorTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.MsgPackRoundTripTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.PostgresRepositoryIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.RateLimiterTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.RedisConsumerIntegrationTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.RetryPolicyTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.RunStoredSagaRequestTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.SagaDefinitionCrudTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.SagaDefinitionValidatorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.SagaExecutionProcessorShutdownTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.SagaExecutionQueueTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.SagaRepositoryStoreTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.TemplateContextBuilderTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.TemplateRendererTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.TemplateStringSerializerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.TypedJsonTemplateTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.WaitingCallbackStoreTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.callback.CallbackReceiverTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.callback.CallbackTokenServiceTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.OrphanedShardMigratorTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.RedisConsumerResilienceTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.RedisCrashRecoveryTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.RedisRuntimeIntegrationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.RedisShardingTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.RedisSleepAndMembershipTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.redis.RedisSplitJoinStoreTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.store.CheckpointRepositoryIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.store.SagaRepositoryIntegrationTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.CheckpointFencingTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.DefinitionNormalizerTest",
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.JsonLogicEvaluatorTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.SplitJoinWorkflowExecutorTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.SwitchNodeHandlerTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.TaskNodeHandlerTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.WorkflowDefinitionValidatorTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.saga.workflow.WorkflowExecutorBehaviorTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    },
+    {
+      "name": "run.trama.telemetry.DashboardMetricsContractTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failures_detail": []
+    }
+  ],
+  "totals": {
+    "tests": 338,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 0
+  },
+  "reason": "Existing pagination fixture omitted orderId, which is required by its JSON body. Corrected the fixture and added explicit terminal-status assertions without changing the filtering expectations."
+}
