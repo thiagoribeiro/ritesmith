@@ -675,3 +675,23 @@ per-resource access control.
 ## License
 
 Apache License 2.0
+
+## One-shot arrival reminders
+
+`POST /plans` can select `requested_artifact_types: ["trama_workflow"]` and
+provide `context.presence_reminder` with `person_alias`, `message`, and
+`channel: "telegram"`. Workflow generation uses a dedicated recipe and skips
+artifact reuse for this contract. The same context is accepted by
+`POST /generate/trama-workflow` with `save: false` for validation.
+
+The recipe reads LoomHarbor through `home.execute` with `presence.read`, checks
+`output.success` and the boolean `output.result.present`, waits for departure
+first if the person is already home, then waits for arrival, calls
+`telegram.send` once, and ends. Missing, failed, or non-boolean readings do not
+count as departure or arrival. Polls sleep for 30 seconds in Trama and do not
+call the LLM. The `max_iterations` metadata permits back-edges in validation;
+there is no twenty-poll completion counter. Existing plan cancellation,
+completion callbacks, and persistence remain in use.
+
+This contract requires the configured home and Telegram providers. It does
+not add GPS tracking, a second phone scanner, or an independent scheduler.
