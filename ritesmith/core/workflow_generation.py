@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from copy import deepcopy
 from datetime import UTC, datetime
 
@@ -299,6 +300,7 @@ class WorkflowGenerationService:
                     validation_errors=last_errors,
                     attempt_number=attempt,
                     available_capability_names=sorted(cap_registry.keys()),
+                    capability_contracts=_used_contracts(last_definition, cap_registry),
                 )
                 definition = repair_resp.definition
                 llm_resp = WorkflowGenerationResponse(
@@ -537,3 +539,17 @@ class WorkflowGenerationService:
         if budget is not None:
             budget.prepared["capabilities"] = result
         return result
+
+
+def _used_contracts(definition, registry) -> list[dict]:
+    """Contracts of the capabilities a candidate calls, so repair can fix args and fields."""
+    names = sorted(set(re.findall(r'"capability_name":\s*"([^"]+)"', json.dumps(definition))))
+    return [
+        {
+            "name": name,
+            "in": registry[name].get("input_schema") or {},
+            "out": registry[name].get("output_schema") or {},
+        }
+        for name in names
+        if name in registry
+    ]

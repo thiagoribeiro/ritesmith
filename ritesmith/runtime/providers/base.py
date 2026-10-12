@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -18,6 +19,17 @@ class HostFunctionDef:
     description: str = ""
     input_schema: dict | None = None
     output_schema: dict | None = None
+
+
+def invoke_capability(fn, args: dict):
+    """Call a provider function with named arguments.
+
+    report.* functions take one `args` dict (`def f(args)`) instead of keyword arguments.
+    """
+    params = list(inspect.signature(fn).parameters.values())
+    if len(params) == 1 and params[0].name == "args":
+        return fn(args)
+    return fn(**args)
 
 
 @dataclass

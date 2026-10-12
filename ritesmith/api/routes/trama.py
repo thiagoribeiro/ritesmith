@@ -16,11 +16,13 @@ from ritesmith.api.deps import get_execution_service
 from ritesmith.config import Settings, get_settings
 from ritesmith.core.execution import ExecutionService
 from ritesmith.runtime.host_functions import get_capability
+from ritesmith.runtime.providers.base import invoke_capability
 from ritesmith.schemas.execution import (
     CreateExecutionRequest,
     TramaExecuteRequest,
     TramaExecuteResponse,
 )
+from ritesmith.workflows.semantic_validation import unknown_inputs
 
 router = APIRouter(prefix="/trama", tags=["trama"])
 
@@ -60,8 +62,33 @@ async def trama_execute(
             raise HTTPException(
                 status_code=404, detail=f"Unknown capability: {req.capability_name}"
             )
+        args = req.input or {}
+        schema = getattr(cap, "input_schema", None)
+        # A contract violation is a 422: Trama does not retry it, unlike a 500.
+        unknown = unknown_inputs(schema, args)
+        missing = [k for k in (schema or {}).get("required", []) if k not in args]
+        if unknown or missing:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "invalid_input",
+                    "capability": req.capability_name,
+                    "unknown": unknown,
+                    "missing": missing,
+                    "accepted": sorted((schema or {}).get("properties", {})),
+                },
+            )
         try:
-            result = await asyncio.to_thread(cap.callable, **(req.input or {}))
+            result = await asyncio.to_thread(invoke_capability, cap.callable, args)
+        except TypeError as e:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "invalid_input",
+                    "capability": req.capability_name,
+                    "message": str(e),
+                },
+            )
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
         if isinstance(result, dict):

@@ -824,7 +824,13 @@ Do not cap count at 20, add manual advance_chain actions or build continuation y
 Compiler constructs counters, scopes, joins, HTTP fields and continuation in blocks of 20.
 Use only one top-level repeat; put actions that must happen once after it, not before it.
 Only declared capability input keys. Tools go through declared RiteSmith capabilities, never
-directly to provider APIs (no web.fetch to Telegram or similar). Array outputs use path "result".
+directly to provider APIs (no web.fetch to Telegram or similar). Contracts are closed: pass
+only the input keys in "in" and read only the fields in "out"; when "out" is an array or a
+scalar, read it as path "result". Unknown keys and fields are rejected.
+Numeric thresholds, comparisons and percentages are conditions, not llm.evaluate. Precompute
+the bounds: "notify when the rate moves more than 10% from 4.99" is
+condition {when:{"or":[{">":[{ref:"fetch",path:"rate"},5.489]},{"<":[{ref:"fetch",path:"rate"},4.491]}]},steps:[notify]}.
+Use llm.evaluate only to judge or summarize text.
 wait is for elapsed time only; later operations reference earlier ones directly.
 Content monitors compare snapshots via llm.evaluate, skip empty current snapshots, keep the
 previous snapshot in repeat.state and notify only when decision=notify.

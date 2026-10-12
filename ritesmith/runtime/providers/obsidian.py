@@ -137,7 +137,7 @@ class ObsidianProvider(ToolProvider):
                         "limit": {"type": "integer", "default": 10},
                     },
                 },
-                output_schema={"type": "object", "properties": {"results": {"type": "array"}}},
+                output_schema={"type": "array", "items": {"type": "object"}},
             ),
             "obsidian.read": HostFunctionDef(
                 "obsidian.read",
@@ -146,15 +146,12 @@ class ObsidianProvider(ToolProvider):
                 description="Read the full content of an Obsidian note by its path.",
                 input_schema={
                     "type": "object",
-                    "required": ["path"],
+                    "required": ["relative_path"],
                     "properties": {
-                        "path": {"type": "string"},
+                        "relative_path": {"type": "string"},
                     },
                 },
-                output_schema={
-                    "type": "object",
-                    "properties": {"content": {"type": "string"}, "path": {"type": "string"}},
-                },
+                output_schema={"type": "string", "description": "Note content"},
             ),
             "obsidian.list": HostFunctionDef(
                 "obsidian.list",
@@ -167,7 +164,7 @@ class ObsidianProvider(ToolProvider):
                         "folder": {"type": "string", "default": ""},
                     },
                 },
-                output_schema={"type": "object", "properties": {"notes": {"type": "array"}}},
+                output_schema={"type": "array", "items": {"type": "object"}},
             ),
         }
 

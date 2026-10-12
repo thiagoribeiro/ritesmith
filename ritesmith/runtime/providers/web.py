@@ -203,13 +203,10 @@ class WebProvider(ToolProvider):
                     },
                 },
                 output_schema={
-                    "type": "object",
-                    "properties": {
-                        "result": {"description": "Set when the JSON response is an array"},
-                        "<field>": {
-                            "description": "Direct field access when the JSON response is an object"
-                        },
-                    },
+                    "description": (
+                        "Arbitrary JSON: an object's fields are at the top level; "
+                        "an array response is under result"
+                    )
                 },
             ),
         }

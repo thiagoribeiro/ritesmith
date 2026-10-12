@@ -40,7 +40,7 @@ class ContextProvider(ToolProvider):
                 _now,
                 description="Return the current UTC time as an ISO-8601 string.",
                 input_schema={"type": "object", "properties": {}},
-                output_schema={"type": "object", "properties": {"now": {"type": "string"}}},
+                output_schema={"type": "string", "description": "ISO-8601 timestamp"},
             ),
             "runtime.timezone": HostFunctionDef(
                 "runtime.timezone",
@@ -48,7 +48,7 @@ class ContextProvider(ToolProvider):
                 _timezone,
                 description="Return the local timezone name (e.g. 'America/Sao_Paulo').",
                 input_schema={"type": "object", "properties": {}},
-                output_schema={"type": "object", "properties": {"timezone": {"type": "string"}}},
+                output_schema={"type": "string"},
             ),
             "runtime.timestamp": HostFunctionDef(
                 "runtime.timestamp",
@@ -56,7 +56,7 @@ class ContextProvider(ToolProvider):
                 _timestamp,
                 description="Return the current Unix epoch as a float.",
                 input_schema={"type": "object", "properties": {}},
-                output_schema={"type": "object", "properties": {"result": {"type": "number"}}},
+                output_schema={"type": "number"},
             ),
         }
 

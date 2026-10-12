@@ -724,10 +724,12 @@ conditions, parallel branches and bounded repeats, and Python compiles counters,
 joins, first-pass seeds and continuation blocks into native Trama. Set it to `false`
 to fall back to model-written compact graphs, which still cover nested or multiple
 repeats. Generation stops after `RITESMITH_GENERATION_DEADLINE_SECONDS` (default 60).
-Compiled workflows require **Trama 3.0.0** or later (mandatory typed JSON rendering);
+Compiled workflows require **Trama 3.0.1** or later (mandatory typed JSON rendering, and
+resumed loops that read results after a `switch`);
 upgrade the engine before or together with RiteSmith.
-The [2026-10-10 scorecard](benchmarks/generation_latency/README.md#pass-rate-scorecard)
-measured 77% valid workflows (p50 7.3 s) and 94% valid Luau scripts on the local corpus.
+The [scorecard](benchmarks/generation_latency/README.md#pass-rate-scorecard) for 0.2.1, graded
+against the closed capability contracts, measured 68% valid workflows (median 8.5 s,
+9.4k tokens per valid workflow; 64%, 20.1 s and 22.5k before) and 96% valid Luau scripts.
 
 The **95% valid and complete within 10 seconds, with at least 50% lower estimated
 cost per valid artifact than baseline** target is an acceptance gate,

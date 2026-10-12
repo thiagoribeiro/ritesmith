@@ -190,7 +190,7 @@ class EmailProvider(ToolProvider):
             return False
 
     def lua_functions(self) -> dict[str, HostFunctionDef]:
-        _msg_list_output = {"type": "object", "properties": {"messages": {"type": "array"}}}
+        _msg_list_output = {"type": "array", "items": {"type": "object"}}
         _ok_output = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
         return {
             "email.search": HostFunctionDef(

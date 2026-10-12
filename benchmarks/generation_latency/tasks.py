@@ -2,7 +2,9 @@
 
 from benchmarks.luau_codegen.tasks import ALL_TASKS
 
-ASSESSMENT_VERSION = 2
+# v3 (2026-10-11): also checks task args and output references against the closed
+# provider contracts, which the v2 structural checks missed.
+ASSESSMENT_VERSION = 3
 
 WORKFLOWS = [
     (
@@ -236,7 +238,39 @@ def workflow_checks(task: dict, definition: dict) -> list[str]:
     ):
         errors.append("missing explicit artifact binding")
     errors.extend(_counter_progress_errors(nodes))
+    errors.extend(contract_errors(task, definition))
     return errors
+
+
+_CONTRACT_MARKERS = (
+    "unknown input",
+    "unknown output field",
+    "read it as output.result",
+    "input contract",
+    "missing required input",
+)
+
+
+def contract_errors(task: dict, definition: dict) -> list[str]:
+    """Args and output references checked against every provider's closed contract."""
+    from ritesmith.runtime.providers import PROVIDERS
+    from ritesmith.workflows.semantic_validation import validate_semantics
+
+    registry = {
+        name: {"input_schema": fd.input_schema, "output_schema": fd.output_schema}
+        for provider in PROVIDERS
+        for name, fd in provider.lua_functions().items()
+    }
+    for artifact in task.get("context", {}).get("available_lua_artifacts", []):
+        registry[artifact["artifact_id"]] = {
+            "input_schema": artifact.get("input_schema"),
+            "output_schema": artifact.get("output_schema"),
+        }
+    return [
+        "contract: " + error
+        for error in validate_semantics(definition, registry, check_graph=False)
+        if any(marker in error for marker in _CONTRACT_MARKERS)
+    ]
 
 
 def _counter_progress_errors(nodes):

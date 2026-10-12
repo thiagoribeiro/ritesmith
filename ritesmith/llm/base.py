@@ -197,5 +197,6 @@ class LLMProvider(ABC):
         validation_errors: list[str],
         attempt_number: int,
         available_capability_names: list[str] | None = None,
+        capability_contracts: list[dict] | None = None,
     ) -> tuple[WorkflowRepairResponse, LLMCallStats]:
         raise NotImplementedError("workflow repair not implemented in this provider")
