@@ -563,7 +563,7 @@ ssh user@host "cd ~/ritesmith/deploy && docker compose build && docker compose u
 | `RITESMITH_DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection |
 | `OPENAI_API_KEY` | — | Required for generation |
 | `RITESMITH_LLM_MODEL` | `gpt-5-mini` | Generation model |
-| `RITESMITH_LLM_MODEL_FAST` | `gpt-4.1-nano` | Intent analysis / fast calls |
+| `RITESMITH_LLM_MODEL_FAST` | `gpt-4.1-mini` | Intent analysis / fast calls |
 | `RITESMITH_SCRIPT_LANGUAGE` | `luau` | Language for new scripts: `luau` (LunarDyson) or `lua` (lupa); falls back to `lua` if the lunardyson package is missing |
 | `RITESMITH_LUA_TIMEOUT_MS` | `1000` | Script VM timeout (both runtimes) |
 | `RITESMITH_LUA_MEMORY_LIMIT_MB` | `32` | Script memory budget |
