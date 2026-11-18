@@ -78,7 +78,7 @@ class SpendBudget:
     def reserve(self, kwargs):
         self.check()
         model = kwargs["model"]
-        if model not in PRICES or model not in ("gpt-5-mini", "gpt-5.4-mini", "gpt-4.1-nano"):
+        if model not in PRICES or model not in ("gpt-5-mini", "gpt-5.4-mini", "gpt-4.1-mini"):
             self.stop("unaccounted_model_price")
             self.check()
         if kwargs.get("service_tier", "default") != "default" or "tools" in kwargs:

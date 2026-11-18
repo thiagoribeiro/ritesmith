@@ -6,6 +6,12 @@ All notable changes to RiteSmith. The format loosely follows
 
 ## [Unreleased]
 
+### Changed
+- **Default fast model is now `gpt-4.1-mini`.** OpenAI retired `gpt-4.1-nano` (`404
+  model_not_found`), which broke `analyze_intent` and `llm.evaluate`. `gpt-4.1-mini` is
+  non-reasoning, as `llm_model_fast` requires. It is priced in `observability/costs.py`
+  and allowed by the spend budget. The preserved benchmark baselines still name nano.
+
 ## [0.2.1] - 2026-10-11
 
 Capability contracts are closed end to end. A workflow that passes an argument or reads a

@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # their whole token budget before emitting the JSON these call sites parse.
     llm_provider: str = "openai"
     llm_model: str = "gpt-5-mini"
-    llm_model_fast: str = "gpt-4.1-nano"
+    llm_model_fast: str = "gpt-4.1-mini"
     llm_script_model: str | None = None
     llm_workflow_model: str | None = None
     llm_reasoning_effort: Literal["minimal", "none", "low", "medium", "high"] | None = "low"
