@@ -119,18 +119,37 @@ class LuauValidationSession:
                 name, self._handler(name), signature=signature, effect="pure", max_calls=100
             )
 
+    def _fixture_for(self, name, args):
+        """Pick the fixture a tool call consumes.
+
+        Tests and script come from separate generations, so they can disagree on
+        argument spelling (``'BRL'`` vs ``'brl'``) without disagreeing on behaviour.
+        Exact match wins, then a case-insensitive match. A different value is still a
+        miss: the fixture is what makes a wrong symbol or currency fail the test.
+        """
+        available = [
+            index
+            for index, fixture in enumerate(self.spec.tool_fixtures)
+            if fixture.tool == name and self.used[index] < fixture.times
+        ]
+        fixtures = self.spec.tool_fixtures
+        for same in (
+            lambda f: f.args == args,
+            lambda f: _fold(f.args) == _fold(args),
+        ):
+            for index in available:
+                if same(fixtures[index]):
+                    return index
+        return None
+
     def _handler(self, name):
         def handler(args):
             self.counts[name] += 1
             args = args or {}
-            for index, fixture in enumerate(self.spec.tool_fixtures):
-                if (
-                    fixture.tool == name
-                    and fixture.args == args
-                    and self.used[index] < fixture.times
-                ):
-                    self.used[index] += 1
-                    return deepcopy(fixture.output)
+            index = self._fixture_for(name, args)
+            if index is not None:
+                self.used[index] += 1
+                return deepcopy(self.spec.tool_fixtures[index].output)
             pure = {
                 "text.slugify",
                 "text.upper",
@@ -178,3 +197,13 @@ class LuauValidationSession:
 
     def close(self):
         self.runtime.close()
+
+
+def _fold(value):
+    if isinstance(value, str):
+        return value.casefold()
+    if isinstance(value, dict):
+        return {k: _fold(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_fold(v) for v in value]
+    return value

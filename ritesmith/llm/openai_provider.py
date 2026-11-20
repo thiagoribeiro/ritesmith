@@ -1124,7 +1124,7 @@ Return source="intent". The implementation is intentionally unavailable.
             "workflow-plan-v1" if self.settings.generation_semantic_workflows else "compact-v1",
         )
         try:
-            data = json.loads(raw)
+            data = _unwrap_bare_candidate(json.loads(raw))
             if data.get("script"):
                 data["script"] = expand_script(data["script"])
             if data.get("workflow"):
@@ -1176,3 +1176,26 @@ Return source="intent". The implementation is intentionally unavailable.
         except Exception as e:
             self._invalid_response(stats, e)
             raise self._candidate_failure(raw, stats, e) from e
+
+
+def _unwrap_bare_candidate(data):
+    """Accept a workflow candidate returned without its ``{"workflow": ...}`` envelope.
+
+    Larger models sometimes answer the proposal shape with the workflow object itself
+    (``definition``/``name``/...). The content is a valid candidate; only the wrapper is
+    missing, so rejecting it would burn a repair call on formatting.
+    """
+    if (
+        isinstance(data, dict)
+        and isinstance(data.get("definition"), dict)
+        and not data.get("workflow")
+        and not data.get("script")
+    ):
+        analysis = data.pop("analysis", None)
+        data.pop("workflow", None)
+        data.pop("script", None)
+        wrapped = {"workflow": data}
+        if analysis is not None:
+            wrapped["analysis"] = analysis
+        return wrapped
+    return data
