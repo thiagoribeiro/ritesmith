@@ -4,7 +4,7 @@ Sources: https://developers.openai.com/api/docs/models/{model}
 Estimates exclude tax, regional/priority premiums and account-specific discounts.
 """
 
-PRICE_VERSION = "baseline-2026-10-08"
+PRICE_VERSION = "2026-11-20"
 
 PRICES = {
     "gpt-5-mini": (0.25, 0.025, 2.0),
@@ -13,6 +13,7 @@ PRICES = {
     "gpt-5.4-mini": (0.75, 0.075, 4.5),
     "gpt-4.1-nano": (0.10, 0.025, 0.40),  # retired by OpenAI (404) in 2026-11; kept for old traces
     "gpt-4.1-mini": (0.40, 0.10, 1.60),
+    "gpt-5.5": (5.00, 0.50, 30.00),  # standard tier, prompts <= 272K tokens
 }
 
 
