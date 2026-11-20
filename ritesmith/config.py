@@ -87,7 +87,12 @@ class Settings(BaseSettings):
     lua_enabled: bool = True
     lua_timeout_ms: int = 1000
     lua_memory_limit_mb: int = 32
+    # Threads that run Luau VM steps (CPU). With the async step driver they are held only
+    # while the VM computes, not while a script waits for tools.
     lua_sandbox_workers: int = 8
+    # In-flight Luau executions; also the size of the I/O pool that runs their (blocking)
+    # provider calls. This, not lua_sandbox_workers, bounds script throughput.
+    luau_max_concurrency: int = Field(default=128, ge=1, le=1024)
 
     # Luau budgets beyond the VM CPU deadline (lua_timeout_ms). The VM deadline does
     # not interrupt a blocked Python tool call (the VM is not running during it), so:
