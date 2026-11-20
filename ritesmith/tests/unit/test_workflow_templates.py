@@ -245,3 +245,105 @@ def test_ordering_ops_need_numbers():
         requested_template(
             {"template": {"name": "threshold_action", "params": {**THRESHOLD, "value": True}}}
         )
+
+
+def here(flag):
+    return {"success": True, "result": {"present": flag}}
+
+
+def presence_clock(definition, prefix):
+    node = next(n for n in definition["nodes"] if n["id"] == f"{prefix}_deadline")
+    return node["cases"][0]["when"][">"][1]
+
+
+def test_arrival_waits_for_a_real_transition():
+    # "me avisa quando a Jaque chegar": already home at start must not fire.
+    definition = built(
+        "presence_change",
+        {"people": ["jaque"], "event": "any_home", "notify": "A Jaque chegou."},
+    )
+    deadline = presence_clock(definition, "before")
+    sim = WorkflowSimulator(
+        definition,
+        {
+            "before_0": [here(True), here(False)],
+            "before_clock": [{"result": deadline - 10}],
+            "after_0": [here(False), here(True)],
+            "after_clock": [{"result": deadline - 5}],
+            "notify": {"ok": True, "message_id": 1},
+        },
+    ).run()
+    assert sim.calls["telegram.send"] == 1
+    assert sim.calls["home.execute"] == 4  # home, away, away, home
+
+
+def test_everyone_leaving_runs_each_action_once_after_the_delay():
+    definition = built(
+        "presence_change",
+        {
+            "people": ["thiago", "jaque"],
+            "event": "all_away",
+            "delay_seconds": 900,
+            "actions": [
+                {"capability": "switch.off", "target": "interruptor_sala"},
+                {"capability": "switch.off", "target": "interruptor_cozinha"},
+            ],
+        },
+    )
+    sim = WorkflowSimulator(
+        definition,
+        {
+            "before_0": here(True),
+            "before_1": here(False),
+            "after_0": here(False),
+            "after_1": here(False),
+            "act_0": {"success": True, "result": {}},
+            "act_1": {"success": True, "result": {}},
+        },
+    ).run()
+    # 2 reads before + 2 reads after + 2 actions; no telegram (no notify asked)
+    assert sim.calls == {"home.execute": 6}
+    assert sim.clock == 900
+
+
+def test_without_transition_an_already_true_state_fires_at_once():
+    definition = built(
+        "presence_change",
+        {
+            "people": ["thiago"],
+            "event": "all_away",
+            "require_transition": False,
+            "notify": "Casa vazia.",
+        },
+    )
+    assert definition["entrypoint"] == "after_0"
+    sim = WorkflowSimulator(definition, {"after_0": here(False), "notify": {"ok": True}}).run()
+    assert sim.calls == {"home.execute": 1, "telegram.send": 1}
+
+
+def test_presence_change_stops_at_the_deadline_without_acting():
+    definition = built(
+        "presence_change",
+        {"people": ["jaque"], "event": "any_home", "require_transition": False, "notify": "x"},
+    )
+    deadline = presence_clock(definition, "after")
+    sim = WorkflowSimulator(
+        definition,
+        {"after_0": here(False), "after_clock": [{"result": deadline + 1}]},
+    ).run()
+    assert sim.calls["telegram.send"] == 0
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"people": []},
+        {"people": ["a", "A"]},
+        {"event": "someone_left"},
+        {"actions": [], "notify": None},
+    ],
+)
+def test_presence_change_params_are_closed(change):
+    params = {"people": ["thiago"], "event": "all_away", "notify": "x", **change}
+    with pytest.raises(ValidationError):
+        requested_template({"template": {"name": "presence_change", "params": params}})

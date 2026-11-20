@@ -76,6 +76,30 @@ class PriceVariation(_Closed):
     label: str | None = Field(default=None, max_length=80)
 
 
+class PresenceChange(_Closed):
+    """Act once when the household's presence changes: someone arrives, everyone leaves."""
+
+    people: list[str] = Field(min_length=1, max_length=4)
+    # all_away: every listed person absent; any_home: at least one present.
+    event: Literal["all_away", "any_home"]
+    # Wait to observe the opposite state first, so a condition already true when the
+    # automation starts does not fire immediately (arrival means a real transition).
+    require_transition: bool = True
+    delay_seconds: int = Field(default=0, ge=0, le=6 * 3600)
+    actions: list[HomeCall] = Field(default_factory=list, max_length=6)
+    notify: str | None = Field(default=None, min_length=1, max_length=1000)
+    interval_seconds: int = Field(default=60, ge=30, le=3600)
+    window_seconds: int = Field(default=24 * 3600, ge=300, le=_MAX_WINDOW)
+
+    @model_validator(mode="after")
+    def does_something(self):
+        if not self.actions and self.notify is None:
+            raise ValueError("presence_change needs actions, a notify text, or both")
+        if len({p.strip().lower() for p in self.people}) != len(self.people):
+            raise ValueError("people must be distinct")
+        return self
+
+
 @dataclass(frozen=True)
 class Template:
     spec: type[BaseModel]
@@ -242,6 +266,95 @@ def price_variation_workflow(spec: PriceVariation, base_url: str) -> dict:
     }
 
 
+def presence_change_workflow(spec: PresenceChange, base_url: str) -> dict:
+    deadline = round(time.time() + spec.window_seconds)
+
+    def present(node_id: str, value: bool) -> dict:
+        root = _out(node_id)
+        return {
+            "and": [
+                {"===": [{"var": root + ".success"}, True]},
+                {"===": [{"var": root + ".result.present"}, value]},
+            ]
+        }
+
+    def condition(prefix: str, event: str) -> dict:
+        ids = [f"{prefix}_{i}" for i in range(len(spec.people))]
+        if event == "all_away":
+            return {"and": [present(i, False) for i in ids]}
+        return {"or": [present(i, True) for i in ids]}
+
+    def phase(prefix: str, event: str, on_match: str) -> list[dict]:
+        nodes = []
+        for i, person in enumerate(spec.people):
+            following = f"{prefix}_{i + 1}" if i + 1 < len(spec.people) else f"{prefix}_check"
+            call = HomeCall(capability="presence.read", target=person)
+            nodes.append(_home(base_url, f"{prefix}_{i}", call, following))
+        nodes += [
+            {
+                "id": f"{prefix}_check",
+                "kind": "switch",
+                "cases": [{"name": event, "when": condition(prefix, event), "target": on_match}],
+                "default": f"{prefix}_clock",
+            },
+            _task(base_url, f"{prefix}_clock", "runtime.timestamp", {}, f"{prefix}_deadline"),
+            {
+                "id": f"{prefix}_deadline",
+                "kind": "switch",
+                "cases": [
+                    {
+                        "name": "expired",
+                        "when": {">": [{"var": _out(f"{prefix}_clock", "result")}, deadline]},
+                        "target": "end",
+                    }
+                ],
+                "default": f"{prefix}_wait",
+            },
+            {
+                "id": f"{prefix}_wait",
+                "kind": "sleep",
+                "durationSeconds": spec.interval_seconds,
+                "next": f"{prefix}_0",
+            },
+        ]
+        return nodes
+
+    opposite = "any_home" if spec.event == "all_away" else "all_away"
+    effects: list[dict] = []
+    steps = [f"act_{i}" for i in range(len(spec.actions))] + (["notify"] if spec.notify else [])
+    first_effect = steps[0]
+    if spec.delay_seconds:
+        effects.append(
+            {
+                "id": "delay",
+                "kind": "sleep",
+                "durationSeconds": spec.delay_seconds,
+                "next": steps[0],
+            }
+        )
+        first_effect = "delay"
+    for i, action in enumerate(spec.actions):
+        effects.append(
+            _home(base_url, f"act_{i}", action, steps[i + 1] if i + 1 < len(steps) else "end")
+        )
+    if spec.notify:
+        effects.append(_task(base_url, "notify", "telegram.send", {"text": spec.notify}, "end"))
+
+    nodes = []
+    if spec.require_transition:
+        nodes += phase("before", opposite, "after_0")
+    nodes += phase("after", spec.event, first_effect)
+    nodes += effects
+    return {
+        "name": "presence_change",
+        "version": "1.0.0",
+        # Validator metadata for the polling back-edges; the deadline is what stops it.
+        "max_iterations": 20,
+        "entrypoint": "before_0" if spec.require_transition else "after_0",
+        "nodes": nodes,
+    }
+
+
 TEMPLATES: dict[str, Template] = {
     "presence_reminder": Template(
         PresenceReminder, presence_arrival_workflow, ("home.execute", "telegram.send")
@@ -250,6 +363,11 @@ TEMPLATES: dict[str, Template] = {
         ThresholdAction,
         threshold_action_workflow,
         ("home.execute", "telegram.send", "runtime.timestamp"),
+    ),
+    "presence_change": Template(
+        PresenceChange,
+        presence_change_workflow,
+        ("home.execute", "runtime.timestamp"),
     ),
     "price_variation": Template(
         PriceVariation,

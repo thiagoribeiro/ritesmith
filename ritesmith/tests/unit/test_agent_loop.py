@@ -345,3 +345,31 @@ def test_worker_memory_limit_is_a_data_segment_cap():
         assert resource.getrlimit(resource.RLIMIT_DATA)[0] == 4096 * 1024 * 1024
     finally:
         resource.setrlimit(resource.RLIMIT_DATA, (soft, hard))
+
+
+@pytest.mark.asyncio
+async def test_try_capability_runs_read_only_and_refuses_effects():
+    gen, _ = agent([])
+    ok = await gen._dispatch("try_capability", {"name": "runtime.timestamp", "args": {}})
+    assert ok["ok"] is True and isinstance(ok["output"], float)
+    for name in ("home.execute", "telegram.send"):
+        refused = await gen._dispatch("try_capability", {"name": name, "args": {}})
+        assert refused["ok"] is False and "read-only" in refused["error"]
+
+
+@pytest.mark.asyncio
+async def test_probe_budget_is_bounded():
+    from ritesmith.llm.agent_loop import _MAX_PROBES
+
+    gen, _ = agent([])
+    for _ in range(_MAX_PROBES):
+        assert (await gen._dispatch("try_capability", {"name": "runtime.timestamp"}))["ok"]
+    over = await gen._dispatch("try_capability", {"name": "runtime.timestamp"})
+    assert over["ok"] is False and "budget" in over["error"]
+
+
+def test_prompt_covers_deliverables_and_virtual_devices():
+    system = _static_system()
+    assert "report.write_html" in system and "try_capability" in system
+    assert "virtual" in system
+    assert "Ambiguous targets" in system and "do NOT pick one" in system
