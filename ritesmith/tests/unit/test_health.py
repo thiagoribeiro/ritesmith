@@ -18,3 +18,4 @@ async def test_health_returns_ok(app):
     assert body["status"] == "ok"
     assert body["version"] == "0.2.1"
     assert "time" in body
+    assert body["script_runtime"] == "lupa" or body["script_runtime"].startswith("lunardyson ")

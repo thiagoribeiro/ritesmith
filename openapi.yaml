@@ -1792,11 +1792,15 @@ components:
         time:
           type: string
           title: Time
+        script_runtime:
+          type: string
+          title: Script Runtime
       type: object
       required:
       - status
       - version
       - time
+      - script_runtime
       title: HealthResponse
     MemorySearchRequest:
       properties:
