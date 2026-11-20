@@ -207,3 +207,41 @@ def test_unknown_template_is_rejected_with_the_list():
         requested_template({"template": {"name": "nope", "params": {}}})
     assert requested_template({"schedule_hours": 1}) is None
     assert set(TEMPLATES) >= {"presence_reminder", "threshold_action", "price_variation"}
+
+
+def test_state_match_with_start_delay():
+    params = {
+        "read": {"capability": "presence.read", "target": "sensor_porta_frente"},
+        "metric_path": "present",
+        "op": "==",
+        "value": True,
+        "action": {"capability": "alarm.home", "target": "sirene"},
+        "notify": "Movimento na porta da frente: sirene em modo casa.",
+        "interval_seconds": 60,
+        "window_seconds": 6 * 3600,
+        "start_delay_seconds": 3 * 3600,
+    }
+    definition = built("threshold_action", params)
+    assert definition["entrypoint"] == "start_wait"
+    deadline = clock(definition)
+    sim = WorkflowSimulator(
+        definition,
+        {
+            "read": [
+                {"success": True, "result": {"present": False}},
+                {"success": True, "result": {"present": True}},
+            ],
+            "clock": [{"result": deadline - 100}],
+            "act_entry": {"success": True, "result": {}},
+            "notify": {"ok": True, "message_id": 1},
+        },
+    ).run()
+    assert sim.calls == {"home.execute": 3, "runtime.timestamp": 1, "telegram.send": 1}
+    assert sim.clock == 3 * 3600 + 60
+
+
+def test_ordering_ops_need_numbers():
+    with pytest.raises(ValidationError):
+        requested_template(
+            {"template": {"name": "threshold_action", "params": {**THRESHOLD, "value": True}}}
+        )

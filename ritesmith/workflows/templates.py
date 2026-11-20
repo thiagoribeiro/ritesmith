@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_workflow
 
-_OPS = {"<": "<", "<=": "<=", ">": ">", ">=": ">="}
+_OPS = {"<": "<", "<=": "<=", ">": ">", ">=": ">=", "==": "===", "!=": "!=="}
 _MAX_WINDOW = 14 * 86400
 
 
@@ -43,18 +43,23 @@ class ThresholdAction(_Closed):
     read: HomeCall
     # Path under the home.execute ``result`` object, e.g. "state.current_temperature".
     metric_path: str = Field(min_length=1, max_length=120, pattern=r"^[A-Za-z0-9_.]+$")
-    op: Literal["<", "<=", ">", ">="]
-    value: float
+    op: Literal["<", "<=", ">", ">=", "==", "!="]
+    # Numbers for thresholds; a bool/str for state matches (motion detected, door open).
+    value: float | bool | str
     action: HomeCall | None = None
     notify: str | None = Field(default=None, min_length=1, max_length=1000)
     timeout_notify: str | None = Field(default=None, min_length=1, max_length=1000)
     interval_seconds: int = Field(default=300, ge=30, le=86400)
     window_seconds: int = Field(default=12 * 3600, ge=60, le=_MAX_WINDOW)
+    # Wait before the first read ("between midnight and 6am" starting now at 21:00).
+    start_delay_seconds: int = Field(default=0, ge=0, le=86400)
 
     @model_validator(mode="after")
     def does_something(self):
         if self.action is None and self.notify is None:
             raise ValueError("threshold_action needs an action, a notify text, or both")
+        if self.op in ("<", "<=", ">", ">=") and isinstance(self.value, (bool, str)):
+            raise ValueError(f"op {self.op} needs a numeric value")
         return self
 
 
@@ -129,7 +134,7 @@ def _deadline_nodes(base_url, deadline: float, on_timeout: str, loop: str) -> li
 
 
 def threshold_action_workflow(spec: ThresholdAction, base_url: str) -> dict:
-    deadline = round(time.time() + spec.window_seconds)
+    deadline = round(time.time() + spec.start_delay_seconds + spec.window_seconds)
     metric = {"var": _out("read", "result." + spec.metric_path)}
     crossed = {
         "and": [
@@ -172,12 +177,24 @@ def threshold_action_workflow(spec: ThresholdAction, base_url: str) -> dict:
     else:
         # Nothing to say on timeout: a zero-cost terminal step keeps the graph explicit.
         nodes.append(_task(base_url, "timeout_entry", "runtime.timestamp", {}, "end"))
+    entry = "read"
+    if spec.start_delay_seconds:
+        nodes.insert(
+            0,
+            {
+                "id": "start_wait",
+                "kind": "sleep",
+                "durationSeconds": spec.start_delay_seconds,
+                "next": "read",
+            },
+        )
+        entry = "start_wait"
     return {
         "name": "threshold_action",
         "version": "1.0.0",
         # Validator metadata for the polling back-edge; the deadline is what stops it.
         "max_iterations": 20,
-        "entrypoint": "read",
+        "entrypoint": entry,
         "nodes": nodes,
     }
 
