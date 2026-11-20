@@ -305,3 +305,12 @@ async def test_failed_agent_generation_keeps_its_transcript(make_client):
     assert transcript.status_code == 200
     assert transcript.json()["attempts"][0]["ok"] is False
     assert missing.status_code == 404
+
+
+def test_check_script_applies_the_pipeline_size_limit_first():
+    # agent-v1: four scripts passed check_script, then failed the pipeline's 90-line limit.
+    gen, _ = agent([])
+    long_script = "function run(input, context)\n" + "  local x = 1\n" * 200 + "  return {}\nend"
+    result = gen.check_script(long_script, [{"input": {}}])
+    assert result["ok"] is False
+    assert any("linhas" in e for e in result["static_errors"])

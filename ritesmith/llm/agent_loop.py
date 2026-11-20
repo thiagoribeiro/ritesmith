@@ -428,6 +428,10 @@ class AgentGeneration:
     def check_script(self, script: str, cases: list[dict]) -> dict:
         from ritesmith.runtime.validation_session import LuauValidationSession, preflight
 
+        static = self._static_script_errors(script)
+        if static:
+            # Same gate the pipeline applies after submit; failing it there costs the run.
+            return {"ok": False, "static_errors": static}
         session = LuauValidationSession(self.settings, self.profile)
         try:
             diagnostics = session.check(script)
@@ -453,6 +457,21 @@ class AgentGeneration:
             return {"ok": not failures, "cases": len(specs), "failures": failures[:5]}
         finally:
             session.close()
+
+    def _static_script_errors(self, script: str) -> list[str]:
+        from ritesmith.core.validation import (
+            _LUAU_EXTRA_FORBIDDEN,
+            _LUAU_SIZE_FACTOR,
+            ValidationPipeline,
+        )
+
+        pipeline = ValidationPipeline(self.settings)
+        checks = [
+            *pipeline._check_luau_tools_in_profile(script, self.profile),
+            *pipeline._check_forbidden_tokens(script, extra=_LUAU_EXTRA_FORBIDDEN),
+            *pipeline._check_size(script, None, factor=_LUAU_SIZE_FACTOR),
+        ]
+        return [c.message or c.name for c in checks if c.status == "failed"]
 
     # ── loop ─────────────────────────────────────────────────────────────────────
     def _dispatch(self, name: str, args: dict) -> Any:
