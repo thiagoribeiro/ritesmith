@@ -90,11 +90,14 @@ def logic(expression, context):
     operator, operands = next(iter(expression.items()))
     if operator == "var":
         return lookup(context, operands if isinstance(operands, str) else operands[0])
-    values = logic(operands if isinstance(operands, list) else [operands], context)
+    operands = operands if isinstance(operands, list) else [operands]
+    # JSONLogic short-circuits: a guard like {"!=": [x, null]} must keep a later
+    # comparison from ever seeing the null.
     if operator == "and":
-        return all(values)
+        return all(logic(item, context) for item in operands)
     if operator == "or":
-        return any(values)
+        return any(logic(item, context) for item in operands)
+    values = logic(operands, context)
     if operator == "!":
         return not values[0]
     if operator == "in":

@@ -16,7 +16,6 @@ from ritesmith.core.diagnostics import Diagnostic
 from ritesmith.core.exceptions import GenerationFailedError, LLMError
 from ritesmith.core.generation_budget import bounded_generation, current_budget
 from ritesmith.core.ids import generate_id
-from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_workflow
 from ritesmith.core.repair import run_repair_loop
 from ritesmith.core.reuse import check_reuse
 from ritesmith.llm.base import LLMCallStats, LLMProvider, WorkflowGenerationResponse
@@ -30,6 +29,7 @@ from ritesmith.schemas.artifact import Artifact, ArtifactStatus, ArtifactType, V
 from ritesmith.schemas.generation import GeneratedArtifactResponse, GenerateWorkflowRequest
 from ritesmith.workflows.semantic import FORMAT_VERSION, compile_plan
 from ritesmith.workflows.semantic_validation import validate_semantics
+from ritesmith.workflows.templates import TEMPLATES, build_template, requested_template
 from ritesmith.workflows.validator import WorkflowValidator, branch_node_ids
 
 log = logging.getLogger(__name__)
@@ -136,11 +136,9 @@ class WorkflowGenerationService:
             )
         if continuation and continuation.get("intent") != req.intent:
             continuation = None
-        presence = None
-        if "presence_reminder" in (req.context or {}):
-            presence = PresenceReminder.model_validate(req.context["presence_reminder"])
+        recipe = requested_template(req.context)
 
-        if recall is None and not presence and not continuation:
+        if recall is None and not recipe and not continuation:
             with stage("recall", "trama_workflow"):
                 recall = await fts_search(
                     self.db,
@@ -151,7 +149,7 @@ class WorkflowGenerationService:
 
         # 1. Reuse check
         if (
-            not presence
+            not recipe
             and not continuation
             and not reuse_checked
             and (
@@ -173,13 +171,13 @@ class WorkflowGenerationService:
         from ritesmith.runtime.host_functions import get_available_provider_capabilities
 
         provider_caps = get_available_provider_capabilities()
-        if presence:
-            missing = {"home.execute", "telegram.send"} - {
+        if recipe:
+            missing = set(TEMPLATES[recipe[0]].capabilities) - {
                 c["capability_name"] for c in provider_caps
             }
             if missing:
                 raise ValueError(
-                    "Presence reminder capabilities unavailable: " + ", ".join(sorted(missing))
+                    f"Template {recipe[0]} capabilities unavailable: " + ", ".join(sorted(missing))
                 )
         db_caps = await self._get_capabilities()
 
@@ -196,7 +194,7 @@ class WorkflowGenerationService:
         # 3. Similar workflows for few-shot examples — include full content like Lua generation does
         similar = (
             []
-            if presence
+            if recipe
             else [r for r in recall or [] if r.artifact.artifact_type == "trama_workflow"][:2]
         )
         similar_dicts = [
@@ -261,15 +259,24 @@ class WorkflowGenerationService:
                     name=definition["name"],
                     description=req.intent,
                 )
-            elif presence:
-                definition = presence_arrival_workflow(
-                    presence, self.settings.public_url or "http://ritesmith:8081"
+            elif recipe:
+                template_name, template_spec = recipe
+                definition = build_template(
+                    template_name,
+                    template_spec,
+                    self.settings.public_url or "http://ritesmith:8081",
                 )
                 llm_resp = WorkflowGenerationResponse(
                     definition=definition,
                     name=definition["name"],
                     description=req.intent,
-                    required_capabilities=["home.execute", "telegram.send"],
+                    required_capabilities=sorted(
+                        {
+                            n["action"]["request"]["body"]["capability_name"]
+                            for n in definition["nodes"]
+                            if n.get("kind") == "task"
+                        }
+                    ),
                 )
             elif attempt == 1 and initial is not None:
                 llm_resp, stats = initial
@@ -332,7 +339,7 @@ class WorkflowGenerationService:
                 attempts.append((attempt, definition, last_errors))
                 return False
 
-            if self.audit and not presence and not continuation:
+            if self.audit and not recipe and not continuation:
                 await self.audit.log_event(
                     "workflow_generation.llm_call",
                     "workflow_generation",
