@@ -64,6 +64,13 @@ Work like an engineer with tools, not like an autocomplete:
    notifies the right number of times and terminates.
 5. submit. submit re-validates; a rejected submit returns the errors to fix.
 
+Deliver what was asked through its capability, never as returned text: a report, HTML page
+or file → report.write_html (return its path); a message → telegram.send; a device change →
+home.execute. Unknown metric names, API fields or units are discovered with try_capability
+(e.g. list Prometheus metric names) — not a reason to refuse.
+Devices: person/tracker/adapter entries are virtual; their "online" flag does not matter and
+presence.read on a person works. Offline physical devices are skipped (say so in the
+description); refuse only if every device the request depends on is unavailable.
 Vague but common phrasing gets a sensible, stated default instead of a refusal: "à noite /
 durante a noite" = now until 07:00 local; "hoje" = until 23:59 local; "de vez em quando" =
 every 30 min; no duration on a monitor = 24 h. Put the assumption in submit.description.
@@ -113,6 +120,25 @@ _TOOLS: list[dict] = [
             "parameters": {
                 "type": "object",
                 "properties": {"filter": {"type": "string"}},
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "try_capability",
+            "description": (
+                "Run a READ-ONLY capability now to learn real data before building: e.g. "
+                "grafana.query_prometheus to find a metric name "
+                "({query: 'count by (__name__)({__name__=~\".*loss.*\"})'}), web.fetch_json to "
+                "see an API's shape, market.* for a current price. Only grafana.*, web.*, "
+                "market.*, runtime.* and stat.* are allowed; results are truncated."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}, "args": {"type": "object"}},
+                "required": ["name"],
                 "additionalProperties": False,
             },
         },
@@ -279,6 +305,7 @@ class AgentGeneration:
         self.template_definition: dict | None = None
         self.template_name: str | None = None
         self.transcript: list[dict] = []
+        self.probes = 0
 
     # ── tools ────────────────────────────────────────────────────────────────────
     def find_capabilities(self, query: str) -> dict:
@@ -335,6 +362,9 @@ class AgentGeneration:
                 "capabilities": d.get("capabilities"),
                 "online": d.get("online"),
             }
+            if d.get("type") in _VIRTUAL_DEVICE_TYPES:
+                # LoomHarbor reports these as offline; their reads still work.
+                row["online"] = "virtual"
             blob = json.dumps(row, ensure_ascii=False).lower()
             if wanted and not all(w in blob for w in wanted.split()):
                 continue
@@ -362,6 +392,27 @@ class AgentGeneration:
                 "(fields as in state_example). IR remotes: remote.press input {button: <buttons>}."
             ),
         }
+
+    def try_capability(self, name: str, args: dict | None = None) -> dict:
+        from ritesmith.runtime.host_functions import get_capability
+        from ritesmith.runtime.providers.base import invoke_capability
+
+        if name.split(".", 1)[0] not in _PROBE_NAMESPACES or name not in self.registry:
+            return {
+                "ok": False,
+                "error": f"{name} is not a read-only capability; allowed namespaces: "
+                + ", ".join(sorted(_PROBE_NAMESPACES)),
+            }
+        self.probes += 1
+        if self.probes > _MAX_PROBES:
+            return {
+                "ok": False,
+                "error": f"probe budget ({_MAX_PROBES}) used; build with what you know",
+            }
+        cap = get_capability(name)
+        if cap is None:
+            return {"ok": False, "error": f"{name} unavailable"}
+        return {"ok": True, "output": invoke_capability(cap.callable, args or {})}
 
     def use_template(self, name: str, params: dict) -> dict:
         from ritesmith.workflows.templates import build_template, requested_template
@@ -488,6 +539,18 @@ class AgentGeneration:
     async def _dispatch(self, name: str, args: dict) -> Any:
         if name in _ISOLATED:
             return await self._isolated(name, args)
+        if name == "try_capability":
+            try:
+                return await asyncio.wait_for(
+                    asyncio.to_thread(self.try_capability, **args),
+                    timeout=self.settings.generation_agent_tool_timeout_seconds,
+                )
+            except TimeoutError:
+                return {"ok": False, "error": "probe timed out"}
+            except TypeError as exc:
+                return {"error": f"bad arguments for try_capability: {exc}"}
+            except Exception as exc:
+                return {"ok": False, "error": f"{type(exc).__name__}: {str(exc)[:600]}"}
         handler = {
             "find_capabilities": self.find_capabilities,
             "get_contracts": self.get_contracts,
@@ -760,6 +823,11 @@ class AgentGeneration:
         )
 
 
+# Read-only by provider declaration (side_effects none/external_read); llm.* is
+# excluded because it costs model calls.
+_PROBE_NAMESPACES = frozenset({"grafana", "web", "market", "runtime", "stat"})
+_MAX_PROBES = 6
+_VIRTUAL_DEVICE_TYPES = frozenset({"person", "tracker", "adapter"})
 _ISOLATED = ("validate_workflow", "simulate_workflow", "check_script", "compile_workflow")
 _POOL: ProcessPoolExecutor | None = None
 _POOL_LIMIT_MB: int | None = None
