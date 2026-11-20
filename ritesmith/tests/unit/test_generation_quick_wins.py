@@ -226,3 +226,24 @@ async def test_independent_tests_accept_builtin_functions_without_schemas():
     await provider.generate_validation_tests("Sum numbers", {}, {}, profile="transform_only")
     contracts = provider._chat_with_retry.call_args.args[2]
     assert "TOOL CONTRACTS" in contracts
+
+
+def test_bare_workflow_candidate_is_wrapped():
+    # 2026-11-20: gpt-5.5 answered the proposal with the workflow object itself, and the
+    # whole generation failed as "proposal must contain supported artifact candidates".
+    from ritesmith.llm.openai_provider import _unwrap_bare_candidate
+
+    bare = {
+        "definition": {"format": "semantic_plan", "plan": {"steps": []}},
+        "name": "monitor",
+        "description": "d",
+        "required_capabilities": ["casp.resolve"],
+    }
+    assert _unwrap_bare_candidate(dict(bare)) == {"workflow": bare}
+    with_analysis = {**bare, "analysis": {"summary": "s"}}
+    assert _unwrap_bare_candidate(with_analysis) == {
+        "workflow": bare,
+        "analysis": {"summary": "s"},
+    }
+    enveloped = {"workflow": bare, "script": None}
+    assert _unwrap_bare_candidate(enveloped) is enveloped

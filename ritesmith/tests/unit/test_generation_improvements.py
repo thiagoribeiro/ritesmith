@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from collections import Counter
 from time import monotonic
 from unittest.mock import AsyncMock
 
@@ -818,3 +819,26 @@ def test_fixture_oracle_checks_do_not_invent_requirements_for_pure_transformatio
     minimal = case()
     minimal["expected_output"] = {"notified": ["c1"]}
     assert preflight([minimal], crm_tools())[0].functional
+
+
+def test_fixture_match_ignores_string_case_but_not_values():
+    # 2026-10-14: script called coin_price({'currency': 'brl', 'symbol': 'btc'}) while the
+    # independently generated tests declared 'BRL'/'BTC' -> every case "Missing fixture".
+    from types import SimpleNamespace
+
+    from ritesmith.runtime.validation_session import LuauValidationSession
+    from ritesmith.schemas.test_spec import ToolFixture
+
+    session = LuauValidationSession.__new__(LuauValidationSession)
+    session.used = Counter()
+    session.spec = SimpleNamespace(
+        tool_fixtures=[
+            ToolFixture(
+                tool="market.coin_price", args={"currency": "BRL", "symbol": "BTC"}, output=1
+            )
+        ]
+    )
+    assert session._fixture_for("market.coin_price", {"currency": "brl", "symbol": "btc"}) == 0
+    assert session._fixture_for("market.coin_price", {"currency": "brl", "symbol": "eth"}) is None
+    session.used[0] = 1
+    assert session._fixture_for("market.coin_price", {"currency": "BRL", "symbol": "BTC"}) is None
