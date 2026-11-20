@@ -3,7 +3,7 @@
   "info": {
     "title": "RiteSmith API",
     "description": "AI-assisted capability and workflow generation control plane",
-    "version": "0.1.0"
+    "version": "0.2.1"
   },
   "paths": {
     "/health": {
@@ -759,6 +759,51 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans/{plan_id}/transcript": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Plan Transcript",
+        "description": "Tool calls of an agent-mode generation, including generations that failed (422).",
+        "operationId": "get_plan_transcript_plans__plan_id__transcript_get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Plan Transcript Plans  Plan Id  Transcript Get"
                 }
               }
             }

@@ -14,6 +14,9 @@ PRICES = {
     "gpt-4.1-nano": (0.10, 0.025, 0.40),  # retired by OpenAI (404) in 2026-11; kept for old traces
     "gpt-4.1-mini": (0.40, 0.10, 1.60),
     "gpt-5.5": (5.00, 0.50, 30.00),  # standard tier, prompts <= 272K tokens
+    "gpt-5.3-codex": (1.75, 0.175, 14.00),
+    "gpt-6.1-terra": (1.00, 0.05, 5.00),
+    "gpt-6.2-sol": (2.00, 0.10, 10.00),
 }
 
 

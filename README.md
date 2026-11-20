@@ -52,6 +52,11 @@ Once the plan exists:
 - execution is cheap (no LLM cost per step)
 - the system is auditable and reusable
 
+The loop does not disappear; it moves. While RiteSmith **builds** the system, the model
+works like a coding agent: it looks up contracts, inspects devices, validates its plan and
+runs it in an offline simulator, then fixes what failed. That loop is bounded (turns,
+tokens, a deadline) and runs once. The system it produces runs without it.
+
 ---
 
 ## Where RiteSmith fits
@@ -64,7 +69,7 @@ Trama        →  executes it reliably
 
 RiteSmith is the materialization layer.
 
-Given an intent, it searches for existing capabilities, generates new scripts (Luau by default, executed by the embedded [LunarDyson](https://github.com/thiagoribeiro/lunardyson) runtime) and workflow definitions when needed, validates them under guardrails (type check, policy, sandbox tests), registers them in a versioned artifact registry, and delegates durable execution to [Trama](https://trama.run).
+Given an intent, it searches for existing artifacts, builds a verified recipe when the request matches one, and otherwise generates what is missing: a semantic plan that it compiles into a [Trama](https://trama.run) workflow, or a strictly typed Luau script executed by the embedded [LunarDyson](https://github.com/thiagoribeiro/lunardyson) runtime. Everything is validated under guardrails (closed capability contracts, type check, policy, simulation, sandbox tests), registered in a versioned artifact registry, and handed to Trama for durable execution.
 
 The LLM is no longer controlling the system while it runs. It defines the system before it runs.
 
@@ -72,105 +77,185 @@ The LLM is no longer controlling the system while it runs. It defines the system
 
 ## Example: Bitcoin price monitor
 
-**Intent:** "Tell me if Bitcoin drops 3% from its current price."
+**Intent:** "Tell me if Bitcoin drops 3% today."
 
-Without RiteSmith, an agent loops — calling the LLM and market API at every check interval.
+Without RiteSmith, an agent loops: it calls the LLM and the market API at every check.
 
-With RiteSmith:
+With RiteSmith there are three ways to get the workflow, from cheapest to most general:
 
-1. Search artifact registry → finds or generates a `math.percentage_change` Lua capability — deterministic, schema-validated, sandboxed
-2. Generate a Trama workflow (nodes are HTTP calls — Lua capabilities are called via `POST /executions`):
+**1. Reuse.** The registry already has a matching artifact: no generation at all.
+
+**2. Recipe.** The caller (or the generation agent) recognizes a known shape and fills
+its parameters. RiteSmith validates them against a closed model and emits the final Trama
+nodes in code: no model call, under a second.
+
+```json
+POST /plans
+{
+  "intent": "Tell me if Bitcoin drops 3% today",
+  "requested_artifact_types": ["trama_workflow"],
+  "context": {
+    "template": {
+      "name": "price_variation",
+      "params": {"kind": "crypto", "symbol": "BTC", "currency": "USD",
+                 "percent": 3, "direction": "down",
+                 "interval_seconds": 900, "window_seconds": 86400}
+    }
+  }
+}
+```
+
+The recipe captures the base price on the first pass, checks every 15 minutes, notifies
+once when the drop crosses 3%, and ends, either then or at the deadline.
+
+**3. Semantic plan.** For anything without a recipe, the model writes a short plan:
+calls, waits, conditions, parallel branches, bounded repeats. Inputs and outputs are
+checked against each capability's closed contract.
 
 ```json
 {
-  "name": "bitcoin_drop_monitor",
-  "version": "2.0.0",
-  "entrypoint": "fetch_price",
-  "max_iterations": 288,
-  "nodes": [
-    {
-      "id": "fetch_price",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "http://ritesmith:8081/trama/execute",
-          "verb": "POST",
-          "headers": {
-            "Authorization": "Bearer <trama_token>",
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "capability_name": "market.bitcoin_price",
-            "input": {}
-          }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "check"
-    },
-    {
-      "id": "check",
-      "kind": "switch",
-      "cases": [
-        {
-          "name": "dropped_3pct",
-          "when": {"<=": [
-            {"/": [{"var": "nodes.fetch_price.response.body.output.price"}, {"var": "execution.input.initial_price"}]},
-            0.97
-          ]},
-          "target": "notify"
-        },
-        {
-          "name": "loop_exhausted",
-          "when": {">=": [{"var": "execution.loop_count"}, 288]},
-          "target": "end"
-        }
-      ],
-      "default": "sleep"
-    },
-    {
-      "id": "notify",
-      "kind": "task",
-      "action": {
-        "mode": "sync",
-        "request": {
-          "url": "http://ritesmith:8081/trama/execute",
-          "verb": "POST",
-          "headers": {
-            "Authorization": "Bearer <trama_token>",
-            "Content-Type": "application/json"
-          },
-          "body": {
-            "capability_name": "telegram.send",
-            "input": {
-              "text": "BTC dropped 3%+ — current: {{ nodes.fetch_price.response.body.output.price }}"
-            }
-          }
-        },
-        "successStatusCodes": [200]
-      },
-      "next": "end"
-    },
-    {"id": "sleep", "kind": "sleep", "durationSeconds": 300, "next": "fetch_price"}
+  "version": "workflow-plan-v1",
+  "name": "btc_morning_digest",
+  "steps": [
+    {"kind": "repeat", "id": "daily", "interval_seconds": 86400, "count": 7,
+     "steps": [
+       {"kind": "call", "id": "price", "capability_name": "market.coin_price",
+        "args": {"symbol": "btc", "currency": "usd"}},
+       {"kind": "call", "id": "notify", "capability_name": "telegram.send",
+        "args": {"text": {"type": "template",
+                          "parts": ["BTC now: ", {"ref": "price", "path": "price"}]}}}
+     ]}
   ]
 }
 ```
 
-3. Validate the Lua capability and the workflow — schemas, policy, sandbox
-4. Register both artifacts — reused on every future similar request
-5. Delegate to Trama — the LLM is no longer in the loop
+RiteSmith compiles the plan into Trama nodes in code: the counters, joins, first-pass seeds,
+continuation blocks and typed JSON references. The model never writes `switch`,
+`max_iterations` or loop bookkeeping, which is where hand-written graphs used to break.
+The result is registered and reused by later similar requests, and Trama runs it without
+calling the LLM again.
 
-The `math.percentage_change` Lua script:
+---
 
-```lua
-function run(input, context)
-  local initial = input.initial_value
-  local current = input.current_value
-  if initial == 0 then error("initial_value cannot be zero") end
-  return { percentage_change = ((current - initial) / initial) * 100 }
-end
-```
+## How generation works
+
+`POST /plans` and `POST /generate` resolve a request in this order:
+
+1. **Reuse.** Full-text recall over the registry, plus an LLM judge when a candidate is
+   close. `reuse_policy: force_new` skips it.
+2. **Recipe.** When the request matches a recipe in `context.template`, the recipe is
+   built in code (see [Recipes](#recipes)).
+3. **Generation.** `RITESMITH_GENERATION_MODE` selects one of two generators. Both
+   return the same proposal, so the rest of the pipeline (certification, policy,
+   approval, persistence) does not change:
+   - `agent`: the tool-using loop described below. It is the better generator;
+     see the measurements.
+   - `proposal` (default): a single structured answer from the model, validated
+     afterwards and repaired with one extra call when it fails.
+
+### Agent mode
+
+The model works like a coding agent with a bounded budget: it finds out what it needs, checks its own
+work, and submits only what passes. The tools it gets are:
+
+| Tool | What it does |
+|---|---|
+| `find_capabilities`, `get_contracts` | Searches the catalog and returns the closed input/output schemas, instead of sending the whole catalog in the prompt |
+| `list_devices` | Lists home devices: alias, room, capabilities, a state example, IR buttons, virtual devices (people, trackers) |
+| `try_capability` | Runs a **read-only** capability now (`grafana`, `web`, `market`, `runtime`, `stat`) to learn real metric names, API shapes or prices; at most 6 probes |
+| `use_template` | Builds a recipe; the result is final |
+| `validate_workflow` | Compiles a semantic plan and runs every pipeline validator |
+| `simulate_workflow` | Runs the compiled workflow offline with a virtual clock and scripted responses, and reports calls per capability, elapsed time and termination |
+| `check_script` | Type-checks a Luau script, applies the pipeline's static gates (profile tools, forbidden tokens, size) and runs it against the model's own cases |
+| `submit` | Finishes with a workflow, a script, a recipe or a refusal; it re-validates and returns errors as a tool result |
+
+Several rules are part of the prompt:
+- Contracts are closed.
+- Every loop has an explicit end.
+- Each real event produces one notification, not one per polling pass.
+- Deliverables go through their capability (a report through `report.write_html`, a
+  message through `telegram.send`).
+- Vague phrasing such as "tonight" gets a stated default, not a refusal.
+- When a request matches several devices of the same kind and does not name one, the
+  agent refuses and lists the options, because a wrong physical action is worse than a
+  question.
+
+Design choices:
+- **Cache-friendly prompt.** The system prompt and tool definitions are identical on every
+  request; only the request comes last. From the second turn on, about 84% of input
+  tokens are cached.
+- **Responses API** with `previous_response_id`, so each turn sends only the new tool
+  results.
+- **Bounded.** The loop is limited by `RITESMITH_GENERATION_AGENT_MAX_TURNS`, by output
+  tokens per turn, and by `RITESMITH_GENERATION_DEADLINE_SECONDS`.
+- **Isolated tools.** Validation, compilation, simulation and script checks run in a
+  separate process with a memory limit and a timeout
+  (`RITESMITH_GENERATION_AGENT_TOOL_MEMORY_MB`, `..._TOOL_TIMEOUT_SECONDS`). A runaway
+  plan costs one tool error, not the server.
+- **Transcript.** Every turn (tool, arguments, result, tokens, duration) is stored as an
+  audit event. `GET /plans/{plan_id}/transcript` returns it, including for failed
+  generations, whose 422 carries the `plan_id`.
+- **Local time.** `RITESMITH_LOCAL_TIMEZONE` gives the model the current local time, so
+  "until midnight" means the user's midnight.
+
+### Measured
+
+These are 23 requests from a private home-automation deployment: device actions,
+monitors, presence, reports, computation, web lookups, and edge cases that must be
+refused. Each was run once with the same server and capabilities. Checks are static: an
+artifact was produced, it has the right type, it uses the required capabilities, and it
+uses none of the forbidden ones. The judge is a separate LLM that scores 1–5 whether the
+artifact does what was asked.
+
+| | Proposal mode, gpt-5.5 | Agent mode, gpt-6.1-terra |
+|---|---|---|
+| Passed checks | 10 / 23 | **22 / 23** |
+| Judge score (1–5) | 1.82 | **4.35** |
+| Latency p50 / p90 | 55 s / 109 s | **21 s / 52 s** |
+| Input tokens per request (cached) | 13.4k (13%) | 37.9k (84%) |
+| Output tokens per request | 3.9k | **1.4k** |
+| Cost for the 23 requests | US$ 3.73 | **US$ 0.34** |
+
+The agent reads more tokens than the single-shot proposal, but most of them are cached,
+and it writes far fewer. It also ran on a model that costs a fifth as much per token.
+
+These results are not an independent evaluation:
+- The agent's prompt rules were tuned on failures from this same subset.
+- With gpt-6.2-sol instead of terra, the agent scored 21/23 and 3.65 for US$ 1.40.
+
+Recipes are not in this table; they use no model at all.
+
+The 0.2.1 proposal-mode scorecard (51 tasks, gpt-5-mini) is in
+[Generation latency](#generation-latency).
+
+---
+
+## Recipes
+
+A recipe is a verified workflow shape. The caller sends
+`context.template = {"name": ..., "params": {...}}` with `POST /plans` (or
+`POST /generate/trama-workflow`), and RiteSmith works through these steps:
+1. It validates the params against a closed model, so unknown keys are rejected.
+2. It emits the final Trama nodes in code.
+3. It skips artifact reuse for that request.
+
+Generation is deterministic, takes under a second and uses no tokens. In agent mode,
+the model calls the same recipes through `use_template` when a request fits one.
+
+Every polling recipe ends on its own, after its single action or at a wall-clock
+deadline fixed when the plan is built. A missing, failed or malformed reading never
+counts as a match.
+
+| Recipe | Use | Main params |
+|---|---|---|
+| `threshold_action` | "When a device reading crosses a limit, act and/or notify once." Also covers boolean or text states such as motion, door or presence | `read{capability,target,input}`, `metric_path`, `op` (`<` `<=` `>` `>=` `==` `!=`), `value`, `action?`, `notify?` (`{value}` = the reading), `timeout_notify?`, `interval_seconds`, `window_seconds` (≤ 14 days), `start_delay_seconds` |
+| `price_variation` | "Tell me if a coin or currency moves N%." The base price is captured on the first pass | `kind` (`crypto`/`fiat`), `symbol`, `currency`, `percent`, `direction` (`up`/`down`/`both`), `interval_seconds`, `window_seconds`, `label?` |
+| `presence_change` | "When someone arrives, or everyone leaves, act and/or notify once" | `people[1..4]`, `event` (`any_home`/`all_away`), `require_transition` (default true: first see the opposite state, so "when X arrives" waits for a real arrival), `delay_seconds`, `actions[≤6]`, `notify?`, `interval_seconds`, `window_seconds` |
+| `presence_reminder` | A one-shot text reminder on arrival (`context.presence_reminder` is still accepted) | `person_alias`, `message`, `channel: "telegram"` |
+
+Device recipes read and act through `home.execute` (LoomHarbor), and notifications go
+through `telegram.send`. The plan is refused if the required providers are not
+configured.
 
 ---
 
@@ -178,7 +263,7 @@ end
 
 | | Agent loop | RiteSmith |
 |---|---|---|
-| LLM cost | every step | once (generation + repair) |
+| LLM cost | every step | once, at generation (a recipe needs none) |
 | Behavior | drifts across runs | consistent — same artifact executes |
 | Audit trail | prompt context | versioned artifacts + execution history |
 | Reuse | none — regenerated each time | registry search before generation |
@@ -203,6 +288,8 @@ end
 | **Capability** | A named, versioned, schema-validated script (`luau_script` by default, `lua_script` legacy) with input/output contracts, risk level, and side-effect declaration |
 | **Artifact** | A stored capability or workflow definition — versioned, searchable, reusable |
 | **Plan** | A proposed set of capabilities + workflow generated from an intent, with optional approval gate |
+| **Semantic plan** | What the model writes for a workflow: calls, waits, conditions, parallel branches, bounded repeats. Compiled to Trama in code |
+| **Recipe** | A verified workflow shape (threshold, price swing, presence change, arrival reminder) built from validated parameters without a model call |
 | **Execution** | A durable record of running an artifact — status, input, output, duration, audit metadata |
 
 ---
@@ -226,6 +313,7 @@ Providers are the single source of truth for both surfaces: Lua host functions (
 | `casp` | device/resource control (query/resolve/execute) | `RITESMITH_CASP_PROVIDERS` |
 | `home` | LoomHarbor device control, findtag zones | `RITESMITH_LOOMHARBOR_URL` |
 | `stat` | running min/max, counters (pure) | — |
+| `llm` | `llm.evaluate`: judge or summarize text inside a workflow | `OPENAI_API_KEY` |
 
 Active providers are registered in the artifact registry at startup and returned by `GET /providers`.
 
@@ -261,9 +349,12 @@ flowchart LR
   MS -->|domain tools| P[Tool Providers]
   MS -->|meta-tools| RS
   RS --> REG[Artifact Registry\nPostgreSQL · FTS]
-  RS --> DISP[GenerationDispatcher\nintent analysis → route]
-  DISP --> GEN[LLM Generation Loop\nLua · Trama workflows]
-  GEN --> VAL[Validation + Repair\ntype check · policy · sandbox]
+  RS --> REC[Recipes\nbuilt in code]
+  RS --> GEN[Generation\nagent loop or single proposal]
+  GEN -->|tools| CHK[Contracts · devices · validate\nsimulate · check_script\nisolated process]
+  GEN --> CMP[Semantic plan compiler]
+  REC --> VAL[Certification + Policy]
+  CMP --> VAL
   VAL --> REG
   REG --> LUA[Script Runtime\nLunarDyson/Luau · lupa/Lua legacy]
   REG --> TR[Trama\ndurable execution]
@@ -281,7 +372,12 @@ flowchart LR
 POST /generate
 ```
 
-Accepts `intent` + optional `save`, `context`, `constraints`, `input_schema`, `output_schema`. Runs intent analysis to decide whether to produce a script (Luau/Lua) or a Trama workflow, then runs the full generate → validate → repair → register loop and returns the validated artifact.
+```http
+POST /generate/lua
+POST /generate/trama-workflow
+```
+
+`POST /generate` accepts `intent` + optional `save`, `context`, `constraints`, `input_schema`, `output_schema`. Runs intent analysis to decide whether to produce a script (Luau/Lua) or a Trama workflow, then runs the full generate → validate → repair → register loop and returns the validated artifact.
 
 ```json
 {
@@ -299,10 +395,18 @@ Accepts `intent` + optional `save`, `context`, `constraints`, `input_schema`, `o
 POST /plans
 POST /plans/{plan_id}/approve
 POST /plans/{plan_id}/reject
+POST /plans/{plan_id}/cancel
+POST /plans/{plan_id}/complete
+POST /plans/{plan_id}/artifacts
 GET  /plans/{plan_id}
+GET  /plans/{plan_id}/transcript
 ```
 
-`POST /plans` is the high-level entry point. Accepts `intent` + `constraints`. Searches, generates, validates, and returns a plan with required capabilities and workflow definition. Optionally gates on approval.
+`POST /plans` is the high-level entry point. It accepts `intent`, plus optional
+`requested_artifact_types`, `reuse_policy`, `constraints`, `context` and `callback_url`.
+It searches, generates and validates, then returns a plan with its required capabilities
+and workflow definition, optionally behind an approval gate. `context.template` selects a
+[recipe](#recipes). In agent mode, `/transcript` returns every generation turn.
 
 ### Artifacts
 
@@ -369,7 +473,10 @@ Response: `{"output": {...}}`
 
 ```http
 GET /capabilities
+GET /capabilities/{capability_id}
 GET /providers
+GET /providers/{namespace}
+POST /search
 POST /validate
 POST /policies/evaluate
 POST /memory/search
@@ -452,7 +559,7 @@ sandbox/auth hardening tracked in the roadmap.
 
 ## Workflow contract
 
-RiteSmith generates [Trama v2](https://trama.run) workflow definitions. Each step is an HTTP call — there is no intermediate abstraction.
+The model does not write this format: it writes a [semantic plan](#example-bitcoin-price-monitor), and the compiler (or a recipe) emits the Trama definition below. Compiled workflows use Trama's mandatory typed JSON references and require **Trama 3.0.1** or later. Each step is an HTTP call; there is no intermediate abstraction.
 
 Node kinds: `task` (HTTP call), `switch` (JSON Logic branch), `sleep` (time pause), and `split`/`join` (parallel fan-out: a split runs its branches as independent child executions; the join barriers on all of them and the parent reads the aggregated results via `nodes.<join>.response.body.branches`).
 
@@ -495,9 +602,9 @@ Node kinds: `task` (HTTP call), `switch` (JSON Logic branch), `sleep` (time paus
 
 Template variables: `execution.input.<field>`, `nodes.<id>.response.body.<field>`, `runtime.callback.url`.
 
-To call a RiteSmith Lua capability from a workflow step, use `POST /executions` as the task URL with `{"artifact_id": "...", "input": {...}}` as the body.
+Workflow steps call RiteSmith through `POST /trama/execute` with `{"capability_name": ..., "input": ...}` or `{"artifact_id": ..., "input": ...}` for a registered script.
 
-Use `max_iterations` at the workflow root for polling loops (bypasses the cycle detector).
+`max_iterations` at the workflow root allows back-edges for polling loops; it is a safety cap, not a poll count.
 
 ---
 
@@ -562,13 +669,22 @@ ssh user@host "cd ~/ritesmith/deploy && docker compose build && docker compose u
 |---|---|---|
 | `RITESMITH_DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection |
 | `OPENAI_API_KEY` | — | Required for generation |
-| `RITESMITH_LLM_MODEL` | `gpt-5-mini` | Generation model |
+| `RITESMITH_LLM_MODEL` | `gpt-5-mini` | Generation model (fallback for the two below) |
+| `RITESMITH_LLM_WORKFLOW_MODEL` / `RITESMITH_LLM_SCRIPT_MODEL` | — | Model per artifact type; agent mode uses the workflow model |
+| `RITESMITH_LLM_REASONING_EFFORT` | `low` | Reasoning effort; `..._WORKFLOW_EFFORT` / `..._SCRIPT_EFFORT` override it |
 | `RITESMITH_LLM_MODEL_FAST` | `gpt-4.1-mini` | Intent analysis / fast calls |
+| `RITESMITH_GENERATION_MODE` | `proposal` | `agent` turns on the tool-using generation loop |
+| `RITESMITH_GENERATION_DEADLINE_SECONDS` | `60` | Wall-clock budget per generation, repairs included (agent mode needs more, e.g. 240) |
+| `RITESMITH_GENERATION_AGENT_MAX_TURNS` | `12` | Agent turns before it must submit |
+| `RITESMITH_GENERATION_AGENT_TURN_TOKENS` | `8000` | Output tokens per agent turn |
+| `RITESMITH_GENERATION_AGENT_ISOLATE_TOOLS` | `true` | Run validate/simulate/check_script in a separate process |
+| `RITESMITH_GENERATION_AGENT_TOOL_MEMORY_MB` / `..._TOOL_TIMEOUT_SECONDS` | `512` / `30` | Memory and time limit of that process |
+| `RITESMITH_LOCAL_TIMEZONE` | `UTC` | The user's time zone, for "tonight" and "until midnight" |
 | `RITESMITH_SCRIPT_LANGUAGE` | `luau` | Language for new scripts: `luau` (LunarDyson) or `lua` (lupa); falls back to `lua` if the lunardyson package is missing |
 | `RITESMITH_LUA_TIMEOUT_MS` | `1000` | Script VM timeout (both runtimes) |
 | `RITESMITH_LUA_MEMORY_LIMIT_MB` | `32` | Script memory budget |
 | `RITESMITH_LUA_SANDBOX_WORKERS` | `8` | Parallel script workers |
-| `RITESMITH_GENERATION_MAX_ATTEMPTS` | `5` | Repair loop limit |
+| `RITESMITH_GENERATION_MAX_ATTEMPTS` | `2` | Repair loop limit (proposal mode) |
 | `RITESMITH_POLICY_DEFAULT` | `deny` | Default policy decision |
 | `RITESMITH_WORKFLOW_ENGINE_URL` | — | Trama endpoint for delegation |
 | `RITESMITH_PUBLIC_URL` | `http://ritesmith:8081` | RiteSmith's public URL (embedded in generated workflows) |
@@ -580,6 +696,7 @@ ssh user@host "cd ~/ritesmith/deploy && docker compose build && docker compose u
 | `RITESMITH_GOOGLE_CALENDAR_IDS` | — | `"personal:primary,family:id@..."` |
 | `RITESMITH_DUCKDB_PATH` | — | DuckDB file path |
 | `RITESMITH_OBSIDIAN_VAULT_PATH` | — | Obsidian vault root |
+| `RITESMITH_LOOMHARBOR_URL` | — | LoomHarbor endpoint (`home` provider, devices for agent mode) |
 
 All variables use the `RITESMITH_` prefix (loaded from `.env` via pydantic-settings).
 
@@ -607,7 +724,7 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 
 ## Roadmap
 
-### Implemented (V0)
+### Implemented
 
 - FastAPI HTTP API
 - PostgreSQL artifact registry with FTS (`tsvector` + GIN index) and versioning
@@ -625,7 +742,7 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 - Luau script runtime (LunarDyson) — default; type-checked before execution, with VM time / memory / tool / effect budgets; Lua (lupa) kept for legacy artifacts
 - Server-issued approval tokens (HMAC per artifact version) gating policy-restricted executions
 - Split/join parallel nodes in generated Trama workflows
-- Tool providers (13 namespaces) — dual Lua / MCP surface
+- Tool providers (14 namespaces) — dual Lua / MCP surface
 - MCP server (`mcp-server/`)
 - Alembic migrations
 - Prometheus metrics (HTTP, LLM, generation, execution, audit) + Grafana dashboard
@@ -636,9 +753,15 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 - Per-operation LLM `max_tokens` and `temperature` tuning
 - Graceful shutdown (drains Lua executor, disposes DB pool)
 - HTTP connection pooling for all host function providers
+- Semantic workflow plans compiled to Trama (counters, joins, continuation in code)
+- Closed capability contracts, enforced at generation and at `/trama/execute`
+- Recipes built without a model call: `threshold_action`, `price_variation`, `presence_change`, `presence_reminder`
+- Agent-mode generation: tool-using loop with contracts, devices, read-only probes, validation, offline simulation and script checks; cacheable prompt; isolated tool process; per-plan transcript
 
 ### Next
 
+- Learn from what worked: offer plans that executed successfully as examples through a `find_similar` tool
+- Make agent mode the default once it is measured on the full corpus
 - Host-side security hardening — API authentication, compile-only `/validate`, DNS-resolving SSRF guard
 - Embeddings-based artifact search
 - Provider/tool manifests UI
@@ -672,31 +795,11 @@ per-resource access control.
 
 ---
 
-## License
-
-Apache License 2.0
-
-## One-shot arrival reminders
-
-`POST /plans` can select `requested_artifact_types: ["trama_workflow"]` and
-provide `context.presence_reminder` with `person_alias`, `message`, and
-`channel: "telegram"`. Workflow generation uses a dedicated recipe and skips
-artifact reuse for this contract. The same context is accepted by
-`POST /generate/trama-workflow` with `save: false` for validation.
-
-The recipe reads LoomHarbor through `home.execute` with `presence.read`, checks
-`output.success` and the boolean `output.result.present`, waits for departure
-first if the person is already home, then waits for arrival, calls
-`telegram.send` once, and ends. Missing, failed, or non-boolean readings do not
-count as departure or arrival. Polls sleep for 30 seconds in Trama and do not
-call the LLM. The `max_iterations` metadata permits back-edges in validation;
-there is no twenty-poll completion counter. Existing plan cancellation,
-completion callbacks, and persistence remain in use.
-
-This contract requires the configured home and Telegram providers. It does
-not add GPS tracking, a second phone scanner, or an independent scheduler.
-
 ## Generation latency
+
+This section describes proposal mode, the single-answer generator; agent mode is
+described under [How generation works](#how-generation-works).
+
 
 Generation uses a process-scoped OpenAI client, configurable script/workflow
 models and effort, locally selected Trama examples, and an internal typed graph
@@ -760,8 +863,13 @@ reject unusable artifacts with diagnostics and preserve strict certification.
 JSON with explicit initial state and retained continuation work, requiring the
 compatible engine revision. The [final offline review](benchmarks/generation_latency/results/integration-review-20261009/RESULTS.md)
 records 992 passing tests; it does not establish LLM accuracy or latency/cost targets.
-Production remains on the restored image; merging these changes does not deploy them.
 
 For the owner's direct r2d2 update and the executable image/configuration rollback,
 see [generation deployment on r2d2](docs/generation-deployment-r2d2.md). The rollback
 retains current application data; a separate database backup is available for recovery.
+
+---
+
+## License
+
+Apache License 2.0
