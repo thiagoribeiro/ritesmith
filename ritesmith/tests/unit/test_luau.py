@@ -435,15 +435,102 @@ async def test_wall_clock_abandons_slow_execution(monkeypatch):
     from ritesmith.config import get_settings
     from ritesmith.runtime import luau as L
 
-    def slow_run(*args, **kwargs):
-        import time as _t
+    async def slow_run(*args, **kwargs):
+        import asyncio as _a
 
-        _t.sleep(0.5)
+        await _a.sleep(0.5)
         return ({"ok": 1}, None, False, 0)
 
-    monkeypatch.setattr(L, "run_luau", slow_run)
+    monkeypatch.setattr(L, "run_luau_async", slow_run)
     rt = L.LuauScriptRuntime(get_settings())
     rt.wall_clock_ms = 100
     result = await rt.execute("function run() return {} end", {}, {})
     assert result.timed_out
     assert "wall-clock" in result.error
+
+
+# ---------------------------------------------------------------------------
+# Async step driver: tool waits do not hold sandbox threads
+# ---------------------------------------------------------------------------
+
+SLUG_SOURCE = "function run(input) return { slug = tools.text.slugify({ s = input.t }) } end"
+
+
+@pytest.fixture
+def slow_slugify(monkeypatch):
+    """text.slugify that blocks like a network call; a fresh sandbox pool of 2 threads."""
+    import time as _t
+
+    from ritesmith.runtime import luau as L
+
+    monkeypatch.setenv("RITESMITH_LUA_SANDBOX_WORKERS", "2")
+    get_settings.cache_clear()
+    L.shutdown_executor()
+    fn_def = L.luau_tools_for_profile("transform_only")["text.slugify"]
+    calls = []
+
+    def slow(s):
+        calls.append(s)
+        _t.sleep(0.2)
+        return s.lower()
+
+    monkeypatch.setattr(fn_def, "callable", slow)
+    yield calls
+    L.shutdown_executor()
+    get_settings.cache_clear()
+
+
+async def test_async_driver_overlaps_tool_waits(slow_slugify):
+    import asyncio as _a
+    import time as _t
+
+    rt = luau.LuauScriptRuntime(get_settings())
+    started = _t.perf_counter()
+    results = await _a.gather(
+        *(rt.execute(SLUG_SOURCE, {"t": f"A{i}"}, {}, timeout_ms=1001) for i in range(16))
+    )
+    elapsed = _t.perf_counter() - started
+    assert [r.output for r in results] == [{"slug": f"a{i}"} for i in range(16)]
+    # Holding a sandbox thread per script would take 16 x 0.2 s / 2 threads = 1.6 s.
+    assert elapsed < 1.0, elapsed
+
+
+async def test_async_driver_tool_timeout_is_a_timeout(slow_slugify, monkeypatch):
+    monkeypatch.setenv("RITESMITH_LUAU_TOOL_TIMEOUT_MS", "50")
+    get_settings.cache_clear()
+    result = await luau.LuauScriptRuntime(get_settings()).execute(
+        SLUG_SOURCE, {"t": "x"}, {}, timeout_ms=1002
+    )
+    assert result.timed_out
+    assert "Tool call timed out" in result.error
+
+
+async def test_async_driver_cancellation_waits_for_the_vm_step(slow_slugify):
+    """The wall clock fires while a VM step runs: the execution is freed only after the
+    step ends, and the runtime is reusable afterwards."""
+    busy = "function run() local x = 0 for i = 1, 3e7 do x = x + i % 3 end return { x = x } end"
+    rt = luau.LuauScriptRuntime(get_settings())
+    rt.wall_clock_ms = 30
+    result = await rt.execute(busy, {}, {}, timeout_ms=1003)
+    assert result.timed_out and "wall-clock" in result.error
+    rt.wall_clock_ms = 0
+    import asyncio as _a
+
+    await _a.sleep(1.2)  # let the abandoned step hit its CPU deadline and release
+    again = await rt.execute(SLUG_SOURCE, {"t": "Ok"}, {}, timeout_ms=1003)
+    assert again.output == {"slug": "ok"}
+
+
+async def test_async_driver_non_json_tool_result_is_a_tool_error(slow_slugify, monkeypatch):
+    from ritesmith.runtime import luau as L
+
+    fn_def = L.luau_tools_for_profile("transform_only")["text.slugify"]
+    monkeypatch.setattr(fn_def, "callable", lambda s: object())
+    source = (
+        "function run(input) local ok, err = pcall(tools.text.slugify, { s = 'x' })"
+        " return { ok = ok, err = tostring(err) } end"
+    )
+    result = await L.LuauScriptRuntime(get_settings()).execute(source, {}, {}, timeout_ms=1004)
+    assert result.error is None
+    assert result.output["ok"] is False
+    assert "not JSON-serializable" in result.output["err"]

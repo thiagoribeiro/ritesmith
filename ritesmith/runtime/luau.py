@@ -24,6 +24,7 @@ import logging
 import re
 import threading
 import time
+import weakref
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeout
@@ -361,7 +362,7 @@ def _get_tool_executor() -> ThreadPoolExecutor:
 
 
 def shutdown_executor() -> None:
-    global _executor, _tool_executor
+    global _executor, _tool_executor, _io_executor
     with _executor_lock:
         if _executor is not None:
             _executor.shutdown(wait=False)
@@ -370,6 +371,10 @@ def shutdown_executor() -> None:
         if _tool_executor is not None:
             _tool_executor.shutdown(wait=False)
             _tool_executor = None
+    with _io_executor_lock:
+        if _io_executor is not None:
+            _io_executor.shutdown(wait=False)
+            _io_executor = None
 
 
 def _pooled_runtime(profile: str, cpu_time_ms: int, memory_mb: float):
@@ -391,7 +396,12 @@ def run_luau(
 ) -> tuple[dict | None, str | None, bool, int]:
     """Runs a script synchronously. Returns (output, error, timed_out, peak_memory_bytes)."""
     rt = _pooled_runtime(profile, timeout_ms, memory_mb)
-    result = rt.execute(content, input_data, context)
+    return _map_result(rt.execute(content, input_data, context), timeout_ms)
+
+
+def _map_result(result, timeout_ms: int) -> tuple[dict | None, str | None, bool, int]:
+    """lunardyson.Result → (output, error, timed_out, peak_memory_bytes) with RiteSmith's
+    error prefixes, which the ExecutionService self-heal keys on."""
     peak = result.stats.peak_memory_bytes
     if result.ok:
         return result.output, None, False, peak
@@ -409,6 +419,146 @@ def run_luau(
         return None, message, False, peak
     # runtime, memory, unknown_tool, tool/effect budget: the script itself misbehaved
     return None, f"Runtime error: {message}", False, peak
+
+
+# ── Async step driver ───────────────────────────────────────────────────────────────
+# A script spends almost all of its wall time waiting for tools (HTTP, Telegram, devices),
+# and the VM itself runs for microseconds to milliseconds. Running a whole execution on a
+# sandbox thread pinned that thread for the full wait, so the pool size capped throughput
+# (8 threads ≈ 26 scripts/s for 3 × 100 ms tool calls, with the CPU idle). Here the
+# execution is driven through LunarDyson's step API: VM steps run on the sandbox pool, tool
+# calls run on a separate I/O pool and are awaited, and no thread is held while a script
+# waits. Concurrency is bounded by luau_max_concurrency (in-flight executions).
+
+
+class _RuntimePool:
+    """Sealed runtimes per (profile, timeout, memory), reused across executions. A runtime
+    runs one execution at a time, so each in-flight execution takes one from the free list."""
+
+    def __init__(self, max_concurrency: int):
+        self.slots = asyncio.Semaphore(max_concurrency)
+        self.free: dict[tuple, list] = {}
+
+    def take(self, key: tuple):
+        bucket = self.free.get(key)
+        return bucket.pop() if bucket else None
+
+    def give(self, key: tuple, rt) -> None:
+        self.free.setdefault(key, []).append(rt)
+
+
+_pools: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, _RuntimePool]" = (
+    weakref.WeakKeyDictionary()
+)
+_io_executor: ThreadPoolExecutor | None = None
+_io_executor_lock = threading.Lock()
+
+
+def _pool_for(loop: asyncio.AbstractEventLoop) -> _RuntimePool:
+    pool = _pools.get(loop)
+    if pool is None:
+        pool = _pools[loop] = _RuntimePool(get_settings().luau_max_concurrency)
+    return pool
+
+
+def _get_io_executor() -> ThreadPoolExecutor:
+    """Threads that run (blocking) provider calls for the async driver. They sit in I/O
+    waits, so there can be as many as there are in-flight executions."""
+    global _io_executor
+    with _io_executor_lock:
+        if _io_executor is None:
+            _io_executor = ThreadPoolExecutor(
+                max_workers=get_settings().luau_max_concurrency, thread_name_prefix="luau-io"
+            )
+        return _io_executor
+
+
+def _build_driven_runtime(profile: str, cpu_time_ms: int, memory_mb: float):
+    rt = build_runtime(profile, cpu_time_ms, memory_mb)
+    rt.rs_tools = {
+        name: (fn_def.callable, tool_signature(name, fn_def)[1])
+        for name, fn_def in luau_tools_for_profile(profile).items()
+    }
+    return rt
+
+
+def _resume(ex, value) -> None:
+    try:
+        ex.resume(value)
+    except (TypeError, ValueError) as e:  # same contract as lunardyson.Runtime.execute
+        ex.resume_error(f"tool result is not JSON-serializable: {e}")
+
+
+async def _call_tool(rt, call, loop) -> tuple[bool, object]:
+    """Runs one tool call off the event loop. Returns (ok, value_or_error_message)."""
+    fn, positional = rt.rs_tools[call.tool]
+    args = call.args
+    if args is None or args == []:
+        args = {}
+    if not isinstance(args, dict):
+        return False, (
+            "TypeError: tools take a single table of named arguments, e.g. tools.ns.fn({ x = 1 })"
+        )
+    timeout_ms = get_settings().luau_tool_timeout_ms
+    fut = loop.run_in_executor(_get_io_executor(), _invoke, fn, positional, args)
+    try:
+        if timeout_ms and timeout_ms > 0:
+            return True, await asyncio.wait_for(fut, timeout_ms / 1000)
+        return True, await fut
+    except TimeoutError:
+        # The provider thread cannot be killed; it returns on its own (httpx timeouts).
+        return False, f"TimeoutError: {_TOOL_TIMEOUT_SENTINEL}: exceeded {timeout_ms}ms"
+    except Exception as e:  # surfaces inside the program as a tool error
+        return False, f"{type(e).__name__}: {e}"
+
+
+async def run_luau_async(
+    content: str,
+    input_data: dict,
+    context: dict,
+    profile: str,
+    timeout_ms: int,
+    memory_mb: float,
+) -> tuple[dict | None, str | None, bool, int]:
+    """Async equivalent of run_luau. Returns (output, error, timed_out, peak_memory_bytes)."""
+    loop = asyncio.get_running_loop()
+    pool = _pool_for(loop)
+    sandbox = _get_executor()
+    key = (profile, timeout_ms, memory_mb)
+    async with pool.slots:
+        rt = pool.take(key)
+        if rt is None:
+            rt = await loop.run_in_executor(sandbox, _build_driven_runtime, *key)
+        ex = None
+        step = None
+        try:
+            # shield: cancelling this task must not mark a running VM step as done, or the
+            # cleanup below would free the execution under the thread still using it.
+            step = loop.run_in_executor(sandbox, rt.start, content, input_data, context)
+            ex = await asyncio.shield(step)
+            while ex.status == "pending_tool":
+                ok, value = await _call_tool(rt, ex.pending(), loop)
+                if ok:
+                    step = loop.run_in_executor(sandbox, _resume, ex, value)
+                else:
+                    step = loop.run_in_executor(sandbox, ex.resume_error, value)
+                await asyncio.shield(step)
+            return _map_result(ex.result(), timeout_ms)
+        finally:
+            # On cancellation (e.g. the wall-clock backstop) a VM step may still be running
+            # on its thread: free the execution and return the runtime only once it ends.
+            def release(_=None, ex=ex):
+                # The start step may have produced the execution after we stopped waiting.
+                if ex is None and step is not None and step.exception() is None:
+                    ex = step.result()
+                if ex is not None:
+                    ex.close()
+                pool.give(key, rt)
+
+            if step is not None and not step.done():
+                step.add_done_callback(release)
+            else:
+                release()
 
 
 def normalize_output(value, schema):
@@ -449,20 +599,10 @@ class LuauScriptRuntime:
     ) -> RuntimeResult:
         timeout = timeout_ms if timeout_ms is not None else self.default_timeout_ms
         start = time.monotonic()
-        loop = asyncio.get_running_loop()
-        fut = loop.run_in_executor(
-            _get_executor(),
-            run_luau,
-            content,
-            input_data,
-            context,
-            profile,
-            timeout,
-            self.memory_limit_mb,
-        )
-        # Wall-clock backstop: if a tool (or chain of tools) blocks past the cap, stop
-        # waiting and return a timeout. The sandbox thread is abandoned, not killed —
-        # it keeps running until its own tool/VM deadlines release it.
+        fut = run_luau_async(content, input_data, context, profile, timeout, self.memory_limit_mb)
+        # Wall-clock backstop: past the cap, stop waiting and return a timeout. A VM step in
+        # flight finishes on its own thread (bounded by the CPU deadline) before its
+        # execution is freed; a blocked provider thread returns on its own timeouts.
         if self.wall_clock_ms and self.wall_clock_ms > 0:
             try:
                 output, error, timed_out, peak = await asyncio.wait_for(
