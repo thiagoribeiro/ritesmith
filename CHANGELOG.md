@@ -6,7 +6,73 @@ All notable changes to RiteSmith. The format loosely follows
 
 ## [Unreleased]
 
+### Added
+- **Agent-mode generation** (`RITESMITH_GENERATION_MODE=agent`; the default stays
+  `proposal`).
+  - The model works in a bounded tool loop over the Responses API.
+  - It finds capabilities and their closed contracts, and lists devices with state
+    examples, IR buttons and virtual people/trackers.
+  - It probes read-only capabilities with `try_capability` (at most 6).
+  - It builds recipes, validates semantic plans, simulates them offline with a virtual
+    clock, and checks Luau scripts against its own cases.
+  - It submits only what re-validates.
+  - Instructions and tool definitions are request-independent, so the prompt cache
+    serves them; about 84% of input tokens are cached.
+  - New settings: `generation_agent_max_turns` (12), `generation_agent_turn_tokens`
+    (8000), `local_timezone` (UTC).
+
+  On a 23-request home-automation subset:
+
+  | Run | Checks passed | Judge (1–5) | p50 | Total cost |
+  |---|---|---|---|---|
+  | Proposal mode, gpt-5.5 | 10/23 | 1.82 | 55 s | US$ 3.73 |
+  | Agent mode, gpt-6.1-terra | 22/23 | 4.35 | 21 s | US$ 0.34 |
+
+  The prompt rules were tuned on that subset's failures.
+- **Recipes:** `context.template = {name, params}` builds a verified workflow without a
+  model call. Params are validated against closed models, and every polling recipe ends at
+  a deadline. The presence reminder now lives in the same registry
+  (`context.presence_reminder` still works). The recipes are:
+  - `threshold_action`: a numeric, boolean or text state crosses a limit; an optional
+    start delay.
+  - `price_variation`: a crypto or fiat price moves ±N%.
+  - `presence_change`: someone arrives or everyone leaves, after a real transition, with
+    an optional delay and up to 6 actions.
+- **`GET /plans/{plan_id}/transcript`:** every agent turn (tool, arguments, result,
+  tokens, duration) is stored as an audit event. A failed generation commits its
+  transcript before the 422, which carries the `plan_id`.
+- **Agent prompt rules:**
+  - Deliverables go through their capability (`report.write_html`, `telegram.send`),
+    never as returned text.
+  - Virtual devices that report offline still count.
+  - When the request names a kind of device and several devices of that kind match, the
+    agent refuses and lists the options instead of picking one.
+
+### Fixed
+- **A model-shaped plan could exhaust host memory.** Validate, compile, simulate and
+  `check_script` now run in a spawned worker. It has a soft `RLIMIT_DATA`
+  (`generation_agent_tool_memory_mb`, 512) and a timeout
+  (`generation_agent_tool_timeout_seconds`, 30). A runaway becomes a tool error and the
+  event loop never blocks. Simulation is capped at 2000 steps.
+- **Scripts passed `check_script` and then failed the pipeline's size limit.**
+  `check_script` now applies the same static gates first: profile tools, forbidden
+  tokens, size.
+- **Workflows returned without the response envelope were rejected.** The bare candidate
+  is now unwrapped.
+- **Fixtures matched tool arguments case-sensitively** (`BRL` vs `brl`). Matching now
+  ignores case.
+- **The simulator evaluated both sides of `and`/`or`.** It now short-circuits like
+  JSONLogic, so a null guard protects the comparison after it.
+- **Traces from newer models reported no cost.** Prices per 1M tokens (input / cached /
+  output):
+  - gpt-5.5: $5 / $0.50 / $30
+  - gpt-6.1-terra: $1 / $0.05 / $5
+  - gpt-6.2-sol: $2 / $0.10 / $10
+  - gpt-5.3-codex: $1.75 / $0.175 / $14
+
 ### Changed
+- `openapi.json` / `openapi.yaml` regenerated (they predated 0.2.0 and lacked
+  `/plans/{plan_id}/transcript`).
 - **Default fast model is now `gpt-4.1-mini`.** OpenAI retired `gpt-4.1-nano` (`404
   model_not_found`), which broke `analyze_intent` and `llm.evaluate`. `gpt-4.1-mini` is
   non-reasoning, as `llm_model_fast` requires. It is priced in `observability/costs.py`
