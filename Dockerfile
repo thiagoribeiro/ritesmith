@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -e .
 # A wheel dropped in deploy/wheels/ overrides the download (see deploy/wheels/README.md).
 # Production sets RITESMITH_REQUIRE_LUAU=true, so an image without it refuses to start
 # instead of falling back to the Lua (lupa) sandbox.
-ARG LUNARDYSON_VERSION=0.1.1
+ARG LUNARDYSON_VERSION=0.1.2
 COPY deploy/wheels/ /tmp/wheels/
 RUN set -e; \
     if ls /tmp/wheels/lunardyson-*.whl >/dev/null 2>&1; then \

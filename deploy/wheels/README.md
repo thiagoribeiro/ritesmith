@@ -17,4 +17,4 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --parallel
 
 Keep `RITESMITH_REQUIRE_LUAU=true` in production: an image without LunarDyson then
 refuses to start instead of silently falling back to the Lua (lupa) sandbox.
-`GET /health` reports the active script runtime (`"script_runtime": "lunardyson 0.1.1"`).
+`GET /health` reports the active script runtime (`"script_runtime": "lunardyson 0.1.2"`).
