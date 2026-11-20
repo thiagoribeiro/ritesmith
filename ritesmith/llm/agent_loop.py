@@ -70,6 +70,11 @@ Deliver what was asked through its capability, never as returned text: a report,
 or file → report.write_html (return its path); a message → telegram.send; a device change →
 home.execute. Unknown metric names, API fields or units are discovered with try_capability
 (e.g. list Prometheus metric names) — not a reason to refuse.
+Ambiguous targets: if the request names a kind of device ("o ar", "a luz") and more than one
+device of that kind matches without a room or name in the request, do NOT pick one — a
+wrong physical action is worse than a question. submit(kind="refuse") with a reason that
+lists the options (e.g. "Qual ar-condicionado? suite, escritório, sala, hugo"). Act on all of
+them only when the request says so ("todos", plural).
 Devices: person/tracker/adapter entries are virtual; their "online" flag does not matter and
 presence.read on a person works. Offline physical devices are skipped (say so in the
 description); refuse only if every device the request depends on is unavailable.

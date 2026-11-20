@@ -372,3 +372,4 @@ def test_prompt_covers_deliverables_and_virtual_devices():
     system = _static_system()
     assert "report.write_html" in system and "try_capability" in system
     assert "virtual" in system
+    assert "Ambiguous targets" in system and "do NOT pick one" in system
