@@ -246,3 +246,62 @@ async def test_every_turn_resends_the_same_instructions_and_tools():
         "resp_"
     )
     assert all("REQUEST" not in json.dumps(t) for t in _TOOLS)
+
+
+# ── /plans in agent mode, end to end through the API and the database ───────────────
+
+
+def _agent_provider(replies):
+    responses = FakeResponses(replies)
+    settings = Settings(llm_model="gpt-5.5", generation_mode="agent")
+    return OpenAIProvider(settings, client=SimpleNamespace(responses=responses)), settings
+
+
+# Capabilities a bare test environment always has (no Telegram token there).
+CLOCK = {
+    "version": "workflow-plan-v1",
+    "name": "clock",
+    "steps": [
+        {"kind": "wait", "seconds": 300},
+        {"kind": "call", "id": "now", "capability_name": "runtime.now", "args": {}},
+    ],
+}
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_agent_plan_is_created_and_its_transcript_is_readable(make_client):
+    llm, settings = _agent_provider(
+        [
+            reply(call("validate_workflow", {"plan": CLOCK}, "a")),
+            reply(call("submit", {"kind": "workflow", "plan": CLOCK, "name": "relogio"}, "b")),
+        ]
+    )
+    async with make_client(llm=llm, settings=settings) as client:
+        resp = await client.post(
+            "/plans",
+            json={"intent": "em 5 minutos me lembra de tirar a roupa", "reuse_policy": "force_new"},
+        )
+        assert resp.status_code == 201, resp.text
+        plan = resp.json()
+        assert plan["artifacts"][0]["artifact_type"] == "trama_workflow"
+        transcript = await client.get(f"/plans/{plan['plan_id']}/transcript")
+    assert transcript.status_code == 200
+    attempt = transcript.json()["attempts"][0]
+    assert attempt["ok"] is True
+    assert [t["tool"] for t in attempt["transcript"]] == ["validate_workflow", "submit"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_failed_agent_generation_keeps_its_transcript(make_client):
+    llm, settings = _agent_provider([reply(content="texto"), reply(content="mais texto")])
+    async with make_client(llm=llm, settings=settings) as client:
+        resp = await client.post(
+            "/plans", json={"intent": "faça algo impossível", "reuse_policy": "force_new"}
+        )
+        assert resp.status_code == 422, resp.text
+        plan_id = resp.json()["details"]["plan_id"]
+        transcript = await client.get(f"/plans/{plan_id}/transcript")
+        missing = await client.get("/plans/plan_nope/transcript")
+    assert transcript.status_code == 200
+    assert transcript.json()["attempts"][0]["ok"] is False
+    assert missing.status_code == 404

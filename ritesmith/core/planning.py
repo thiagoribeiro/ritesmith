@@ -221,6 +221,7 @@ class PlanBuilder:
                 context=req.context,
                 profile=profile,
                 audit=self.audit,
+                plan_id=plan_id,
             )
             if reusable is not None:
                 kind = reusable.artifact.artifact_type.value

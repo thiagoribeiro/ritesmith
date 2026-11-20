@@ -1,10 +1,13 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ritesmith.api.deps import get_plan_builder
 from ritesmith.core.planning import PlanBuilder
+from ritesmith.registry.models import AuditEvent
 from ritesmith.schemas.plan import (
     ApprovePlanRequest,
     CancelPlanRequest,
@@ -15,6 +18,7 @@ from ritesmith.schemas.plan import (
     PlanStatus,
     RejectPlanRequest,
 )
+from ritesmith.storage.postgres import get_db
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 
@@ -132,6 +136,26 @@ async def get_plan(
     builder: PlanBuilder = Depends(get_plan_builder),
 ) -> Plan:
     return await builder.get_plan(plan_id)
+
+
+@router.get("/{plan_id}/transcript")
+async def get_plan_transcript(plan_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """Tool calls of an agent-mode generation, including generations that failed (422)."""
+    rows = (
+        await db.execute(
+            select(AuditEvent)
+            .where(
+                AuditEvent.event_type == "generation.agent_transcript",
+                AuditEvent.entity_type == "plan",
+                AuditEvent.entity_id == plan_id,
+            )
+            .order_by(AuditEvent.created_at)
+        )
+    ).scalars()
+    attempts = [{"at": r.created_at.isoformat(), **(r.payload or {})} for r in rows]
+    if not attempts:
+        raise HTTPException(status_code=404, detail=f"No agent transcript for {plan_id}")
+    return {"plan_id": plan_id, "attempts": attempts}
 
 
 @router.post("/{plan_id}/approve", response_model=Plan)
