@@ -305,3 +305,43 @@ async def test_failed_agent_generation_keeps_its_transcript(make_client):
     assert transcript.status_code == 200
     assert transcript.json()["attempts"][0]["ok"] is False
     assert missing.status_code == 404
+
+
+def test_check_script_applies_the_pipeline_size_limit_first():
+    # agent-v1: four scripts passed check_script, then failed the pipeline's 90-line limit.
+    gen, _ = agent([])
+    long_script = "function run(input, context)\n" + "  local x = 1\n" * 200 + "  return {}\nend"
+    result = gen.check_script(long_script, [{"input": {}}])
+    assert result["ok"] is False
+    assert any("linhas" in e for e in result["static_errors"])
+
+
+@pytest.mark.asyncio
+async def test_isolated_tool_over_budget_becomes_feedback_and_pool_recovers():
+    # 2026-11-20: a generation froze the host; heavy tools now run in a capped child.
+    gen, _ = agent([], generation_agent_tool_timeout_seconds=0.001)
+    result = await gen._dispatch("validate_workflow", {"plan": REMINDER})
+    assert result["ok"] is False and "budget" in result["error"]
+    gen.settings = Settings(llm_model="gpt-5.5", generation_agent_tool_timeout_seconds=60)
+    result = await gen._dispatch("validate_workflow", {"plan": REMINDER})
+    assert result["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_isolated_compile_returns_the_definition_for_submit():
+    gen, _ = agent([])
+    result = await gen._dispatch("compile_workflow", {"plan": REMINDER})
+    assert result["ok"] and any(n["kind"] == "sleep" for n in result["definition"]["nodes"])
+
+
+def test_worker_memory_limit_is_a_data_segment_cap():
+    import resource
+
+    from ritesmith.llm.agent_loop import _limit_memory
+
+    soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
+    try:
+        _limit_memory(4096)
+        assert resource.getrlimit(resource.RLIMIT_DATA)[0] == 4096 * 1024 * 1024
+    finally:
+        resource.setrlimit(resource.RLIMIT_DATA, (soft, hard))

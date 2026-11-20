@@ -16,9 +16,13 @@ so planning, validation and persistence are unchanged.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import multiprocessing
 import time
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from typing import Any
 
 from ritesmith.core.exceptions import LLMError
@@ -412,10 +416,17 @@ class AgentGeneration:
         errors = self._graph_errors(compiled)
         return {"ok": not errors, "errors": errors[:20], "nodes": len(compiled.get("nodes", []))}
 
+    def compile_workflow(self, plan: dict) -> dict:
+        """validate_workflow plus the compiled definition, for submit."""
+        check = self.validate_workflow(plan)
+        if check["ok"]:
+            check["definition"] = self._compile(plan)
+        return check
+
     def simulate_workflow(self, plan: dict, responses: dict | None = None) -> dict:
         try:
             compiled = self._compile(plan)
-            result = _AgentSimulator(compiled, responses or {}, max_steps=5000).run()
+            result = _AgentSimulator(compiled, responses or {}, max_steps=2000).run()
         except Exception as exc:
             return {"ok": False, "error": str(exc)[:1500]}
         return {
@@ -428,6 +439,10 @@ class AgentGeneration:
     def check_script(self, script: str, cases: list[dict]) -> dict:
         from ritesmith.runtime.validation_session import LuauValidationSession, preflight
 
+        static = self._static_script_errors(script)
+        if static:
+            # Same gate the pipeline applies after submit; failing it there costs the run.
+            return {"ok": False, "static_errors": static}
         session = LuauValidationSession(self.settings, self.profile)
         try:
             diagnostics = session.check(script)
@@ -454,16 +469,30 @@ class AgentGeneration:
         finally:
             session.close()
 
+    def _static_script_errors(self, script: str) -> list[str]:
+        from ritesmith.core.validation import (
+            _LUAU_EXTRA_FORBIDDEN,
+            _LUAU_SIZE_FACTOR,
+            ValidationPipeline,
+        )
+
+        pipeline = ValidationPipeline(self.settings)
+        checks = [
+            *pipeline._check_luau_tools_in_profile(script, self.profile),
+            *pipeline._check_forbidden_tokens(script, extra=_LUAU_EXTRA_FORBIDDEN),
+            *pipeline._check_size(script, None, factor=_LUAU_SIZE_FACTOR),
+        ]
+        return [c.message or c.name for c in checks if c.status == "failed"]
+
     # ── loop ─────────────────────────────────────────────────────────────────────
-    def _dispatch(self, name: str, args: dict) -> Any:
+    async def _dispatch(self, name: str, args: dict) -> Any:
+        if name in _ISOLATED:
+            return await self._isolated(name, args)
         handler = {
             "find_capabilities": self.find_capabilities,
             "get_contracts": self.get_contracts,
             "list_devices": self.list_devices,
             "use_template": self.use_template,
-            "validate_workflow": self.validate_workflow,
-            "simulate_workflow": self.simulate_workflow,
-            "check_script": self.check_script,
         }.get(name)
         if handler is None:
             return {"error": f"unknown tool {name}"}
@@ -475,7 +504,46 @@ class AgentGeneration:
             log.warning("agent tool %s failed: %s", name, exc)
             return {"error": f"{type(exc).__name__}: {str(exc)[:800]}"}
 
-    def _submit(self, args: dict, goal: str):
+    async def _isolated(self, name: str, args: dict) -> Any:
+        """Run a model-shaped workload (compile/validate/simulate/Luau) out of process.
+
+        2026-11-20: one agent generation drove the service to exhaust the host's RAM
+        and froze the Pi; these tools run code whose cost the model controls (plan
+        size, loop counts, a generated script), synchronously, inside the event loop.
+        Here they get their own process with a data-segment limit and a timeout, and
+        a runaway becomes a tool error the model can act on.
+        """
+        if not self.settings.generation_agent_isolate_tools:
+            return _run_tool(self, name, args)
+        loop = asyncio.get_running_loop()
+        try:
+            return await asyncio.wait_for(
+                loop.run_in_executor(
+                    _tool_pool(self.settings.generation_agent_tool_memory_mb),
+                    _isolated_tool,
+                    self.settings,
+                    self.registry,
+                    self.profile,
+                    self.language,
+                    name,
+                    args,
+                ),
+                timeout=self.settings.generation_agent_tool_timeout_seconds,
+            )
+        except (TimeoutError, BrokenProcessPool, MemoryError) as exc:
+            _reset_tool_pool()
+            log.warning("agent tool %s aborted: %s", name, type(exc).__name__)
+            return {
+                "ok": False,
+                "error": (
+                    f"{name} exceeded its time/memory budget "
+                    f"({self.settings.generation_agent_tool_timeout_seconds:g}s, "
+                    f"{self.settings.generation_agent_tool_memory_mb} MB). Simplify: fewer "
+                    "iterations, smaller simulated responses, no unbounded loops."
+                ),
+            }
+
+    async def _submit(self, args: dict, goal: str):
         kind = args.get("kind")
         name = (args.get("name") or "automation").strip()[:80] or "automation"
         description = (args.get("description") or goal)[:500]
@@ -496,10 +564,10 @@ class AgentGeneration:
             return _proposal(workflow=wf, summary=description), None
         if kind == "workflow":
             plan = args.get("plan") or {}
-            check = self.validate_workflow(plan)
-            if not check["ok"]:
+            check = await self._dispatch("compile_workflow", {"plan": plan})
+            if not check.get("ok"):
                 return None, check
-            compiled = self._compile(plan)
+            compiled = check["definition"]
             wf = WorkflowGenerationResponse(
                 definition=compiled,
                 name=name,
@@ -511,8 +579,8 @@ class AgentGeneration:
             script, cases = args.get("script") or "", args.get("cases") or []
             if not cases:
                 return None, {"ok": False, "errors": ["submit the cases check_script passed"]}
-            check = self.check_script(script, cases)
-            if not check["ok"]:
+            check = await self._dispatch("check_script", {"script": script, "cases": cases})
+            if not check.get("ok"):
                 return None, check
             sc = LuaGenerationResponse(
                 script=script,
@@ -600,7 +668,7 @@ class AgentGeneration:
                     result: Any = {"error": f"arguments are not valid JSON: {exc}"}
                     args = None
                 if args is not None and call.name == "submit":
-                    proposal, rejection = self._submit(args, goal)
+                    proposal, rejection = await self._submit(args, goal)
                     self._log(turn, "submit", args, rejection or {"ok": True})
                     if proposal is not None:
                         total.duration_s = time.perf_counter() - started
@@ -610,7 +678,7 @@ class AgentGeneration:
                     last_rejection = rejection
                     result = {"submit_rejected": rejection}
                 elif args is not None:
-                    result = self._dispatch(call.name, args)
+                    result = await self._dispatch(call.name, args)
                     self._log(turn, call.name, args, result)
                 pending.append(
                     {
@@ -690,6 +758,65 @@ class AgentGeneration:
                 "result": json.dumps(result, ensure_ascii=False, default=str)[:3000],
             }
         )
+
+
+_ISOLATED = ("validate_workflow", "simulate_workflow", "check_script", "compile_workflow")
+_POOL: ProcessPoolExecutor | None = None
+_POOL_LIMIT_MB: int | None = None
+
+
+def _limit_memory(megabytes: int) -> None:
+    import resource
+
+    # Soft limit only: nothing in the worker (validators, sandboxed Luau) can raise it.
+    _, hard = resource.getrlimit(resource.RLIMIT_DATA)
+    resource.setrlimit(resource.RLIMIT_DATA, (megabytes * 1024 * 1024, hard))
+
+
+def _tool_pool(megabytes: int) -> ProcessPoolExecutor:
+    global _POOL, _POOL_LIMIT_MB
+    if _POOL is None or _POOL_LIMIT_MB != megabytes:
+        _reset_tool_pool()
+        _POOL = ProcessPoolExecutor(
+            max_workers=1,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=_limit_memory,
+            initargs=(megabytes,),
+        )
+        _POOL_LIMIT_MB = megabytes
+    return _POOL
+
+
+def _reset_tool_pool() -> None:
+    global _POOL
+    pool, _POOL = _POOL, None
+    if pool is None:
+        return
+    for process in list(getattr(pool, "_processes", {}).values()):
+        process.kill()  # a timed-out worker is still running; don't wait for it
+    pool.shutdown(wait=False, cancel_futures=True)
+
+
+def _run_tool(gen: AgentGeneration, name: str, args: dict) -> Any:
+    try:
+        return getattr(gen, name)(**args)
+    except TypeError as exc:
+        return {"error": f"bad arguments for {name}: {exc}"}
+    except MemoryError:
+        raise
+    except Exception as exc:  # a tool failure is feedback, not a crash
+        return {"error": f"{type(exc).__name__}: {str(exc)[:800]}"}
+
+
+def _isolated_tool(settings, registry, profile, language, name, args):
+    """Worker-process entry: rebuild a provider-less generator and run one tool."""
+    from ritesmith.llm.openai_provider import OpenAIProvider
+
+    provider = OpenAIProvider(settings, client=object())
+    gen = AgentGeneration(
+        provider, capabilities=list(registry.values()), profile=profile, language=language
+    )
+    return _run_tool(gen, name, args)
 
 
 class _AgentSimulator:

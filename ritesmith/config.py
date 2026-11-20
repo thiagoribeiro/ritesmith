@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     local_timezone: str = "UTC"
     generation_agent_max_turns: int = Field(default=12, ge=2, le=30)
     generation_agent_turn_tokens: int = Field(default=8000, ge=1000, le=32000)
+    # Compile/validate/simulate/Luau tools run in a child process with these limits.
+    generation_agent_isolate_tools: bool = True
+    generation_agent_tool_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    generation_agent_tool_memory_mb: int = Field(default=512, ge=128, le=4096)
     llm_timeout_seconds: int = 180  # gpt-5* reasoning + workflow JSON regularly exceeds 60s
 
     # Embeddings (deferred to V1)
