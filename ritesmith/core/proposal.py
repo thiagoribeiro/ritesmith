@@ -26,6 +26,7 @@ async def prepare_proposal(
     profile="transform_only",
     audit=None,
     allow_dependencies=True,
+    plan_id=None,
 ):
     if not settings.generation_unified_proposal or not llm.supports_proposal:
         return None, None, None
@@ -76,7 +77,7 @@ async def prepare_proposal(
         ],
     }
     if settings.generation_mode == "agent" and getattr(llm, "supports_agent", False):
-        return await _agent_proposal(llm, settings, kwargs, audit, recall)
+        return await _agent_proposal(db, llm, settings, kwargs, audit, recall, plan_id)
     tests_task = None
     if (
         settings.generation_parallel_tests
@@ -159,7 +160,7 @@ async def prepare_proposal(
     return (proposal, stats), recall, None
 
 
-async def _agent_proposal(llm, settings, kwargs, audit, recall):
+async def _agent_proposal(db, llm, settings, kwargs, audit, recall, plan_id=None):
     """Tool-using generation; tests come from the model's own check_script runs."""
     from ritesmith.llm.agent_loop import AgentGeneration
 
@@ -182,22 +183,26 @@ async def _agent_proposal(llm, settings, kwargs, audit, recall):
         if audit:
             await audit.log_event(
                 "generation.agent_transcript",
-                "proposal",
-                payload={"diagnostic": str(exc), "transcript": agent.transcript},
+                "plan",
+                plan_id,
+                payload={"ok": False, "diagnostic": str(exc), "transcript": agent.transcript},
             )
             await audit.log_event("generation.failed", "proposal", payload={"diagnostic": str(exc)})
-        raise GenerationFailedError(
-            "No acceptable generation proposal",
-            details={
-                "category": exc.details.get("category", "agent"),
-                "diagnostics": [str(exc)],
-                "location": None,
-            },
-        ) from exc
+            # The request fails with 422 and the session rolls back: keep the evidence.
+            await db.commit()
+        details = {
+            "category": exc.details.get("category", "agent"),
+            "diagnostics": [str(exc)],
+            "location": None,
+        }
+        if plan_id:
+            details["plan_id"] = plan_id  # GET /plans/{plan_id}/transcript
+        raise GenerationFailedError("No acceptable generation proposal", details=details) from exc
     if audit:
         await audit.log_event(
             "generation.agent_transcript",
-            "proposal",
-            payload={"turns": stats.api_attempts, "transcript": agent.transcript},
+            "plan",
+            plan_id,
+            payload={"ok": True, "turns": stats.api_attempts, "transcript": agent.transcript},
         )
     return (proposal, stats), recall, None
