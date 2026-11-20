@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     generation_deadline_seconds: float = Field(default=60, gt=0)
     generation_recovery_min_seconds: float = Field(default=3, ge=0)
     generation_recovery_attempts: int = Field(default=1, ge=0, le=4)
+    # "proposal": one JSON answer validated afterwards (default). "agent": the model uses
+    # validation/simulation/lookup tools and submits only what passes (llm/agent_loop.py).
+    generation_mode: Literal["proposal", "agent"] = "proposal"
+    # IANA zone the agent uses to read "tonight", "at 9am", "today" in requests.
+    local_timezone: str = "UTC"
+    generation_agent_max_turns: int = Field(default=12, ge=2, le=30)
+    generation_agent_turn_tokens: int = Field(default=8000, ge=1000, le=32000)
     llm_timeout_seconds: int = 180  # gpt-5* reasoning + workflow JSON regularly exceeds 60s
 
     # Embeddings (deferred to V1)

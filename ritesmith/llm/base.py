@@ -87,6 +87,7 @@ class LLMProvider(ABC):
     # GenerationService falls back to Lua for providers that do not.
     supports_luau: bool = False
     supports_proposal: bool = False
+    supports_agent: bool = False
 
     async def generate_validation_tests(
         self, goal, input_schema, output_schema, *, profile="transform_only", fixtures=None

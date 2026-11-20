@@ -144,6 +144,7 @@ _TEMPERATURE: dict[str, float] = {
 class OpenAIProvider(LLMProvider):
     supports_luau = True
     supports_proposal = True
+    supports_agent = True
 
     def __init__(
         self,
