@@ -57,7 +57,9 @@ Work like an engineer with tools, not like an autocomplete:
 3. If use_template fits, call it: it is verified and needs no further checks. It fits
    "when <device reading/state> <condition>, do X / tell me" (threshold_action, also for
    motion/door/presence states and time windows via start_delay_seconds), "tell me if the
-   price moves N%" (price_variation) and arrival reminders. A semantic repeat cannot stop
+   price moves N%" (price_variation), "when <people> arrive / everyone leaves, do X / tell
+   me" (presence_change — always for presence, it waits for a real transition) and
+   arrival reminders. A semantic repeat cannot stop
    early, so an act-once request written as a plan would act on every pass: use the recipe.
 4. Otherwise draft, then validate_workflow (or check_script). Fix every error it reports.
    For anything that loops, simulate_workflow with realistic responses and confirm it
@@ -158,6 +160,13 @@ _TOOLS: list[dict] = [
                 "e.g. until midnight). "
                 "price_variation params: kind (crypto|fiat), symbol, currency, percent, "
                 "direction (up|down|both), interval_seconds, window_seconds, label?. "
+                "presence_change = 'when people arrive/leave, act and/or notify ONCE, then end': "
+                "params people[] (person targets from list_devices, e.g. thiago, jaque), event "
+                "(all_away = everyone listed is out; any_home = someone listed is home), "
+                "require_transition (default true: first see the opposite state, so 'when X "
+                "arrives' waits for a real arrival), delay_seconds (e.g. 900 = 15 min after), "
+                "actions[{capability,target,input}] (<=6), notify?, interval_seconds, "
+                "window_seconds. "
                 "presence_reminder params: person_alias, message, channel='telegram'. "
                 "On success the workflow is final: call submit(kind='template')."
             ),
@@ -166,7 +175,12 @@ _TOOLS: list[dict] = [
                 "properties": {
                     "name": {
                         "type": "string",
-                        "enum": ["threshold_action", "price_variation", "presence_reminder"],
+                        "enum": [
+                            "threshold_action",
+                            "price_variation",
+                            "presence_change",
+                            "presence_reminder",
+                        ],
                     },
                     "params": {"type": "object"},
                 },
