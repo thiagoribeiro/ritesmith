@@ -75,6 +75,8 @@ async def prepare_proposal(
             for r in recall[:2]
         ],
     }
+    if settings.generation_mode == "agent" and getattr(llm, "supports_agent", False):
+        return await _agent_proposal(llm, settings, kwargs, audit, recall)
     tests_task = None
     if (
         settings.generation_parallel_tests
@@ -154,4 +156,48 @@ async def prepare_proposal(
         ) from exc
     finally:
         await finish_pending_tests(tests_task)
+    return (proposal, stats), recall, None
+
+
+async def _agent_proposal(llm, settings, kwargs, audit, recall):
+    """Tool-using generation; tests come from the model's own check_script runs."""
+    from ritesmith.llm.agent_loop import AgentGeneration
+
+    agent = AgentGeneration(
+        llm,
+        capabilities=kwargs["available_capabilities"],
+        profile=kwargs["profile"],
+        language=kwargs["language"],
+    )
+    try:
+        with stage("proposal", "mixed"):
+            proposal, stats = await agent.run(
+                goal=kwargs["goal"],
+                constraints=kwargs["constraints"],
+                context=kwargs["context"],
+                input_schema=kwargs["input_schema"],
+                output_schema=kwargs["output_schema"],
+            )
+    except LLMError as exc:
+        if audit:
+            await audit.log_event(
+                "generation.agent_transcript",
+                "proposal",
+                payload={"diagnostic": str(exc), "transcript": agent.transcript},
+            )
+            await audit.log_event("generation.failed", "proposal", payload={"diagnostic": str(exc)})
+        raise GenerationFailedError(
+            "No acceptable generation proposal",
+            details={
+                "category": exc.details.get("category", "agent"),
+                "diagnostics": [str(exc)],
+                "location": None,
+            },
+        ) from exc
+    if audit:
+        await audit.log_event(
+            "generation.agent_transcript",
+            "proposal",
+            payload={"turns": stats.api_attempts, "transcript": agent.transcript},
+        )
     return (proposal, stats), recall, None
