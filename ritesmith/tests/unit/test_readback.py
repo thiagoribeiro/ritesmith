@@ -126,7 +126,10 @@ def test_split_join_continues_after_the_branches_and_reads_are_not_actions():
             ),
         ],
     }
-    assert describe(definition, start=NOW).text == "• Agora: envia no Telegram “Check-up: ‹valor›”."
+    assert describe(definition, start=NOW).text == (
+        "• Agora: envia no Telegram “Check-up: ‹valor›”.\n"
+        "Consulta: sensor.battery de porta; vacuum.state de x20."
+    )
 
 
 def test_unrolled_repeats_collapse_to_one_line():
@@ -161,10 +164,9 @@ def test_unrolled_repeats_collapse_to_one_line():
                 }
             )
     text = describe({"entrypoint": "fetch__rs_1", "nodes": nodes}, start=NOW).text
-    assert (
-        text.count("\n") == 0
-        and "até 5 vezes, a cada 6 h (última checagem depois de 1 dia)" in text
-    )
+    first, sources = text.split("\n")
+    assert "até 5 vezes, a cada 6 h (última checagem depois de 1 dia)" in first
+    assert sources == "Consulta: web.search (solar)."
 
 
 def test_plan_readback_skips_non_workflows_and_survives_bad_content():
@@ -191,3 +193,21 @@ def test_plan_readback_skips_non_workflows_and_survives_bad_content():
     )
     assert text.startswith("• Quando jaque chegar em casa")
     assert plan_readback([art("trama_workflow", "{not json")], NOW, settings) is None
+
+
+def test_polling_shows_when_watching_begins_and_minutes_round():
+    definition = recipe(
+        "threshold_action",
+        {
+            "read": {"capability": "presence.read", "target": "sensor_porta"},
+            "metric_path": "present",
+            "op": "==",
+            "value": True,
+            "notify": "Movimento",
+            "interval_seconds": 60,
+            "window_seconds": 3600,
+            "start_delay_seconds": 3 * 3600 - 2,  # 13:06:58 → reads as 14:07
+        },
+    )
+    text = describe(definition, start=NOW).text
+    assert "(verifica a cada 1 min, a partir de 21/11/2026 14:07)" in text

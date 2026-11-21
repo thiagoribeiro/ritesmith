@@ -418,6 +418,24 @@ will do. It is derived from the graph, never from the intent:
 Show this text to the user as the confirmation. Repeating the request back can confirm a
 plan that does something else.
 
+**Intent verification** (`RITESMITH_INTENT_VERIFICATION=off|shadow|enforce`, default
+`off`): before activation, a model compares the readback with the user's literal
+messages, sent as `context.user_request` (a string or a list, oldest first). It does not
+compare against `intent`, which is a caller's paraphrase and can carry the
+misunderstanding. The verdict (`match`/`mismatch`/`unsure`/`error`, plus a reason) is
+returned in `Plan.verification` and audited as `plan.intent_verified`.
+- `shadow` only records the verdict.
+- `enforce` blocks a `mismatch` with the reason. `unsure` passes, and the caller should ask
+  the user.
+- Errors fail open.
+
+The model defaults to `RITESMITH_LLM_WORKFLOW_MODEL`, with
+`RITESMITH_INTENT_VERIFICATION_EFFORT=low`. On a 26-case home-automation calibration set,
+`gpt-6.1-terra` caught 14/14 deliberately wrong plans, including the misrouted reminder
+that motivated it. Of 12 accepted plans, it marked 8 `match` and 3 `unsure`, and 1
+`mismatch` that was a real defect: the plan stopped checking after 114 h of a 7-day
+request. Cost was about US$ 0.0015 and 3.5 s (p50) per check.
+
 ### Artifacts
 
 ```http

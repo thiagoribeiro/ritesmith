@@ -353,6 +353,17 @@ class PlanBuilder:
                 elif decision.decision == PolicyDecisionValue.require_approval:
                     any_requires_approval = True
 
+        # 4b. Does what was built do what the user asked, in their own words?
+        readback = plan_readback(artifacts, datetime.now(UTC), self.settings)
+        verification = await self._verify_intent(req, readback) if not any_blocked else None
+        mismatch = (
+            verification is not None
+            and verification["mode"] == "enforce"
+            and verification["verdict"] == "mismatch"
+        )
+        if mismatch:
+            any_blocked = True
+
         # 5. Determine plan status
         if any_blocked:
             plan_status = PlanStatus.blocked
@@ -383,6 +394,12 @@ class PlanBuilder:
                 aggregate_policy = PolicyDecision(
                     decision=PolicyDecisionValue.allow, reason="All artifacts approved by policy"
                 )
+
+        if mismatch:
+            aggregate_policy = PolicyDecision(
+                decision=PolicyDecisionValue.deny,
+                reason=f"O que foi construído não corresponde ao pedido: {verification['reason']}",
+            )
 
         # 6. Persist plan
         save_artifacts = req.mode in (GenerationMode.persist, GenerationMode.execute)
@@ -469,11 +486,19 @@ class PlanBuilder:
                 plan_id,
                 payload={"intent": req.intent, "status": plan_status, "mode": req.mode},
             )
+            if verification is not None:
+                await self.audit.log_event(
+                    "plan.intent_verified",
+                    "plan",
+                    plan_id,
+                    payload={**verification, "readback": readback, "intent": req.intent},
+                )
 
         await self.db.commit()
 
         return Plan(
-            readback=plan_readback(artifacts, now, self.settings),
+            readback=readback,
+            verification=verification,
             plan_id=plan_id,
             status=plan_status,
             intent=req.intent,
@@ -485,6 +510,37 @@ class PlanBuilder:
             created_at=now,
             updated_at=now,
         )
+
+    async def _verify_intent(self, req: CreatePlanRequest, readback: str | None) -> dict | None:
+        mode = self.settings.intent_verification
+        client = getattr(self.llm, "client", None)
+        if mode == "off" or not readback or client is None:
+            return None
+        from zoneinfo import ZoneInfo
+
+        from ritesmith.core.intent_verification import verify_intent
+
+        user_request = (req.context or {}).get("user_request") or req.intent
+        now_local = datetime.now(ZoneInfo(self.settings.local_timezone)).strftime(
+            "%A %Y-%m-%d %H:%M"
+        )
+        result = await verify_intent(
+            client,
+            self.settings,
+            user_request=user_request,
+            intent=req.intent,
+            readback=readback,
+            now_local=now_local,
+        )
+        result["mode"] = mode
+        result["user_request_given"] = "user_request" in (req.context or {})
+        logging.getLogger(__name__).info(
+            "intent verification mode=%s verdict=%s reason=%s",
+            mode,
+            result["verdict"],
+            result.get("reason"),
+        )
+        return result
 
     async def _handle_lua_artifact(
         self,

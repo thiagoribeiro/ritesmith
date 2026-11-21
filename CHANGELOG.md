@@ -12,6 +12,11 @@ All notable changes to RiteSmith. The format loosely follows
   with their wall-clock times, or their trigger conditions and poll interval, plus the
   deadline. Arrivals and departures read as such, and unrolled repeats collapse. Callers
   should confirm with this text instead of echoing the intent.
+- **Intent verification** (`RITESMITH_INTENT_VERIFICATION`, default `off`): the readback
+  is compared with the user's own words (`context.user_request`) before activation.
+  `shadow` records the verdict in `Plan.verification` and in the audit log; `enforce`
+  blocks a mismatch. It uses the Responses API with the workflow model at low effort and
+  fails open on errors.
 - **Agent-mode generation** (`RITESMITH_GENERATION_MODE=agent`; the default stays
   `proposal`).
   - The model works in a bounded tool loop over the Responses API.

@@ -58,6 +58,7 @@ class Effect:
     conditions: list[str] = field(default_factory=list)
     poll_seconds: float | None = None
     delay_after_seconds: float = 0  # sleeps between the matched condition and the effect
+    starts_after_seconds: float = 0  # sleeps before the polling loop begins
 
 
 @dataclass
@@ -275,6 +276,31 @@ class _Describer:
         return None
 
     def _render(self, expr) -> str | None:
+        """Meaningful condition text; falls back to plumbing (a read worked / returned a
+        value) when that is all the case checks, so success and failure branches differ."""
+        return self._render_meaning(expr) or self._render_plumbing(expr)
+
+    def _render_plumbing(self, expr) -> str | None:
+        if not isinstance(expr, dict) or len(expr) != 1:
+            return None
+        ((op, args),) = expr.items()
+        if op in ("and", "or") and isinstance(args, list):
+            parts = list(dict.fromkeys(p for p in (self._render_plumbing(a) for a in args) if p))
+            return (" e " if op == "and" else " ou ").join(parts) or None
+        if op in ("==", "===", "!=", "!==") and isinstance(args, list) and len(args) == 2:
+            left, right = args
+            src = self._source(str(left.get("var", ""))) if isinstance(left, dict) else None
+            if src is None:
+                return None
+            name = src[0].split(":", 1)[-1] if ":" in src[0] else src[0]
+            positive = op in ("==", "===")
+            if src[1] == "success" and isinstance(right, bool):
+                return f"a leitura de {name} {'funcionou' if positive == right else 'falhou'}"
+            if right is None:
+                return f"{name} {'sem' if positive else 'com'} resultado"
+        return None
+
+    def _render_meaning(self, expr) -> str | None:
         presence = self._presence(expr)
         if presence:
             return presence
@@ -282,12 +308,12 @@ class _Describer:
             return None
         ((op, args),) = expr.items()
         if op in ("and", "or"):
-            parts = [p for p in (self._render(a) for a in args) if p]
+            parts = [p for p in (self._render_meaning(a) for a in args) if p]
             if not parts:
                 return None
             return (" e " if op == "and" else " ou ").join(parts)
         if op == "!":
-            inner = self._render(args[0] if isinstance(args, list) else args)
+            inner = self._render_meaning(args[0] if isinstance(args, list) else args)
             return f"não ({inner})" if inner else None
         if op in _OPS and isinstance(args, list) and len(args) == 2:
             left, right = args
@@ -310,6 +336,7 @@ class _Describer:
         return None
 
     def _fmt(self, at: datetime) -> str:
+        at = at + timedelta(seconds=30)  # nearest minute: 23:29:58 reads as 23:30
         return at.astimezone(self.tz).strftime("%d/%m/%Y %H:%M")
 
     # ── walk ───────────────────────────────────────────────────────────────────
@@ -317,12 +344,14 @@ class _Describer:
         found: dict[tuple, Effect] = {}
         paths = [0]
 
-        def walk(nid, elapsed, conds, on_path, polled, depth, after=0.0):
+        def walk(nid, elapsed, conds, on_path, polled, depth, after=0.0, start=0.0):
             if paths[0] >= _MAX_PATHS or depth > _MAX_DEPTH or nid not in self.nodes:
                 return
             if nid in on_path:
                 return  # back-edge: the loop is described by its conditions and poll period
             node = self.nodes[nid]
+            if not polled and nid in self.cyclic:
+                start = elapsed  # sleeps before the loop: when watching begins
             polled = polled or nid in self.cyclic
             if node.get("kind") == "sleep":
                 seconds = float(node.get("durationSeconds") or 0)
@@ -352,6 +381,7 @@ class _Describer:
                         conditions=list(conds),
                         poll_seconds=self._poll_seconds(nid) if polled else None,
                         delay_after_seconds=after,
+                        starts_after_seconds=start if polled else 0,
                     )
             edges = self._edges(node)
             if not edges:
@@ -362,8 +392,21 @@ class _Describer:
                 if node.get("kind") == "switch" and case is not None:
                     rendered = self._render(case.get("when"))
                     extra = [rendered] if rendered else []
+                elif (
+                    node.get("kind") == "switch"
+                    and not (nid in self.cyclic and target in self.cyclic)
+                    # Only an alternative effect (e.g. "não consegui") is a branch worth
+                    # naming; "nothing new, go on to the next round" is not.
+                    and _effect_text(self.nodes.get(target) or {}) is not None
+                ):
+                    others = [self._render(c.get("when")) for c in node.get("cases", [])]
+                    others = [o for o in others if o and not o.startswith("@")]
+                    if others:
+                        extra = [f"caso contrário de ({'; '.join(others)})"]
                 # A default edge that loops back is "keep waiting"; it adds no condition.
-                walk(target, elapsed, conds + extra, on_path | {nid}, polled, depth + 1, after)
+                walk(
+                    target, elapsed, conds + extra, on_path | {nid}, polled, depth + 1, after, start
+                )
 
         if self.entry:
             walk(self.entry, 0.0, [], frozenset(), False, 0)
@@ -412,6 +455,31 @@ def _presence_phrase(conds: list[str]) -> list[str]:
 
 def _cap(text: str) -> str:
     return text[:1].upper() + text[1:]
+
+
+def _sources(definition: dict) -> list[str]:
+    """What the workflow reads: devices, prices, searches, metrics (deduplicated)."""
+    out: list[str] = []
+    for node in definition.get("nodes", []):
+        if node.get("kind") != "task" or _effect_text(node) is not None:
+            continue
+        capability, args = _call(node)
+        if not capability or capability.startswith(("runtime.", "stat.", "memory.")):
+            continue
+        if capability == "home.execute":
+            item = f"{args.get('capability')} de {args.get('target')}"
+        else:
+            shown = [
+                str(v)[:60]
+                for k, v in args.items()
+                if isinstance(v, (str, int, float))
+                and k not in ("text", "prompt", "instructions")
+                and "{{" not in str(v)
+            ][:3]
+            item = f"{capability} ({', '.join(shown)})" if shown else capability
+        if item not in out:
+            out.append(item)
+    return out
 
 
 def describe(
@@ -463,13 +531,21 @@ def describe(
         wait = next((e.delay_after_seconds for e in group if e.delay_after_seconds), 0)
         if wait:
             when += f", espera {_human(wait)}"
+        begins = next((e.starts_after_seconds for e in group if e.starts_after_seconds), 0)
         if poll:
-            timing = f" (verifica a cada {_human(poll)})"
+            timing = f" (verifica a cada {_human(poll)}"
+            if begins >= 60:
+                timing += f", a partir de {d._fmt(start + timedelta(seconds=begins))}"
+            timing += ")"
         elif delay:
             timing = f" (depois de {_human(delay)})"
         lines.append(f"• {_cap(when)}: {' e depois '.join(whats)}{timing}.")
     if not lines:
         lines.append("• Não envia mensagens nem age em dispositivos.")
+    sources = _sources(definition)
+    if sources:
+        shown = sources[:10] + ([f"… +{len(sources) - 10}"] if len(sources) > 10 else [])
+        lines.append("Consulta: " + "; ".join(shown) + ".")
     if deadline:
         lines.append(f"Encerra até {d._fmt(deadline)} se nada acontecer.")
     return Readback(effects=effects, deadline=deadline, text="\n".join(lines))

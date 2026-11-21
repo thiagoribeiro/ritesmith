@@ -87,6 +87,9 @@ class Plan(BaseModel):
     # What the plan's workflows will do, derived from their graphs (never from the
     # intent). Callers show this to the user as the confirmation.
     readback: str | None = None
+    # Intent verification of this plan (only on creation): verdict match | mismatch |
+    # unsure | error, reason, mode (shadow | enforce). See core/intent_verification.py.
+    verification: dict | None = None
 
 
 class CreatePlanRequest(BaseModel):
