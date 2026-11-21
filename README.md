@@ -232,6 +232,13 @@ The 0.2.1 proposal-mode scorecard (51 tasks, gpt-5-mini) is in
 
 ## Recipes
 
+Recipes are shortcuts, not a menu. A request uses one only if every requirement (trigger,
+times, repetition, each action, each message, the end) maps onto its params. Anything left
+over means a generated plan; semantic plans can do everything a recipe does, including
+"act once and stop" with `{kind:"stop"}` inside a repeat. Callers that force a recipe with
+`context.template` skip that judgement, so prefer sending the intent and the user's words
+(`context.user_request`) and let the agent decide.
+
 A recipe is a verified workflow shape. The caller sends
 `context.template = {"name": ..., "params": {...}}` with `POST /plans` (or
 `POST /generate/trama-workflow`), and RiteSmith works through these steps:
@@ -248,7 +255,7 @@ counts as a match.
 
 | Recipe | Use | Main params |
 |---|---|---|
-| `threshold_action` | "When a device reading crosses a limit, act and/or notify once." Also covers boolean or text states such as motion, door or presence | `read{capability,target,input}`, `metric_path`, `op` (`<` `<=` `>` `>=` `==` `!=`), `value`, `action?`, `notify?` (`{value}` = the reading), `timeout_notify?`, `interval_seconds`, `window_seconds` (≤ 14 days), `start_delay_seconds` |
+| `threshold_action` | "When a device reading crosses a limit, act and/or notify once." Also covers boolean or text states such as motion, door or presence | `read{capability,target,input}`, `metric_path`, `op` (`<` `<=` `>` `>=` `==` `!=`), `value`, `actions[≤6]` (in order; `action` for one), `notify?` (`{value}` = the reading), `timeout_notify?`, `interval_seconds`, `window_seconds` (≤ 14 days), `start_delay_seconds` |
 | `price_variation` | "Tell me if a coin or currency moves N%." The base price is captured on the first pass | `kind` (`crypto`/`fiat`), `symbol`, `currency`, `percent`, `direction` (`up`/`down`/`both`), `interval_seconds`, `window_seconds`, `label?` |
 | `presence_change` | "When someone arrives, or everyone leaves, act and/or notify once" | `people[1..4]`, `event` (`any_home`/`all_away`), `require_transition` (default true: first see the opposite state, so "when X arrives" waits for a real arrival), `delay_seconds`, `actions[≤6]`, `notify?`, `interval_seconds`, `window_seconds` |
 | `presence_reminder` | A one-shot text reminder on arrival (`context.presence_reminder` is still accepted) | `person_alias`, `message`, `channel: "telegram"` |

@@ -26,7 +26,7 @@ from ritesmith.config import Settings
 
 log = logging.getLogger(__name__)
 
-VERSION = "intent-verify-v1"
+VERSION = "intent-verify-v2"
 
 _SYSTEM = """\
 You check whether an automation that was ALREADY BUILT does what the USER asked.
@@ -51,7 +51,9 @@ Extract the requirement from USER, then compare it with BUILT field by field:
 verdict:
 - "mismatch": any field contradicts the request. Examples: wrong trigger type, a
   different date or time, recurrence asked but missing (or the reverse), a different
-  device, person or channel, or an extra side effect the user did not ask for.
+  device, person or channel, or an extra side effect the user did not ask for. A message
+  telling the user what the automation did (or that it fired) is NOT an extra side
+  effect; only an unrequested device action, purchase or message to someone else is.
 - "unsure": the user's words are ambiguous, or BUILT lacks the information to decide.
 - "match": every field the user specified is honoured. Reasonable defaults the user
   left open (a polling interval, a stop deadline) are fine.

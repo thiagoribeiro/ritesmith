@@ -255,3 +255,63 @@ def test_block_continuation_reports_the_full_monitor():
         "(checagens e avisos) continua sozinho até completar 28 rodadas a cada 6 h (≈ 7 dias no total)"
         in text
     )
+
+
+def test_execution_outcome_says_what_actually_happened():
+    from ritesmith.workflows.readback import execution_outcome
+
+    definition = recipe(
+        "threshold_action",
+        {
+            "read": {"capability": "ac.read", "target": "hugo"},
+            "metric_path": "state.current_temperature",
+            "op": "<",
+            "value": 26,
+            "actions": [{"capability": "ac.turn_off", "target": "hugo"}],
+            "notify": "Desliguei o ar",
+            "interval_seconds": 300,
+            "window_seconds": 3600,
+        },
+    )
+
+    def step(name, at, ok=True):
+        return {"stepName": name, "phase": "UP", "success": ok, "createdAt": at}
+
+    quiet = [
+        step("read", "2026-11-21T01:19:00Z"),
+        step("check", "2026-11-21T01:19:01Z"),
+        step("clock", "2026-11-21T01:19:02Z"),
+        step("read", "2026-11-21T01:24:00Z"),
+        step("timeout_entry", "2026-11-21T09:19:00Z"),
+    ]
+    assert (
+        execution_outcome(definition, quiet)
+        == "Não agiu: a condição não aconteceu em 2 verificações."
+    )
+    acted = [
+        step("read", "2026-11-21T09:00:00Z"),
+        step("act_entry", "2026-11-21T09:12:00Z"),
+        step("notify", "2026-11-21T09:12:01Z", ok=False),
+    ]
+    assert execution_outcome(definition, acted) == (
+        "Fez: 21/11 06:12 executa ac.turn_off em hugo.\n"
+        "Falhou: 21/11 06:12 envia no Telegram “Desliguei o ar”."
+    )
+
+
+def test_unfamiliar_device_verbs_are_actions_not_reads():
+    # The bench's generated plan called ac.powerOff; it was listed under "Consulta",
+    # so the confirmation (and the verifier) would have said the AC is never turned off.
+    definition = {
+        "entrypoint": "read",
+        "nodes": [
+            task("read", "home.execute", {"capability": "ac.read", "target": "hugo"}, "off"),
+            task("off", "home.execute", {"capability": "ac.powerOff", "target": "hugo"}, "fan"),
+            task(
+                "fan", "home.execute", {"capability": "remote.press", "target": "ventilador_hugo"}
+            ),
+        ],
+    }
+    text = describe(definition, start=NOW).text
+    assert "executa ac.powerOff em hugo" in text and "executa remote.press" in text
+    assert text.endswith("Consulta: ac.read de hugo.")

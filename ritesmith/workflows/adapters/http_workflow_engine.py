@@ -66,6 +66,16 @@ class HttpWorkflowEngineAdapter(WorkflowEngineAdapter):
             data = resp.json()
             return data["id"]
 
+    async def get_steps(self, external_execution_id: str) -> list[dict]:
+        """Every step Trama ran for this execution, in order (stepName = node id)."""
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.get(
+                f"{self.base_url}/workflows/{external_execution_id}/steps",
+                headers=self.headers,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
     async def get_status(self, external_execution_id: str) -> dict:
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             resp = await client.get(

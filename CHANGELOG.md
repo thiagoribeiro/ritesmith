@@ -7,6 +7,24 @@ All notable changes to RiteSmith. The format loosely follows
 ## [Unreleased]
 
 ### Added
+- **`stop` in semantic plans**: `{kind:"stop"}` inside a repeat (typically in a condition)
+  ends it after the steps before it. "Watch X; when Y do A and B, tell me, and stop" is
+  now an ordinary generated plan with any number of actions; before, only recipes could
+  act once and stop.
+- **`threshold_action.actions[]`**: several actions in order (up to 6); `action` still works.
+- **Regeneration on mismatch** (`enforce`): a model-built workflow that the intent
+  verifier rejects is generated once more with `context.verifier_feedback`
+  (requested vs built), then verified again. Recipes are never regenerated.
+- **Execution outcome in completion callbacks** (`outcome`): what the workflow actually
+  did, from Trama's step log. Example: "Fez: 21/11 06:12 executa ac.turn_off em hugo" or
+  "Não agiu: a condição não aconteceu em 97 verificações".
+- Readback: "— uma vez, e encerra" for act-once effects, and the full horizon of
+  duration-based continuations.
+
+### Changed
+- **The agent no longer bends requests to fit recipes.** It lists every requirement
+  first and uses a recipe only if all of them map onto its params; otherwise it writes a
+  plan. `context.user_request` (the user's words) wins over the paraphrase.
 - **Plan readback** (`Plan.readback`): what the plan's workflows will do, derived
   deterministically from the graph. It covers effects (messages, device actions, reports)
   with their wall-clock times, or their trigger conditions and poll interval, plus the
