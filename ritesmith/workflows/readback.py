@@ -457,6 +457,47 @@ def _cap(text: str) -> str:
     return text[:1].upper() + text[1:]
 
 
+def _literal(value):
+    if isinstance(value, dict) and set(value) == {"__trama_literal_json__"}:
+        return value["__trama_literal_json__"]
+    return value
+
+
+def _continuations(definition: dict) -> list[str]:
+    """Long monitors run in blocks; the last node of a block starts the next one."""
+    out = []
+    for node in definition.get("nodes", []):
+        if node.get("kind") != "task":
+            continue
+        request = (node.get("action") or {}).get("request") or {}
+        body = request.get("body") if isinstance(request.get("body"), dict) else {}
+        context = _literal(body.get("context")) or {}
+        cont = _literal(context.get("workflow_continuation")) if isinstance(context, dict) else None
+        if not str(request.get("url", "")).rstrip("/").endswith("/plans") or not isinstance(
+            cont, dict
+        ):
+            continue
+        repeats = [
+            st
+            for st in ((cont.get("plan") or {}).get("steps") or [])
+            if isinstance(st, dict) and st.get("kind") == "repeat"
+        ]
+        if repeats and repeats[0].get("count") and repeats[0].get("interval_seconds"):
+            r = repeats[0]
+            total = float(r["count"]) * float(r["interval_seconds"])
+            out.append(
+                "Ao fim deste bloco, o mesmo monitor (checagens e avisos) continua sozinho até "
+                f"completar {int(r['count'])} rodadas a cada {_human(float(r['interval_seconds']))}"
+                f" (≈ {_human(total)} no total)."
+            )
+        else:
+            out.append(
+                "Ao fim deste bloco, o mesmo monitor (checagens e avisos) continua sozinho "
+                "num novo bloco."
+            )
+    return list(dict.fromkeys(out))
+
+
 def _sources(definition: dict) -> list[str]:
     """What the workflow reads: devices, prices, searches, metrics (deduplicated)."""
     out: list[str] = []
@@ -494,6 +535,8 @@ def describe(
     effects = d.effects()
     deadline = datetime.fromtimestamp(max(d.deadlines), UTC) if d.deadlines else None
 
+    continuations = _continuations(definition)
+    block = " neste bloco" if continuations else ""
     timed = [e for e in effects if e.at_seconds is not None and not e.conditions]
     lines: list[str] = []
     # Repeated identical timed effects (a dated series) collapse to dates.
@@ -523,7 +566,7 @@ def describe(
         if len(times) > 1 and len(whats) == 1:
             step = times[1] - times[0]
             lines.append(
-                f"• {_cap(when)}: {whats[0]} — até {len(times)} vezes, a cada {_human(step)}"
+                f"• {_cap(when)}: {whats[0]} — até {len(times)} vezes{block}, a cada {_human(step)}"
                 f" (última checagem depois de {_human(times[-1])})."
             )
             continue
@@ -542,6 +585,7 @@ def describe(
         lines.append(f"• {_cap(when)}: {' e depois '.join(whats)}{timing}.")
     if not lines:
         lines.append("• Não envia mensagens nem age em dispositivos.")
+    lines += continuations
     sources = _sources(definition)
     if sources:
         shown = sources[:10] + ([f"… +{len(sources) - 10}"] if len(sources) > 10 else [])

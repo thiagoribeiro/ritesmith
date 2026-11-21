@@ -211,3 +211,47 @@ def test_polling_shows_when_watching_begins_and_minutes_round():
     )
     text = describe(definition, start=NOW).text
     assert "(verifica a cada 1 min, a partir de 21/11/2026 14:07)" in text
+
+
+def test_block_continuation_reports_the_full_monitor():
+    # Long monitors run 20 rounds per block; the last node starts the next block, so
+    # "114 h" in this block is not the end of a 7-day request.
+    cont = {
+        "__trama_literal_json__": {
+            "plan": {
+                "steps": [
+                    {
+                        "kind": "repeat",
+                        "id": "monitor",
+                        "interval_seconds": 21600,
+                        "count": 28,
+                        "steps": [],
+                    }
+                ]
+            }
+        }
+    }
+    definition = {
+        "entrypoint": "fetch",
+        "nodes": [
+            task("fetch", "web.search", {"query": "solar"}, "go_on"),
+            {
+                "id": "go_on",
+                "kind": "task",
+                "next": "end",
+                "action": {
+                    "mode": "sync",
+                    "request": {
+                        "url": f"{BASE}/plans",
+                        "verb": "POST",
+                        "body": {"mode": "execute", "context": {"workflow_continuation": cont}},
+                    },
+                },
+            },
+        ],
+    }
+    text = describe(definition, start=NOW).text
+    assert (
+        "(checagens e avisos) continua sozinho até completar 28 rodadas a cada 6 h (≈ 7 dias no total)"
+        in text
+    )

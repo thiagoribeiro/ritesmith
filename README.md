@@ -432,9 +432,9 @@ returned in `Plan.verification` and audited as `plan.intent_verified`.
 The model defaults to `RITESMITH_LLM_WORKFLOW_MODEL`, with
 `RITESMITH_INTENT_VERIFICATION_EFFORT=low`. On a 26-case home-automation calibration set,
 `gpt-6.1-terra` caught 14/14 deliberately wrong plans, including the misrouted reminder
-that motivated it. Of 12 accepted plans, it marked 8 `match` and 3 `unsure`, and 1
-`mismatch` that was a real defect: the plan stopped checking after 114 h of a 7-day
-request. Cost was about US$ 0.0015 and 3.5 s (p50) per check.
+that motivated it. Of 12 correct plans, it marked 10 `match`, 2 `unsure` and none
+`mismatch`. Cost was about US$ 0.0015 and 3 s (p50) per check. That is one run of a
+nondeterministic model, so watch it in `shadow` before you `enforce`.
 
 ### Artifacts
 
