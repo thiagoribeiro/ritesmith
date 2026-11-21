@@ -7,6 +7,11 @@ All notable changes to RiteSmith. The format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Plan readback** (`Plan.readback`): what the plan's workflows will do, derived
+  deterministically from the graph. It covers effects (messages, device actions, reports)
+  with their wall-clock times, or their trigger conditions and poll interval, plus the
+  deadline. Arrivals and departures read as such, and unrolled repeats collapse. Callers
+  should confirm with this text instead of echoing the intent.
 - **Agent-mode generation** (`RITESMITH_GENERATION_MODE=agent`; the default stays
   `proposal`).
   - The model works in a bounded tool loop over the Responses API.

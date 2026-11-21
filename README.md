@@ -408,6 +408,16 @@ It searches, generates and validates, then returns a plan with its required capa
 and workflow definition, optionally behind an approval gate. `context.template` selects a
 [recipe](#recipes). In agent mode, `/transcript` returns every generation turn.
 
+Every plan carries a `readback`, a plain-language description (pt-BR) of what its workflows
+will do. It is derived from the graph, never from the intent:
+- each effect: a message, a device action, a report;
+- when it happens: at wall-clock times, or after which observed conditions (an arrival, a
+  reading crossing a limit) and how often they are checked;
+- when the plan gives up.
+
+Show this text to the user as the confirmation. Repeating the request back can confirm a
+plan that does something else.
+
 ### Artifacts
 
 ```http

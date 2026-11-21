@@ -13,6 +13,7 @@ Fluxo principal (build_plan):
 """
 
 import json
+import logging
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from urllib.parse import urlparse
@@ -159,6 +160,24 @@ _ALLOWED_TRANSITIONS: dict[PlanStatus, set[PlanStatus]] = {
     PlanStatus.executing: {PlanStatus.completed, PlanStatus.failed, PlanStatus.cancelled},
     PlanStatus.failed: {PlanStatus.superseded},
 }
+
+
+def plan_readback(artifacts: list[Artifact], start: datetime, settings: Settings) -> str | None:
+    """Readback of every workflow in the plan; None when there is none to describe."""
+    from ritesmith.workflows.readback import describe
+
+    parts = []
+    for artifact in artifacts:
+        if artifact.artifact_type.value != "trama_workflow" or not artifact.content:
+            continue
+        try:
+            definition = json.loads(artifact.content)
+            parts.append(describe(definition, start=start, timezone=settings.local_timezone).text)
+        except Exception:  # a readback must never break plan creation
+            logging.getLogger(__name__).warning(
+                "readback failed artifact=%s", artifact.artifact_id, exc_info=True
+            )
+    return "\n".join(parts) or None
 
 
 class PlanBuilder:
@@ -454,6 +473,7 @@ class PlanBuilder:
         await self.db.commit()
 
         return Plan(
+            readback=plan_readback(artifacts, now, self.settings),
             plan_id=plan_id,
             status=plan_status,
             intent=req.intent,
@@ -815,6 +835,7 @@ class PlanBuilder:
         policy = PolicyDecision(**plan_orm.policy_decision) if plan_orm.policy_decision else None
 
         return Plan(
+            readback=plan_readback(artifacts, plan_orm.created_at, self.settings),
             plan_id=plan_orm.plan_id,
             status=PlanStatus(plan_orm.status),
             intent=plan_orm.intent,

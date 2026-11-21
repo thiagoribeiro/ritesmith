@@ -84,6 +84,9 @@ class Plan(BaseModel):
     metadata: dict | None = None
     # {execution_id, artifact_id, status, delegated_execution_id (Trama id), error}
     executions: list[dict] = []
+    # What the plan's workflows will do, derived from their graphs (never from the
+    # intent). Callers show this to the user as the confirmation.
+    readback: str | None = None
 
 
 class CreatePlanRequest(BaseModel):
