@@ -252,6 +252,7 @@ counts as a match.
 | `price_variation` | "Tell me if a coin or currency moves N%." The base price is captured on the first pass | `kind` (`crypto`/`fiat`), `symbol`, `currency`, `percent`, `direction` (`up`/`down`/`both`), `interval_seconds`, `window_seconds`, `label?` |
 | `presence_change` | "When someone arrives, or everyone leaves, act and/or notify once" | `people[1..4]`, `event` (`any_home`/`all_away`), `require_transition` (default true: first see the opposite state, so "when X arrives" waits for a real arrival), `delay_seconds`, `actions[≤6]`, `notify?`, `interval_seconds`, `window_seconds` |
 | `presence_reminder` | A one-shot text reminder on arrival (`context.presence_reminder` is still accepted) | `person_alias`, `message`, `channel: "telegram"` |
+| `scheduled_reminder` | "Remind me at a date and time", optionally repeating on the calendar. Every occurrence is computed when the plan is built (months clamp to the month's last day and return to the anchor day) and each gap is one durable Trama sleep | `message`, `first_at` (local ISO), `timezone` (default `America/Sao_Paulo`), `repeat{every, unit: days/weeks/months/years}?`, `count?` or `until?` (an open series stops after 10 years and says so in its last message) |
 
 Device recipes read and act through `home.execute` (LoomHarbor), and notifications go
 through `telegram.send`. The plan is refused if the required providers are not
@@ -783,7 +784,7 @@ A Grafana dashboard is at `deploy/grafana/ritesmith.json`.
 - HTTP connection pooling for all host function providers
 - Semantic workflow plans compiled to Trama (counters, joins, continuation in code)
 - Closed capability contracts, enforced at generation and at `/trama/execute`
-- Recipes built without a model call: `threshold_action`, `price_variation`, `presence_change`, `presence_reminder`
+- Recipes built without a model call: `threshold_action`, `price_variation`, `presence_change`, `presence_reminder`, `scheduled_reminder`
 - Agent-mode generation: tool-using loop with contracts, devices, read-only probes, validation, offline simulation and script checks; cacheable prompt; isolated tool process; per-plan transcript
 
 ### Next

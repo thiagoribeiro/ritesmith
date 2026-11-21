@@ -12,10 +12,14 @@ deadline computed when the plan is built (``runtime.timestamp`` is read each pas
 
 from __future__ import annotations
 
+import calendar
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from datetime import time as time_of_day
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -23,6 +27,9 @@ from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_
 
 _OPS = {"<": "<", "<=": "<=", ">": ">", ">=": ">=", "==": "===", "!=": "!=="}
 _MAX_WINDOW = 14 * 86400
+_MAX_OCCURRENCES = 60
+_MAX_HORIZON_YEARS = 10
+_DEFAULT_SERIES_YEARS = 10
 
 
 class _Closed(BaseModel):
@@ -98,6 +105,92 @@ class PresenceChange(_Closed):
         if len({p.strip().lower() for p in self.people}) != len(self.people):
             raise ValueError("people must be distinct")
         return self
+
+
+class Repeat(_Closed):
+    every: int = Field(ge=1, le=120)
+    unit: Literal["days", "weeks", "months", "years"]
+
+
+class ScheduledReminder(_Closed):
+    """Send a text at a wall-clock date and time, optionally repeating on the calendar.
+
+    Every occurrence is computed when the plan is built (months and years are calendar
+    steps anchored on ``first_at``: the 31st falls back to the month's last day and
+    returns to the 31st when it can), and each gap becomes one durable Trama sleep.
+    """
+
+    message: str = Field(min_length=1, max_length=2000)
+    # Local wall-clock time, e.g. "2027-05-15T08:00"; an explicit offset is honoured.
+    first_at: datetime
+    timezone: str = Field(default="America/Sao_Paulo", max_length=64)
+    repeat: Repeat | None = None
+    # Total reminders including the first. Without count/until a repeating series stops
+    # after _DEFAULT_SERIES_YEARS and says so in its last message.
+    count: int | None = Field(default=None, ge=1, le=_MAX_OCCURRENCES)
+    until: date | None = None
+
+    @model_validator(mode="after")
+    def coherent(self):
+        try:
+            ZoneInfo(self.timezone)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError(f"unknown timezone {self.timezone!r}") from exc
+        if self.repeat is None and ((self.count or 1) > 1 or self.until is not None):
+            raise ValueError("count > 1 or until needs repeat={every, unit}")
+        if self.count is not None and self.until is not None:
+            raise ValueError("give count or until, not both")
+        return self
+
+    def occurrences(self, now: datetime) -> tuple[list[datetime], bool]:
+        """Aware datetimes of every reminder, and whether the default cap cut the series."""
+        tz = ZoneInfo(self.timezone)
+        first = self.first_at if self.first_at.tzinfo else self.first_at.replace(tzinfo=tz)
+        if first <= now + timedelta(seconds=60):
+            raise ValueError(
+                f"first_at {first.isoformat()} is not in the future "
+                f"(now {now.astimezone(tz).isoformat(timespec='minutes')})"
+            )
+        if first > now + timedelta(days=366 * _MAX_HORIZON_YEARS):
+            raise ValueError(f"first_at more than {_MAX_HORIZON_YEARS} years away")
+        if self.repeat is None:
+            return [first], False
+        limit = self.count or _MAX_OCCURRENCES
+        horizon = (
+            datetime.combine(self.until, time_of_day.max, tzinfo=first.tzinfo)
+            if self.until is not None
+            else _add(first, years=_DEFAULT_SERIES_YEARS)
+            if self.count is None
+            else None
+        )
+        out = []
+        for k in range(limit):
+            at = _step(first, self.repeat, k)
+            if horizon is not None and at > horizon:
+                break
+            out.append(at)
+        if self.until is not None and not out:
+            raise ValueError("until is before first_at")
+        capped = self.count is None and self.until is None
+        return out, capped
+
+
+def _add(at: datetime, *, months: int = 0, years: int = 0) -> datetime:
+    total = at.month - 1 + months + 12 * years
+    year, month = at.year + total // 12, total % 12 + 1
+    day = min(at.day, calendar.monthrange(year, month)[1])
+    return at.replace(year=year, month=month, day=day)
+
+
+def _step(first: datetime, repeat: Repeat, k: int) -> datetime:
+    n = repeat.every * k
+    if repeat.unit == "days":
+        return first + timedelta(days=n)
+    if repeat.unit == "weeks":
+        return first + timedelta(weeks=n)
+    if repeat.unit == "months":
+        return _add(first, months=n)
+    return _add(first, years=n)
 
 
 @dataclass(frozen=True)
@@ -355,6 +448,49 @@ def presence_change_workflow(spec: PresenceChange, base_url: str) -> dict:
     }
 
 
+def scheduled_reminder_workflow(
+    spec: ScheduledReminder, base_url: str, now: datetime | None = None
+) -> dict:
+    now = now or datetime.now(UTC)
+    occurrences, capped = spec.occurrences(now)
+    nodes: list[dict] = []
+    previous = now
+    for i, at in enumerate(occurrences):
+        last = i + 1 == len(occurrences)
+        text = spec.message
+        if last and capped:
+            text += (
+                f"\n\n(Último lembrete desta série de {_DEFAULT_SERIES_YEARS} anos — "
+                "peça de novo se quiser continuar.)"
+            )
+        nodes.append(
+            {
+                "id": f"wait_{i}",
+                "kind": "sleep",
+                # Gaps between wall-clock targets; Trama persists wakeAt, so a restart
+                # does not lose or shift the schedule.
+                "durationSeconds": max(1, round((at - previous).total_seconds())),
+                "next": f"remind_{i}",
+            }
+        )
+        nodes.append(
+            _task(
+                base_url,
+                f"remind_{i}",
+                "telegram.send",
+                {"text": text},
+                "end" if last else f"wait_{i + 1}",
+            )
+        )
+        previous = at
+    return {
+        "name": "scheduled_reminder",
+        "version": "1.0.0",
+        "entrypoint": "wait_0",
+        "nodes": nodes,
+    }
+
+
 TEMPLATES: dict[str, Template] = {
     "presence_reminder": Template(
         PresenceReminder, presence_arrival_workflow, ("home.execute", "telegram.send")
@@ -374,13 +510,27 @@ TEMPLATES: dict[str, Template] = {
         price_variation_workflow,
         ("telegram.send", "runtime.timestamp"),  # + the market capability for its kind
     ),
+    "scheduled_reminder": Template(
+        ScheduledReminder, scheduled_reminder_workflow, ("telegram.send",)
+    ),
 }
+
+# Fields that only make sense for a time-based request. presence_reminder ignores them,
+# so a request carrying both was misrouted (a dated reminder became an arrival one).
+_SCHEDULE_HINTS = ("schedule_hours", "duration_days", "runs_per_day", "first_at", "repeat")
 
 
 def requested_template(context: dict | None) -> tuple[str, BaseModel] | None:
     """The validated recipe a request asks for, or None. Invalid params raise."""
     context = context or {}
     if "presence_reminder" in context:  # original contract, kept for r2d2
+        mixed = [k for k in (*_SCHEDULE_HINTS, "template") if k in context]
+        if mixed:
+            raise ValueError(
+                "presence_reminder fires once on the next arrival and ignores "
+                f"{', '.join(mixed)}; for a reminder at a date/time (optionally repeating) "
+                "use template scheduled_reminder instead"
+            )
         return "presence_reminder", PresenceReminder.model_validate(context["presence_reminder"])
     choice = context.get("template")
     if choice is None:

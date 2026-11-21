@@ -17,6 +17,11 @@ All notable changes to RiteSmith. The format loosely follows
   `shadow` records the verdict in `Plan.verification` and in the audit log; `enforce`
   blocks a mismatch. It uses the Responses API with the workflow model at low effort and
   fails open on errors.
+- **`scheduled_reminder` recipe**: a text at a wall-clock date and time, optionally
+  repeating every N days/weeks/months/years (`count`, `until`, or an open series capped
+  at 10 years). Occurrences are computed with calendar months when the plan is built;
+  each gap is one durable Trama sleep.
+
 - **Agent-mode generation** (`RITESMITH_GENERATION_MODE=agent`; the default stays
   `proposal`).
   - The model works in a bounded tool loop over the Responses API.
@@ -59,6 +64,9 @@ All notable changes to RiteSmith. The format loosely follows
     agent refuses and lists the options instead of picking one.
 
 ### Fixed
+- `context.presence_reminder` sent together with schedule fields (`schedule_hours`,
+  `first_at`, `repeat`, …) or a `template` is now refused. It used to become an arrival
+  reminder silently, dropping the date and the repetition.
 - **A model-shaped plan could exhaust host memory.** Validate, compile, simulate and
   `check_script` now run in a spawned worker. It has a soft `RLIMIT_DATA`
   (`generation_agent_tool_memory_mb`, 512) and a timeout

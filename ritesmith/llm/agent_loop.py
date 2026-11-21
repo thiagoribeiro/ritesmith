@@ -58,8 +58,8 @@ Work like an engineer with tools, not like an autocomplete:
    "when <device reading/state> <condition>, do X / tell me" (threshold_action, also for
    motion/door/presence states and time windows via start_delay_seconds), "tell me if the
    price moves N%" (price_variation), "when <people> arrive / everyone leaves, do X / tell
-   me" (presence_change — always for presence, it waits for a real transition) and
-   arrival reminders. A semantic repeat cannot stop
+   me" (presence_change — always for presence, it waits for a real transition), arrival
+   reminders and "remind me at <date>, every N months" (scheduled_reminder). A semantic repeat cannot stop
    early, so an act-once request written as a plan would act on every pass: use the recipe.
 4. Otherwise draft, then validate_workflow (or check_script). Fix every error it reports.
    For anything that loops, simulate_workflow with realistic responses and confirm it
@@ -172,7 +172,13 @@ _TOOLS: list[dict] = [
                 "arrives' waits for a real arrival), delay_seconds (e.g. 900 = 15 min after), "
                 "actions[{capability,target,input}] (<=6), notify?, interval_seconds, "
                 "window_seconds. "
-                "presence_reminder params: person_alias, message, channel='telegram'. "
+                "presence_reminder params: person_alias, message, channel='telegram' (ONLY "
+                "'on my next arrival'; never for a date). "
+                "scheduled_reminder = 'tell me at <date/time>, optionally every N "
+                "days/weeks/months/years': params message, first_at (local ISO, e.g. "
+                "2027-05-15T08:00), timezone (default America/Sao_Paulo), "
+                "repeat{every,unit}?, count? or until? (YYYY-MM-DD). Calendar months; a "
+                "durable Trama sleep per gap. "
                 "On success the workflow is final: call submit(kind='template')."
             ),
             "parameters": {
@@ -185,6 +191,7 @@ _TOOLS: list[dict] = [
                             "price_variation",
                             "presence_change",
                             "presence_reminder",
+                            "scheduled_reminder",
                         ],
                     },
                     "params": {"type": "object"},
