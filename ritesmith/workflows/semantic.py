@@ -17,7 +17,7 @@ FORMAT_VERSION = "workflow-plan-v1"
 class Operation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal[
-        "call", "sequence", "wait", "condition", "repeat", "parallel", "state", "callback"
+        "call", "sequence", "wait", "condition", "repeat", "parallel", "state", "callback", "stop"
     ]
     id: str | None = Field(default=None, pattern=r"^[A-Za-z_][A-Za-z0-9_]*$")
     capability_name: str | None = None
@@ -58,6 +58,8 @@ class Operation(BaseModel):
                 "initial_state",
             },
             "callback": {"action", "compensation"},
+            # Ends the enclosing repeat after the steps before it ("act once, then stop").
+            "stop": set(),
         }
         unsupported = self.model_fields_set - {"kind", "id"} - allowed[self.kind]
         if unsupported:
@@ -176,6 +178,7 @@ class PlanCompiler:
         self.scopes = {}
         self.branch_results = {}
         self.repeat_count = 0
+        self.loop_exits: list[str] = []  # where a `stop` inside the current pass jumps
         self._validate_shape(self.plan.steps)
         for index, operation in enumerate(self.plan.steps):
             chunked = operation.kind == "repeat" and (
@@ -194,6 +197,11 @@ class PlanCompiler:
 
     def _validate_shape(self, operations, in_loop=False, in_branch=False, depth=0):
         for operation in operations:
+            if operation.kind == "stop" and (not in_loop or in_branch):
+                raise ValueError(
+                    "stop ends the enclosing repeat: use it inside the repeat's steps "
+                    "(typically in a condition), never outside a repeat or in a parallel branch"
+                )
             if operation.kind == "repeat":
                 self.repeat_count += 1
                 if in_loop or in_branch or self.repeat_count > 1 or depth > 0:
@@ -291,6 +299,9 @@ class PlanCompiler:
     def operation(self, op, after, scope):
         if op.kind == "sequence":
             return self.sequence(op.steps, after, scope)
+        if op.kind == "stop":
+            # No node: whatever precedes the stop continues straight to the repeat's exit.
+            return self.loop_exits[-1]
         nid = self.id(op.id)
         if op.kind in ("call", "state", "callback"):
             node = {"id": nid, "kind": "task", "next": after}
@@ -723,7 +734,12 @@ class PlanCompiler:
                     },
                     scope,
                 )
-            body = self.sequence(operations(op.steps, index), tick, scope)
+            # A `stop` in this pass leaves the repeat with this pass's results.
+            self.loop_exits.append(exit_entry(index))
+            try:
+                body = self.sequence(operations(op.steps, index), tick, scope)
+            finally:
+                self.loop_exits.pop()
             entry = body
             if clock:
                 expired = self.id(name(nid + "_expired", index))
@@ -806,6 +822,9 @@ compiler derives all of them from the plan.
 Operations: call/state {id,capability_name OR artifact_id,args}; sequence {steps}; wait {seconds};
 condition {when:JSONLogic,steps,otherwise}; parallel {id,branches:[operations]};
 repeat {id,steps,interval_seconds, exactly ONE of count,duration_seconds,continuous:true,deadline_unix}.
+stop {kind:"stop"} inside a repeat ends it after the steps before it. "Watch X; when Y, do A and
+B, tell me, and stop" is repeat{steps:[read, condition{when:Y, steps:[A, B, notify, {kind:"stop"}]}],
+interval_seconds, duration_seconds} — every requested action goes in that condition, once.
 References are {ref:"operation_id",path:"output_field"} or {ref:"payload",path:"field"}.
 For text combining references use {type:"template",parts:["BTC: ",{ref:"fetch",path:"price"}]};
 the compiler emits a native string, never a template object passed to a tool.

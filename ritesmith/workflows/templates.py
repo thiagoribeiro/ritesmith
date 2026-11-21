@@ -53,7 +53,9 @@ class ThresholdAction(_Closed):
     op: Literal["<", "<=", ">", ">=", "==", "!="]
     # Numbers for thresholds; a bool/str for state matches (motion detected, door open).
     value: float | bool | str
-    action: HomeCall | None = None
+    action: HomeCall | None = None  # one action (kept for existing callers)
+    # Several actions, in order ("desliga o ar e liga o ventilador"). Never drop one to fit.
+    actions: list[HomeCall] = Field(default_factory=list, max_length=6)
     notify: str | None = Field(default=None, min_length=1, max_length=1000)
     timeout_notify: str | None = Field(default=None, min_length=1, max_length=1000)
     interval_seconds: int = Field(default=300, ge=30, le=86400)
@@ -63,8 +65,10 @@ class ThresholdAction(_Closed):
 
     @model_validator(mode="after")
     def does_something(self):
-        if self.action is None and self.notify is None:
-            raise ValueError("threshold_action needs an action, a notify text, or both")
+        if self.action is not None and self.actions:
+            raise ValueError("give action or actions, not both")
+        if self.action is None and not self.actions and self.notify is None:
+            raise ValueError("threshold_action needs actions, a notify text, or both")
         if self.op in ("<", "<=", ">", ">=") and isinstance(self.value, (bool, str)):
             raise ValueError(f"op {self.op} needs a numeric value")
         return self
@@ -271,22 +275,16 @@ def threshold_action_workflow(spec: ThresholdAction, base_url: str) -> dict:
         *_deadline_nodes(base_url, deadline, "timeout_entry", "wait"),
         {"id": "wait", "kind": "sleep", "durationSeconds": spec.interval_seconds, "next": "read"},
     ]
-    after_action = "notify" if spec.notify else "end"
-    if spec.action:
-        nodes.append(_home(base_url, "act_entry", spec.action, after_action))
+    actions = spec.actions or ([spec.action] if spec.action else [])
+    steps = [f"act_{i}" for i in range(len(actions))] + (["notify"] if spec.notify else [])
+    steps[0] = "act_entry"  # the crossing case targets act_entry
+    for i, call in enumerate(actions):
+        nodes.append(_home(base_url, steps[i], call, steps[i + 1] if i + 1 < len(steps) else "end"))
     if spec.notify:
         text = spec.notify.replace(
             "{value}", "{{ " + _out("read", "result." + spec.metric_path) + " }}"
         )
-        nodes.append(
-            _task(
-                base_url,
-                "notify" if spec.action else "act_entry",
-                "telegram.send",
-                {"text": text},
-                "end",
-            )
-        )
+        nodes.append(_task(base_url, steps[-1], "telegram.send", {"text": text}, "end"))
     if spec.timeout_notify:
         nodes.append(
             _task(base_url, "timeout_entry", "telegram.send", {"text": spec.timeout_notify}, "end")

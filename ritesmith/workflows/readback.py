@@ -59,6 +59,7 @@ class Effect:
     poll_seconds: float | None = None
     delay_after_seconds: float = 0  # sleeps between the matched condition and the effect
     starts_after_seconds: float = 0  # sleeps before the polling loop begins
+    ends: bool = False  # nothing waits or loops after it: the workflow finishes
 
 
 @dataclass
@@ -195,6 +196,20 @@ class _Describer:
             if v not in index:
                 strong(v)
         return out
+
+    def _finishes(self, nid: str) -> bool:
+        """From this node on, the workflow ends without waiting or looping again."""
+        seen, stack = set(), [t for t, _ in self._edges(self.nodes[nid])]
+        while stack:
+            cur = stack.pop()
+            if cur in seen or cur not in self.nodes:
+                continue
+            seen.add(cur)
+            node = self.nodes[cur]
+            if node.get("kind") == "sleep" or cur in self.cyclic:
+                return False
+            stack.extend(t for t, _ in self._edges(node))
+        return True
 
     def _poll_seconds(self, node_id: str) -> float | None:
         sleeps = [
@@ -382,6 +397,7 @@ class _Describer:
                         poll_seconds=self._poll_seconds(nid) if polled else None,
                         delay_after_seconds=after,
                         starts_after_seconds=start if polled else 0,
+                        ends=self._finishes(nid),
                     )
             edges = self._edges(node)
             if not edges:
@@ -482,7 +498,23 @@ def _continuations(definition: dict) -> list[str]:
             for st in ((cont.get("plan") or {}).get("steps") or [])
             if isinstance(st, dict) and st.get("kind") == "repeat"
         ]
-        if repeats and repeats[0].get("count") and repeats[0].get("interval_seconds"):
+        r0 = repeats[0] if repeats else {}
+        if r0.get("duration_seconds") or r0.get("deadline_unix") or r0.get("continuous"):
+            until = (
+                f"até completar ≈ {_human(float(r0['duration_seconds']))} no total"
+                if r0.get("duration_seconds")
+                else "sem prazo definido"
+                if r0.get("continuous")
+                else "até "
+                + datetime.fromtimestamp(float(r0["deadline_unix"]), UTC).strftime(
+                    "%d/%m/%Y %H:%M UTC"
+                )
+            )
+            out.append(
+                "Ao fim deste bloco, o mesmo monitor (checagens e avisos) continua sozinho "
+                f"{until}."
+            )
+        elif repeats and repeats[0].get("count") and repeats[0].get("interval_seconds"):
             r = repeats[0]
             total = float(r["count"]) * float(r["interval_seconds"])
             out.append(
@@ -563,12 +595,19 @@ def describe(
         timing = ""
         poll = next((e.poll_seconds for e in group if e.poll_seconds), None)
         times = sorted({e.at_seconds for e in group if e.at_seconds is not None})
-        if len(times) > 1 and len(whats) == 1:
+        joined = " e depois ".join(whats)
+        if len(times) > 1:
             step = times[1] - times[0]
-            lines.append(
-                f"• {_cap(when)}: {whats[0]} — até {len(times)} vezes{block}, a cada {_human(step)}"
-                f" (última checagem depois de {_human(times[-1])})."
-            )
+            if all(e.ends for e in group):
+                lines.append(
+                    f"• {_cap(when)}: {joined} — uma vez, e encerra "
+                    f"(verifica a cada {_human(step)})."
+                )
+            else:
+                lines.append(
+                    f"• {_cap(when)}: {joined} — até {len(times)} vezes{block}, a cada "
+                    f"{_human(step)} (última checagem depois de {_human(times[-1])})."
+                )
             continue
         delay = next((e.at_seconds for e in group if e.at_seconds), None)
         wait = next((e.delay_after_seconds for e in group if e.delay_after_seconds), 0)
@@ -582,7 +621,8 @@ def describe(
             timing += ")"
         elif delay:
             timing = f" (depois de {_human(delay)})"
-        lines.append(f"• {_cap(when)}: {' e depois '.join(whats)}{timing}.")
+        once = " — uma vez, e encerra" if poll and all(e.ends for e in group) else ""
+        lines.append(f"• {_cap(when)}: {joined}{once}{timing}.")
     if not lines:
         lines.append("• Não envia mensagens nem age em dispositivos.")
     lines += continuations
@@ -606,3 +646,46 @@ def _human(seconds: float) -> str:
     if s >= 60:
         return f"{s // 60} min"
     return f"{s} s"
+
+
+def execution_outcome(
+    definition: dict, steps: list[dict], *, timezone: str = "America/Sao_Paulo"
+) -> str:
+    """What a finished execution actually did, from Trama's step log.
+
+    A completion message used to repeat the request ("Automação concluída: desligar o ar…")
+    even when the monitor ended at its deadline without acting.
+    """
+    tz = ZoneInfo(timezone)
+    nodes = {n["id"]: n for n in definition.get("nodes", []) if "id" in n}
+    done, failed, reads = [], [], 0
+    for st in steps:
+        if st.get("phase") not in (None, "UP"):
+            continue  # compensations are reported by the failure path
+        node = nodes.get(st.get("stepName"))
+        if node is None or node.get("kind") != "task":
+            continue
+        what = _effect_text(node)
+        if what is None:
+            if _call(node)[0] and not _call(node)[0].startswith(("runtime.", "stat.")):
+                reads += 1
+            continue
+        when = st.get("createdAt") or st.get("stepStartedAt")
+        try:
+            at = datetime.fromisoformat(str(when)).astimezone(tz)
+            stamp = (at + timedelta(seconds=30)).strftime("%d/%m %H:%M")
+        except ValueError:
+            stamp = "?"
+        (done if st.get("success") else failed).append(f"{stamp} {what}")
+    lines = []
+    if done:
+        lines.append("Fez: " + "; ".join(done) + ".")
+    if failed:
+        lines.append("Falhou: " + "; ".join(failed) + ".")
+    if not done and not failed:
+        lines.append(
+            "Não agiu: a condição não aconteceu"
+            + (f" em {reads} verificaç{'ão' if reads == 1 else 'ões'}" if reads else "")
+            + "."
+        )
+    return "\n".join(lines)

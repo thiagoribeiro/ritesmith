@@ -40,7 +40,7 @@ from ritesmith.workflows.semantic import SEMANTIC_RULES
 
 log = logging.getLogger(__name__)
 
-AGENT_VERSION = "agent-loop-v1"
+AGENT_VERSION = "agent-loop-v2"
 _RESULT_LIMIT = 6000  # characters of a tool result shown back to the model
 
 AGENT_SYSTEM = """\
@@ -54,13 +54,16 @@ Work like an engineer with tools, not like an autocomplete:
    keys or output fields; contracts are closed.
 2. list_devices when the request names a device, room or person: use the exact alias/id and
    a capability that device actually has (e.g. an IR fan is remote.press, not switch.off).
-3. If use_template fits, call it: it is verified and needs no further checks. It fits
-   "when <device reading/state> <condition>, do X / tell me" (threshold_action, also for
-   motion/door/presence states and time windows via start_delay_seconds), "tell me if the
-   price moves N%" (price_variation), "when <people> arrive / everyone leaves, do X / tell
-   me" (presence_change — always for presence, it waits for a real transition), arrival
-   reminders and "remind me at <date>, every N months" (scheduled_reminder). A semantic repeat cannot stop
-   early, so an act-once request written as a plan would act on every pass: use the recipe.
+3. First list every requirement in the request: trigger, times/dates, repetition, each
+   action (device + what), each message, when it stops. Recipes (use_template) are verified
+   shortcuts — use one ONLY if every requirement maps onto its params. Never drop, merge or
+   rephrase a requirement to make a recipe fit (two actions are two actions; a date is not
+   an arrival). If anything is left over, write a plan instead: a plan can do everything a
+   recipe does, e.g. "watch X; when Y do A and B, tell me, and stop" is a repeat with a
+   condition ending in {kind:"stop"}. Shortcuts: threshold_action (device reading/state
+   crosses a value → actions[] and/or one message, once), price_variation (price moves N%),
+   presence_change (people arrive / everyone leaves → actions/message once), presence_reminder
+   (a text on the next arrival), scheduled_reminder (a text at a date, optionally repeating).
 4. Otherwise draft, then validate_workflow (or check_script). Fix every error it reports.
    For anything that loops, simulate_workflow with realistic responses and confirm it
    notifies the right number of times and terminates.
@@ -86,6 +89,10 @@ Behaviour rules: one notification per real event (never one per polling pass); e
 has an explicit end; precompute numeric thresholds; never invent devices, chats or URLs; a
 request that cannot be done safely with the available capabilities is reported via
 submit(kind="refuse", reason=...).
+context.user_request, when present, is the user's own words; the request text is a
+paraphrase by another assistant and may be wrong — where they disagree, follow the user.
+context.verifier_feedback, when present, means a previous build was checked against those
+words and did not match: fix exactly what it says (requested vs built) and keep the rest.
 Keep messages to the user in the request's language. Code comments in English.
 """
 
@@ -155,11 +162,12 @@ _TOOLS: list[dict] = [
         "function": {
             "name": "use_template",
             "description": (
-                "Build a verified recipe. threshold_action = 'when a device reading matches, act "
+                "Build a verified recipe — only when EVERY requirement of the request maps onto "
+                "its params; otherwise write a plan. threshold_action = 'when a device reading matches, act "
                 "and/or notify ONCE, then end' (ends at the deadline otherwise). params: "
                 "read{capability,target,input?}, metric_path (under home.execute result, e.g. "
                 "state.current_temperature or present), op (<,<=,>,>= numeric; ==,!= for "
-                "bool/text like motion or door state), value, action{capability,target,input}?, "
+                "bool/text like motion or door state), value, actions[{capability,target,input}] (<=6, in order), "
                 "notify? ('{value}' = reading), timeout_notify?, interval_seconds (30-86400), "
                 "window_seconds (<=14 days), start_delay_seconds (wait before the first read, "
                 "e.g. until midnight). "

@@ -361,6 +361,25 @@ class PlanBuilder:
             and verification["mode"] == "enforce"
             and verification["verdict"] == "mismatch"
         )
+        if mismatch and self._can_regenerate(req, artifacts):
+            # One more generation, told exactly what did not match the user's words.
+            retry = await self._regenerate_with_feedback(req, plan_id, verification)
+            if retry is not None:
+                step, artifact, validation = retry
+                index = next(
+                    i for i, a in enumerate(artifacts) if a.artifact_type.value == "trama_workflow"
+                )
+                artifacts[index] = artifact
+                steps[index] = step  # single-artifact plans only (_can_regenerate)
+                if validation:
+                    validations.append(validation)
+                readback = plan_readback(artifacts, datetime.now(UTC), self.settings)
+                first = verification
+                verification = await self._verify_intent(req, readback) or first
+                verification["retried_after"] = {
+                    k: first.get(k) for k in ("verdict", "reason", "built")
+                }
+                mismatch = verification["verdict"] == "mismatch"
         if mismatch:
             any_blocked = True
 
@@ -510,6 +529,39 @@ class PlanBuilder:
             created_at=now,
             updated_at=now,
         )
+
+    @staticmethod
+    def _can_regenerate(req: CreatePlanRequest, artifacts: list[Artifact]) -> bool:
+        """Only model-built workflows: a recipe is deterministic, regenerating it changes nothing."""
+        from ritesmith.workflows.templates import requested_template
+
+        workflows = [a for a in artifacts if a.artifact_type.value == "trama_workflow"]
+        if len(workflows) != 1 or len(artifacts) != 1:
+            return False
+        try:
+            return requested_template(req.context) is None
+        except ValueError:
+            return False
+
+    async def _regenerate_with_feedback(self, req: CreatePlanRequest, plan_id: str, verification):
+        feedback = {
+            "reason": verification.get("reason"),
+            "requested": verification.get("requested"),
+            "built": verification.get("built"),
+        }
+        retry_req = req.model_copy(
+            update={
+                "context": {**(req.context or {}), "verifier_feedback": feedback},
+                "reuse_policy": ReusePolicy.force_new,
+            }
+        )
+        try:
+            return await self._handle_workflow_artifact(
+                req=retry_req, plan_id=plan_id, step_id="step_1"
+            )
+        except Exception as exc:  # keep the first result; the mismatch then blocks it
+            logging.getLogger(__name__).warning("regeneration after mismatch failed: %s", exc)
+            return None
 
     async def _verify_intent(self, req: CreatePlanRequest, readback: str | None) -> dict | None:
         mode = self.settings.intent_verification
@@ -795,12 +847,48 @@ class PlanBuilder:
         if not execs:
             return {}
         last = execs[-1]
-        return {
+        extra = {
             "execution_id": last["execution_id"],
             "artifact_id": last["artifact_id"],
             "delegated_execution_id": last["delegated_execution_id"],
             "error": last["error"],
         }
+        if outcome := await self._outcome(last):
+            extra["outcome"] = outcome
+        return extra
+
+    async def _outcome(self, execution: dict) -> str | None:
+        """What the finished workflow actually did (Trama's step log), for the callback."""
+        engine = self.settings.workflow_engine_url
+        if not engine or not execution.get("delegated_execution_id"):
+            return None
+        try:
+            from ritesmith.workflows.adapters.http_workflow_engine import (
+                HttpWorkflowEngineAdapter,
+            )
+            from ritesmith.workflows.readback import execution_outcome
+
+            row = (
+                await self.db.execute(
+                    select(ArtifactVersionORM.content)
+                    .join(ArtifactORM, ArtifactORM.artifact_id == ArtifactVersionORM.artifact_id)
+                    .where(
+                        ArtifactORM.artifact_id == execution["artifact_id"],
+                        ArtifactVersionORM.version == ArtifactORM.current_version,
+                    )
+                )
+            ).first()
+            if row is None:
+                return None
+            steps = await HttpWorkflowEngineAdapter(engine).get_steps(
+                execution["delegated_execution_id"]
+            )
+            return execution_outcome(
+                json.loads(row[0]), steps, timezone=self.settings.local_timezone
+            )
+        except Exception:  # an outcome is a nicety; never block the callback
+            logging.getLogger(__name__).warning("execution outcome failed", exc_info=True)
+            return None
 
     async def replan(self, failed_plan_id: str, failure_reason: str) -> Plan | None:
         """Create a successor plan when execution fails.

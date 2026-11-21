@@ -468,3 +468,48 @@ def test_scheduled_reminder_through_the_template_contract():
     )
     assert found[0] == "scheduled_reminder"
     assert WorkflowValidator(CAPS).validate(build_template(*found, BASE)) == []
+
+
+def test_threshold_action_runs_every_action_in_order():
+    # 2026-11-20: "desliga o ar e liga o ventilador no 3" fit a one-action recipe.
+    params = {
+        **THRESHOLD,
+        "action": None,
+        "actions": [
+            {"capability": "ac.turn_off", "target": "hugo"},
+            {
+                "capability": "remote.press",
+                "target": "ventilador_hugo",
+                "input": {"button": "velocidade 3"},
+            },
+        ],
+    }
+    params.pop("action")
+    definition = built("threshold_action", params)
+    deadline = clock(definition)
+    sim = WorkflowSimulator(
+        definition,
+        {
+            "read": [ac(27), ac(24.5)],
+            "clock": [{"result": deadline - 100}],
+            "act_entry": {"success": True, "result": {}},
+            "act_1": {"success": True, "result": {}},
+            "notify": {"ok": True, "message_id": 1},
+        },
+    ).run()
+    assert sim.calls == {"home.execute": 4, "runtime.timestamp": 1, "telegram.send": 1}
+    order = [
+        n["action"]["request"]["body"]["input"].get("capability")
+        for n in definition["nodes"]
+        if n["id"] in ("act_entry", "act_1")
+    ]
+    assert order == ["ac.turn_off", "remote.press"]
+    with pytest.raises(ValueError, match="not both"):
+        requested_template(
+            {
+                "template": {
+                    "name": "threshold_action",
+                    "params": {**params, "action": THRESHOLD["action"]},
+                }
+            }
+        )

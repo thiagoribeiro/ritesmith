@@ -126,3 +126,78 @@ async def test_bad_json_or_unknown_verdict_is_an_error():
         client, Settings(), user_request="x", intent="x", readback="• y", now_local="sábado"
     )
     assert out["verdict"] == "error"
+
+
+class Sequence(FakeResponses):
+    """mismatch on the first check, match after the regeneration."""
+
+    def __init__(self, verdicts):
+        super().__init__()
+        self.verdicts = list(verdicts)
+
+    async def create(self, **kwargs):
+        self.verdict = self.verdicts.pop(0)
+        return await super().create(**kwargs)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize("second, blocked", [("match", False), ("mismatch", True)])
+async def test_enforce_regenerates_once_with_the_feedback(
+    make_client, monkeypatch, second, blocked
+):
+    from ritesmith.core.planning import PlanBuilder
+
+    seen = {}
+
+    async def regenerate(self, req, plan_id, verification):
+        seen["reason"] = verification["reason"]
+        step, artifact, validation = await PlanBuilder._handle_workflow_artifact(
+            self,
+            req=req.model_copy(update={"context": {"presence_reminder": PRESENCE}}),
+            plan_id=plan_id,
+            step_id="step_1",
+        )
+        return step, artifact, validation
+
+    monkeypatch.setattr(PlanBuilder, "_can_regenerate", staticmethod(lambda req, artifacts: True))
+    monkeypatch.setattr(PlanBuilder, "_regenerate_with_feedback", regenerate)
+    responses = Sequence(["mismatch", second])
+    plan = await create(make_client, llm_with(responses), "enforce")
+    assert len(responses.calls) == 2
+    assert seen["reason"] == "pedido: data fixa; construído: chegada"
+    assert plan["verification"]["retried_after"]["verdict"] == "mismatch"
+    assert (plan["status"] == "blocked") is blocked
+
+
+def test_recipes_are_never_regenerated():
+    from ritesmith.core.planning import PlanBuilder
+    from ritesmith.schemas.plan import CreatePlanRequest
+
+    req = CreatePlanRequest(intent="x", context={"presence_reminder": PRESENCE})
+    wf = SimpleNamespace(artifact_type=SimpleNamespace(value="trama_workflow"))
+    assert PlanBuilder._can_regenerate(req, [wf]) is False
+    assert PlanBuilder._can_regenerate(CreatePlanRequest(intent="x"), [wf]) is True
+    assert PlanBuilder._can_regenerate(CreatePlanRequest(intent="x"), [wf, wf]) is False
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_regeneration_request_carries_the_feedback(monkeypatch):
+    from ritesmith.core.planning import PlanBuilder
+    from ritesmith.schemas.plan import CreatePlanRequest
+
+    captured = {}
+
+    async def handle(self, req, plan_id, step_id, **kw):
+        captured["context"] = req.context
+        captured["reuse"] = req.reuse_policy
+        return "step", "artifact", None
+
+    monkeypatch.setattr(PlanBuilder, "_handle_workflow_artifact", handle)
+    builder = object.__new__(PlanBuilder)
+    req = CreatePlanRequest(intent="x", context={"user_request": USER})
+    out = await builder._regenerate_with_feedback(
+        req, "plan_x", {"reason": "faltou desligar o ar", "requested": {}, "built": {}}
+    )
+    assert out == ("step", "artifact", None)
+    assert captured["context"]["verifier_feedback"]["reason"] == "faltou desligar o ar"
+    assert captured["context"]["user_request"] == USER and captured["reuse"].value == "force_new"
