@@ -7,6 +7,16 @@ All notable changes to RiteSmith. The format loosely follows
 ## [Unreleased]
 
 ### Added
+- **Plan readback** (`Plan.readback`): what the plan's workflows will do, derived
+  deterministically from the graph. It covers effects (messages, device actions, reports)
+  with their wall-clock times, or their trigger conditions and poll interval, plus the
+  deadline. Arrivals and departures read as such, and unrolled repeats collapse. Callers
+  should confirm with this text instead of echoing the intent.
+- **Intent verification** (`RITESMITH_INTENT_VERIFICATION`, default `off`): the readback
+  is compared with the user's own words (`context.user_request`) before activation.
+  `shadow` records the verdict in `Plan.verification` and in the audit log; `enforce`
+  blocks a mismatch. It uses the Responses API with the workflow model at low effort and
+  fails open on errors.
 - **`scheduled_reminder` recipe**: a text at a wall-clock date and time, optionally
   repeating every N days/weeks/months/years (`count`, `until`, or an open series capped
   at 10 years). Occurrences are computed with calendar months when the plan is built;

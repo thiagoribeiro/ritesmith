@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     generation_agent_tool_timeout_seconds: float = Field(default=30, gt=0, le=300)
     generation_agent_tool_memory_mb: int = Field(default=512, ge=128, le=4096)
     llm_timeout_seconds: int = 180  # gpt-5* reasoning + workflow JSON regularly exceeds 60s
+    # Compare each plan's readback with the user's own words (core/intent_verification.py).
+    # shadow records the verdict only; enforce blocks a mismatch.
+    intent_verification: Literal["off", "shadow", "enforce"] = "off"
+    intent_verification_model: str | None = None  # default: llm_workflow_model, else llm_model
+    intent_verification_effort: Literal["minimal", "none", "low", "medium", "high"] | None = "low"
+    intent_verification_timeout_seconds: float = Field(default=30, gt=0, le=120)
 
     # Embeddings (deferred to V1)
     embeddings_enabled: bool = False

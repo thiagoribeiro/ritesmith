@@ -409,6 +409,34 @@ It searches, generates and validates, then returns a plan with its required capa
 and workflow definition, optionally behind an approval gate. `context.template` selects a
 [recipe](#recipes). In agent mode, `/transcript` returns every generation turn.
 
+Every plan carries a `readback`, a plain-language description (pt-BR) of what its workflows
+will do. It is derived from the graph, never from the intent:
+- each effect: a message, a device action, a report;
+- when it happens: at wall-clock times, or after which observed conditions (an arrival, a
+  reading crossing a limit) and how often they are checked;
+- when the plan gives up.
+
+Show this text to the user as the confirmation. Repeating the request back can confirm a
+plan that does something else.
+
+**Intent verification** (`RITESMITH_INTENT_VERIFICATION=off|shadow|enforce`, default
+`off`): before activation, a model compares the readback with the user's literal
+messages, sent as `context.user_request` (a string or a list, oldest first). It does not
+compare against `intent`, which is a caller's paraphrase and can carry the
+misunderstanding. The verdict (`match`/`mismatch`/`unsure`/`error`, plus a reason) is
+returned in `Plan.verification` and audited as `plan.intent_verified`.
+- `shadow` only records the verdict.
+- `enforce` blocks a `mismatch` with the reason. `unsure` passes, and the caller should ask
+  the user.
+- Errors fail open.
+
+The model defaults to `RITESMITH_LLM_WORKFLOW_MODEL`, with
+`RITESMITH_INTENT_VERIFICATION_EFFORT=low`. On a 26-case home-automation calibration set,
+`gpt-6.1-terra` caught 14/14 deliberately wrong plans, including the misrouted reminder
+that motivated it. Of 12 correct plans, it marked 10 `match`, 2 `unsure` and none
+`mismatch`. Cost was about US$ 0.0015 and 3 s (p50) per check. That is one run of a
+nondeterministic model, so watch it in `shadow` before you `enforce`.
+
 ### Artifacts
 
 ```http
