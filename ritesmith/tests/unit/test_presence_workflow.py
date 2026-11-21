@@ -104,3 +104,16 @@ async def test_service_refuses_missing_runtime_capabilities(service, monkeypatch
         await service.generate_workflow(request)
     service.llm.generate_workflow.assert_not_awaited()
     service.db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_invalid_template_request_is_a_readable_generation_error(service):
+    from ritesmith.core.exceptions import GenerationFailedError
+
+    request = GenerateWorkflowRequest(
+        intent="Lembrar em 15/05/2027 a cada 6 meses",
+        context={"presence_reminder": SPEC, "schedule_hours": 4380},
+    )
+    with pytest.raises(GenerationFailedError) as err:
+        await service.generate_workflow(request, plan_id="plan_test")
+    assert "scheduled_reminder" in err.value.details["diagnostics"][0]

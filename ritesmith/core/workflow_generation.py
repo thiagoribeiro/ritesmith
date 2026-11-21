@@ -136,7 +136,14 @@ class WorkflowGenerationService:
             )
         if continuation and continuation.get("intent") != req.intent:
             continuation = None
-        recipe = requested_template(req.context)
+        try:
+            recipe = requested_template(req.context)
+        except ValueError as exc:  # includes pydantic ValidationError: a caller error, not a 500
+            outcome("trama_workflow", False)
+            raise GenerationFailedError(
+                "Invalid template request",
+                details={"category": "contract", "diagnostics": [str(exc)[:1500]]},
+            ) from exc
 
         if recall is None and not recipe and not continuation:
             with stage("recall", "trama_workflow"):
