@@ -22,30 +22,10 @@ _MAX_PATHS = 64
 _MAX_DEPTH = 400
 _OUT = re.compile(r"^nodes\.([A-Za-z0-9_-]+)\.response\.body\.output\.?(.*)$")
 _TEMPLATE = re.compile(r"\{\{.*?\}\}")
-# home.execute capabilities that change something; everything else (ac.read,
-# sensor.battery, vacuum.state, presence.read…) is a reading.
-_ACTION_VERBS = {
-    "on",
-    "off",
-    "toggle",
-    "press",
-    "start",
-    "stop",
-    "pause",
-    "resume",
-    "home",
-    "dock",
-    "locate",
-    "open",
-    "close",
-    "arm",
-    "disarm",
-    "play",
-    "send",
-    "clean",
-    "trigger",
-    "away",
-}
+# home.execute capabilities that only read. Everything else changes something: device
+# verbs are open-ended (ac.powerOff, remote.press, vacuum.start…), and an action shown as
+# a read hides it from the user and the verifier (ac.powerOff, 2026-11-21 bench).
+_READ_VERBS = {"read", "state", "status", "battery", "location", "info", "current", "list"}
 _UNROLLED = re.compile(r"__rs_\d+$")  # semantic repeat copies: fetch__rs_3
 _OPS = {"<": "<", "<=": "≤", ">": ">", ">=": "≥", "==": "=", "===": "=", "!=": "≠", "!==": "≠"}
 
@@ -89,7 +69,7 @@ def _call(node: dict) -> tuple[str, dict]:
 def _is_read(capability: str, inner: str) -> bool:
     if capability == "home.execute":
         verb = inner.rsplit(".", 1)[-1].lower()
-        return not (verb in _ACTION_VERBS or verb.startswith(("set", "turn_", "run")))
+        return verb in _READ_VERBS or verb.startswith(("read", "get", "list", "query"))
     return not (
         capability.endswith((".send", "send_markdown")) or capability in ("report.write_html",)
     )

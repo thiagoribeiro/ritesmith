@@ -297,3 +297,21 @@ def test_execution_outcome_says_what_actually_happened():
         "Fez: 21/11 06:12 executa ac.turn_off em hugo.\n"
         "Falhou: 21/11 06:12 envia no Telegram “Desliguei o ar”."
     )
+
+
+def test_unfamiliar_device_verbs_are_actions_not_reads():
+    # The bench's generated plan called ac.powerOff; it was listed under "Consulta",
+    # so the confirmation (and the verifier) would have said the AC is never turned off.
+    definition = {
+        "entrypoint": "read",
+        "nodes": [
+            task("read", "home.execute", {"capability": "ac.read", "target": "hugo"}, "off"),
+            task("off", "home.execute", {"capability": "ac.powerOff", "target": "hugo"}, "fan"),
+            task(
+                "fan", "home.execute", {"capability": "remote.press", "target": "ventilador_hugo"}
+            ),
+        ],
+    }
+    text = describe(definition, start=NOW).text
+    assert "executa ac.powerOff em hugo" in text and "executa remote.press" in text
+    assert text.endswith("Consulta: ac.read de hugo.")
