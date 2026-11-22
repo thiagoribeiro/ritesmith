@@ -3,15 +3,15 @@ tier. selftest.py runs them to prove the python target's harness — type stubs,
 bridge, grading — agrees with the Luau references."""
 
 PY_REFERENCES: dict[str, str] = {
-    "t1_slugify": '''
+    "t1_slugify": """
 import re
 
 
 def run(input: Input, context: Context) -> Output:
     slug = re.sub(r"[^a-z0-9]+", "-", input["text"].lower())
     return {"slug": slug.strip("-")}
-''',
-    "t2_price_label": '''
+""",
+    "t2_price_label": """
 def run(input: Input, context: Context) -> Output:
     r = tools.market.get_price({"symbol": input["symbol"], "currency": input["currency"]})
     if not r["ok"]:
@@ -23,8 +23,8 @@ def run(input: Input, context: Context) -> Output:
         "price": price,
         "label": f"{r['symbol']}: {price:.2f} {r['currency']}",
     }
-''',
-    "t3_notify_inactive": '''
+""",
+    "t3_notify_inactive": """
 def run(input: Input, context: Context) -> Output:
     r = tools.crm.list({"segment": input["segment"]})
     if not r["ok"]:
@@ -39,8 +39,8 @@ def run(input: Input, context: Context) -> Output:
             else:
                 failed.append(c["id"])
     return {"notified": notified, "failed": failed, "count": len(notified)}
-''',
-    "t3_order_fulfillment": '''
+""",
+    "t3_order_fulfillment": """
 def first_shortage(order: Order) -> str | None:
     for item in order["items"]:
         stock = tools.inventory.check({"sku": item["sku"]})
@@ -69,5 +69,5 @@ def run(input: Input, context: Context) -> Output:
                 else:
                     blocked.append({"order_id": oid, "reason": s["error"]})
     return {"shipped": shipped, "blocked": blocked}
-''',
+""",
 }

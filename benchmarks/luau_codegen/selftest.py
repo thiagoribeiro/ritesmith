@@ -227,11 +227,18 @@ def check_python() -> list[dict]:
             check.passed and check.typecheck["ty"]["passed"],
             json.dumps(check.to_dict())[:600],
         )
-        samples.append({
-            "model": "reference", "target": "python", "variant": "typed", "task_id": task_id,
-            "tier": task["tier"], "repeat": 1, "passed": check.passed,
-            "attempts": [{"attempt": 1, "script": ref, "check": check.to_dict()}],
-        })
+        samples.append(
+            {
+                "model": "reference",
+                "target": "python",
+                "variant": "typed",
+                "task_id": task_id,
+                "tier": task["tier"],
+                "repeat": 1,
+                "passed": check.passed,
+                "attempts": [{"attempt": 1, "script": ref, "check": check.to_dict()}],
+            }
+        )
 
     notify = TASKS_BY_ID["t3_notify_inactive"]
     ref = PY_REFERENCES["t3_notify_inactive"]
@@ -248,11 +255,24 @@ def check_python() -> list[dict]:
         expect(f"python: {label} → compile error", not c.compiled, str(c.compile_errors))
     c = validate(notify, "import socket\ndef run(input, context):\n    return {}\n", "python")
     expect("python: import socket fails", not c.passed and bool(c.exec_error), str(c.exec_error))
-    c = validate(notify, "def run(input, context):\n    while True:\n        try:\n            pass\n        except Exception:\n            pass\n", "python")
-    expect("python: infinite loop stops", not c.passed and all(not x["passed"] for x in c.cases), str(c.cases)[:200])
-    budget = ref.replace("if c[\"last_seen_days\"] >= input[\"inactive_days\"]:", "if True:")
-    c = validate(notify, budget.replace("for c in r[\"customers\"]:", "for c in r[\"customers\"] * 5:"), "python")
-    expect("python: max_calls budget enforced", not c.passed and "budget exceeded" in json.dumps(c.cases))
+    c = validate(
+        notify,
+        "def run(input, context):\n    while True:\n        try:\n            pass\n        except Exception:\n            pass\n",
+        "python",
+    )
+    expect(
+        "python: infinite loop stops",
+        not c.passed and all(not x["passed"] for x in c.cases),
+        str(c.cases)[:200],
+    )
+    budget = ref.replace('if c["last_seen_days"] >= input["inactive_days"]:', "if True:")
+    c = validate(
+        notify, budget.replace('for c in r["customers"]:', 'for c in r["customers"] * 5:'), "python"
+    )
+    expect(
+        "python: max_calls budget enforced",
+        not c.passed and "budget exceeded" in json.dumps(c.cases),
+    )
     c = validate(notify, "x = 1\n", "python")
     expect("python: missing run → contract error", "must define" in (c.exec_error or ""))
     return samples

@@ -44,6 +44,7 @@ def monty_version() -> str:
 
 def _remap(text: str) -> str:
     """Line numbers refer to the script, not to the hidden prelude."""
+
     def fix(m: re.Match) -> str:
         n = int(m.group(1)) - PRELUDE.count("\n")
         return m.group(0).replace(m.group(1), str(max(n, 1)))
@@ -86,8 +87,10 @@ def _from_lua(value):
         return value
     items = list(value.items())
     n = len(items)
-    if n and all(isinstance(k, int) for k, _ in items) and sorted(k for k, _ in items) == list(
-        range(1, n + 1)
+    if (
+        n
+        and all(isinstance(k, int) for k, _ in items)
+        and sorted(k for k, _ in items) == list(range(1, n + 1))
     ):
         return [_from_lua(value[i]) for i in range(1, n + 1)]
     return {str(k): _from_lua(v) for k, v in items}
@@ -150,7 +153,9 @@ def compile_errors(script: str) -> list[str]:
     """Parse errors, plus syntax Monty rejects at parse time (yield, method decorators…).
     Defining the functions runs no tool, so top-level code errors also show up here."""
     host = ToolHost({"id": "_compile", "tools": []})
-    with pool().checkout(limits=EXEC_LIMITS, external_modules={"tools": pm.ExternalModule({})}) as s:
+    with pool().checkout(
+        limits=EXEC_LIMITS, external_modules={"tools": pm.ExternalModule({})}
+    ) as s:
         try:
             s.feed_run(PRELUDE + script)
         except pm.MontySyntaxError as e:
@@ -209,7 +214,9 @@ def execute(task: dict, script: str) -> tuple[list[dict], str | None]:
                 )
                 results.append({"ok": True, "output": out, "calls": dict(host.calls)})
             except pm.MontyCrashedError as e:
-                results.append({"ok": False, "error": f"worker crashed: {e}", "calls": dict(host.calls)})
+                results.append(
+                    {"ok": False, "error": f"worker crashed: {e}", "calls": dict(host.calls)}
+                )
             except pm.MontyError as e:
                 results.append({"ok": False, "error": _message(e), "calls": dict(host.calls)})
     return results, None
