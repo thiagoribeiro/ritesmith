@@ -49,6 +49,9 @@ jobs:
           pip install "https://github.com/thiagoribeiro/lunardyson/releases/download/v${LUNARDYSON_VERSION}/lunardyson-${LUNARDYSON_VERSION}-py3-none-linux_x86_64.whl"
           python -c "import lunardyson; print('lunardyson', lunardyson.version())"
 
+      - name: No private deployment data
+        run: python scripts/leak_gate.py
+
       - name: Lint
         run: |
           ruff check .

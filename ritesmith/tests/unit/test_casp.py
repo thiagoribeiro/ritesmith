@@ -109,7 +109,7 @@ def test_resolve_request_failure(casp_env, httpx_mock):
     httpx_mock.add_exception(
         httpx.ConnectError("down"), url="http://fast.casp/casp/v1/resources/resolve"
     )
-    out = casp.resolve("smart-switch", "turn-on", "led do painel")
+    out = casp.resolve("smart-switch", "turn-on", "luz da mesa")
     assert out["status"] == "invalid"
 
 

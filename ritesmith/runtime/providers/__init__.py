@@ -21,8 +21,8 @@ from ritesmith.runtime.providers.context import ContextProvider
 from ritesmith.runtime.providers.duckdb_ import DuckdbProvider
 from ritesmith.runtime.providers.email import EmailProvider
 from ritesmith.runtime.providers.grafana import GrafanaProvider
+from ritesmith.runtime.providers.home_example import ExampleHomeProvider
 from ritesmith.runtime.providers.llm import LlmProvider
-from ritesmith.runtime.providers.loomharbor import LoomHarborProvider
 from ritesmith.runtime.providers.market import MarketProvider
 from ritesmith.runtime.providers.obsidian import ObsidianProvider
 from ritesmith.runtime.providers.reports import ReportsProvider
@@ -42,7 +42,7 @@ _BUILTIN: list[ToolProvider] = [
     EmailProvider(),
     ReportsProvider(),
     CASPProvider(),
-    LoomHarborProvider(),
+    ExampleHomeProvider(),  # replaced by a deployment's own `home` plugin
     GrafanaProvider(),
     LlmProvider(),
 ]

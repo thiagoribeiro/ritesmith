@@ -28,7 +28,7 @@ def home(op_id, capability, target, input_=None):
 def watch(**repeat):
     return {
         "version": "workflow-plan-v1",
-        "name": "ac_hugo",
+        "name": "ac_caio",
         "steps": [
             {
                 "kind": "repeat",
@@ -36,16 +36,16 @@ def watch(**repeat):
                 "interval_seconds": 300,
                 **repeat,
                 "steps": [
-                    home("read", "ac.read", "hugo"),
+                    home("read", "ac.read", "caio"),
                     {
                         "kind": "condition",
                         "when": {
                             "<": [{"ref": "read", "path": "result.state.current_temperature"}, 26]
                         },
                         "steps": [
-                            home("ac_off", "ac.turn_off", "hugo"),
+                            home("ac_off", "ac.turn_off", "caio"),
                             home(
-                                "fan", "remote.press", "ventilador_hugo", {"button": "velocidade 3"}
+                                "fan", "remote.press", "ventilador_caio", {"button": "velocidade 3"}
                             ),
                             {
                                 "kind": "call",
@@ -90,7 +90,7 @@ def test_never_crossing_runs_the_whole_window():
 
 def test_readback_says_once_and_stops():
     text = describe(compile_plan(watch(duration_seconds=28800), BASE)).text
-    assert "executa ac.turn_off em hugo e depois executa remote.press" in text
+    assert "executa ac.turn_off em caio e depois executa remote.press" in text
     assert "— uma vez, e encerra (verifica a cada 5 min)" in text
     assert "até completar ≈ 8 h no total" in text
 
@@ -109,7 +109,7 @@ def test_readback_says_once_and_stops():
                     {
                         "kind": "parallel",
                         "id": "p",
-                        "branches": [{"kind": "stop"}, home("x", "ac.read", "hugo")],
+                        "branches": [{"kind": "stop"}, home("x", "ac.read", "caio")],
                     }
                 ],
             }

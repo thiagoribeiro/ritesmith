@@ -37,7 +37,7 @@ class _Closed(BaseModel):
 
 
 class HomeCall(_Closed):
-    """One ``home.execute`` call: LoomHarbor capability on a device alias/id."""
+    """One ``home.execute`` call: a device capability on a target (see docs/home-capability-contract.md)."""
 
     capability: str = Field(min_length=3, max_length=80, pattern=r"^[a-z_]+\.[A-Za-z_]+$")
     target: str = Field(min_length=1, max_length=200)
@@ -521,7 +521,7 @@ _SCHEDULE_HINTS = ("schedule_hours", "duration_days", "runs_per_day", "first_at"
 def requested_template(context: dict | None) -> tuple[str, BaseModel] | None:
     """The validated recipe a request asks for, or None. Invalid params raise."""
     context = context or {}
-    if "presence_reminder" in context:  # original contract, kept for r2d2
+    if "presence_reminder" in context:  # original contract, kept for existing callers
         mixed = [k for k in (*_SCHEDULE_HINTS, "template") if k in context]
         if mixed:
             raise ValueError(

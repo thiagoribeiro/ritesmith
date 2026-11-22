@@ -19,7 +19,6 @@ services:
       RITESMITH_LUA_TIMEOUT_MS: "15000"
     volumes:
       - ${RITESMITH_REPORTS_PATH:-./data/reports}:/reports
-      - ${RITESMITH_FINDTAG_PATH:-./data/findtag}:/findtag:ro
     networks:
       - deploy_default
     depends_on:

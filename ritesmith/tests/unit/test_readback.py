@@ -31,11 +31,11 @@ def task(node_id, capability, input_, next_="end"):
 def test_the_2026_11_21_misroute_reads_as_an_arrival():
     # The plan that was confirmed as "15/05/2027, every 6 months" must say what it is.
     definition = presence_arrival_workflow(
-        PresenceReminder(person_alias="thiago", message="Crédito do Hugo.", channel="telegram"),
+        PresenceReminder(person_alias="ana", message="Crédito do Caio.", channel="telegram"),
         BASE,
     )
     text = describe(definition, start=NOW).text
-    assert text.startswith("• Quando thiago chegar em casa: envia no Telegram “Crédito do Hugo.”")
+    assert text.startswith("• Quando ana chegar em casa: envia no Telegram “Crédito do Caio.”")
     assert "2027" not in text and "sair" not in text
 
 
@@ -61,13 +61,13 @@ def test_threshold_action_names_reading_action_and_deadline():
         recipe(
             "threshold_action",
             {
-                "read": {"capability": "ac.read", "target": "hugo"},
+                "read": {"capability": "ac.read", "target": "caio"},
                 "metric_path": "state.current_temperature",
                 "op": "<",
                 "value": 25,
                 "action": {
                     "capability": "remote.press",
-                    "target": "ventilador_hugo",
+                    "target": "ventilador_caio",
                     "input": {"button": "desligar"},
                 },
                 "notify": "Quarto a {value} °C",
@@ -77,9 +77,9 @@ def test_threshold_action_names_reading_action_and_deadline():
         ),
         start=NOW,
     ).text
-    assert "hugo state.current_temperature < 25" in text.lower()
+    assert "caio state.current_temperature < 25" in text.lower()
     assert (
-        "executa remote.press em ventilador_hugo (button=desligar) e depois envia no Telegram"
+        "executa remote.press em ventilador_caio (button=desligar) e depois envia no Telegram"
         in text
     )
     assert "(verifica a cada 10 min)" in text and "Encerra até" in text
@@ -90,7 +90,7 @@ def test_presence_change_group_departure_with_delay():
         recipe(
             "presence_change",
             {
-                "people": ["thiago", "jaque"],
+                "people": ["ana", "bia"],
                 "event": "all_away",
                 "delay_seconds": 900,
                 "actions": [{"capability": "switch.off", "target": "luz_sala"}],
@@ -100,7 +100,7 @@ def test_presence_change_group_departure_with_delay():
         start=NOW,
     ).text
     assert text.startswith(
-        "• Quando todos (jaque, thiago) tiverem saído de casa, espera 15 min: executa switch.off"
+        "• Quando todos (ana, bia) tiverem saído de casa, espera 15 min: executa switch.off"
     )
 
 
@@ -185,13 +185,13 @@ def test_plan_readback_skips_non_workflows_and_survives_bad_content():
         )
 
     wf = presence_arrival_workflow(
-        PresenceReminder(person_alias="jaque", message="Oi", channel="telegram"), BASE
+        PresenceReminder(person_alias="bia", message="Oi", channel="telegram"), BASE
     )
     settings = Settings(local_timezone="America/Sao_Paulo")
     text = plan_readback(
         [art("lua_script", "return 1"), art("trama_workflow", json.dumps(wf))], NOW, settings
     )
-    assert text.startswith("• Quando jaque chegar em casa")
+    assert text.startswith("• Quando bia chegar em casa")
     assert plan_readback([art("trama_workflow", "{not json")], NOW, settings) is None
 
 
@@ -263,11 +263,11 @@ def test_execution_outcome_says_what_actually_happened():
     definition = recipe(
         "threshold_action",
         {
-            "read": {"capability": "ac.read", "target": "hugo"},
+            "read": {"capability": "ac.read", "target": "caio"},
             "metric_path": "state.current_temperature",
             "op": "<",
             "value": 26,
-            "actions": [{"capability": "ac.turn_off", "target": "hugo"}],
+            "actions": [{"capability": "ac.turn_off", "target": "caio"}],
             "notify": "Desliguei o ar",
             "interval_seconds": 300,
             "window_seconds": 3600,
@@ -294,7 +294,7 @@ def test_execution_outcome_says_what_actually_happened():
         step("notify", "2026-11-21T09:12:01Z", ok=False),
     ]
     assert execution_outcome(definition, acted) == (
-        "Fez: 21/11 06:12 executa ac.turn_off em hugo.\n"
+        "Fez: 21/11 06:12 executa ac.turn_off em caio.\n"
         "Falhou: 21/11 06:12 envia no Telegram “Desliguei o ar”."
     )
 
@@ -305,13 +305,13 @@ def test_unfamiliar_device_verbs_are_actions_not_reads():
     definition = {
         "entrypoint": "read",
         "nodes": [
-            task("read", "home.execute", {"capability": "ac.read", "target": "hugo"}, "off"),
-            task("off", "home.execute", {"capability": "ac.powerOff", "target": "hugo"}, "fan"),
+            task("read", "home.execute", {"capability": "ac.read", "target": "caio"}, "off"),
+            task("off", "home.execute", {"capability": "ac.powerOff", "target": "caio"}, "fan"),
             task(
-                "fan", "home.execute", {"capability": "remote.press", "target": "ventilador_hugo"}
+                "fan", "home.execute", {"capability": "remote.press", "target": "ventilador_caio"}
             ),
         ],
     }
     text = describe(definition, start=NOW).text
-    assert "executa ac.powerOff em hugo" in text and "executa remote.press" in text
-    assert text.endswith("Consulta: ac.read de hugo.")
+    assert "executa ac.powerOff em caio" in text and "executa remote.press" in text
+    assert text.endswith("Consulta: ac.read de caio.")

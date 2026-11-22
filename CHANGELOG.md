@@ -16,7 +16,7 @@ All notable changes to RiteSmith. The format loosely follows
   verifier rejects is generated once more with `context.verifier_feedback`
   (requested vs built), then verified again. Recipes are never regenerated.
 - **Execution outcome in completion callbacks** (`outcome`): what the workflow actually
-  did, from Trama's step log. Example: "Fez: 21/11 06:12 executa ac.turn_off em hugo" or
+  did, from Trama's step log. Example: "Fez: 21/11 06:12 executa ac.turn_off em ar_quarto" or
   "Não agiu: a condição não aconteceu em 97 verificações".
 - Readback: "— uma vez, e encerra" for act-once effects, and the full horizon of
   duration-based continuations.
@@ -123,7 +123,7 @@ accepted and then broken in Trama. Requires **Trama 3.0.1**.
 ### Fixed
 - **Workflows accepted with arguments or fields their capability does not have.** The
   validator ignored unknown inputs and output fields unless a schema set
-  `additionalProperties: false`, which none did. Two r2d2 workflows failed this way
+  `additionalProperties: false`, which none did. Two production workflows failed this way
   (`previous_state` passed to `llm.evaluate`; `output.result` read from
   `market.exchange_rate`, whose field is `rate`). Unknown inputs and fields are now errors
   that list what the contract accepts; array and scalar outputs are read as `output.result`.

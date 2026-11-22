@@ -12,7 +12,7 @@ from ritesmith.core.presence_workflow import PresenceReminder, presence_arrival_
 from ritesmith.schemas.generation import GenerateWorkflowRequest
 from ritesmith.workflows.validator import WorkflowValidator
 
-SPEC = {"person_alias": "thiago", "message": "tomar os remédios", "channel": "telegram"}
+SPEC = {"person_alias": "ana", "message": "tomar os remédios", "channel": "telegram"}
 
 
 @pytest.mark.parametrize(
@@ -47,7 +47,7 @@ def test_recipe_validates_with_real_capability_contracts():
         if n not in notifications:
             assert r["body"] == {
                 "capability_name": "home.execute",
-                "input": {"capability": "presence.read", "target": "thiago", "input": {}},
+                "input": {"capability": "presence.read", "target": "ana", "input": {}},
             }
     assert "stat.tick" not in json.dumps(recipe) and "casp.execute" not in json.dumps(recipe)
 

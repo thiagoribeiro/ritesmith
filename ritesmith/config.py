@@ -173,14 +173,8 @@ class Settings(BaseSettings):
     # Secret for server-issued approval tokens (falls back to api_token, then trama_token).
     approval_secret: str | None = None  # RITESMITH_APPROVAL_SECRET
 
-    # LoomHarbor integration (legacy home.* provider)
-    loomharbor_url: str | None = None  # RITESMITH_LOOMHARBOR_URL (e.g. http://loomharbor:8000)
-    loomharbor_secret: str | None = (
-        None  # RITESMITH_LOOMHARBOR_SECRET (Bearer token for LoomHarbor API)
-    )
-
     # CASP providers — JSON array of CASPProviderConfig objects
-    # e.g. RITESMITH_CASP_PROVIDERS='[{"url":"http://loomharbor:8000"}]'
+    # e.g. RITESMITH_CASP_PROVIDERS='[{"url":"http://home-api:8000"}]'
     casp_providers: list[CASPProviderConfig] = []
 
     # CASP re-planning

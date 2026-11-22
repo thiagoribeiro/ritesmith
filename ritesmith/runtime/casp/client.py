@@ -1,7 +1,7 @@
 """CASP protocol HTTP client with discovery caching.
 
 Used by the CASPProvider host bridge functions to call CASP providers
-(e.g. LoomHarbor). These calls are Python-level and bypass the Lua
+(e.g. a home-automation API). These calls are Python-level and bypass the Lua
 sandbox's _BLOCKED_PATTERNS security policy by design — they are
 structured internal calls to known, configured provider URLs.
 """

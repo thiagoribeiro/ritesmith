@@ -84,9 +84,7 @@ parallel result envelopes, deadline exits, compensation, callbacks, literal data
 dependent certified scripts and HTTP generation acceptance. They are not a full
 distributed workflow deployment test or a measurement of future LLM accuracy.
 
-See the [verification report](../benchmarks/generation_latency/results/ritesmith-explicit-seeds-20261009/RESULTS.md)
-for the initial counts, source hashes and exclusions, and the
-[follow-up review](../benchmarks/generation_latency/results/integration-review-20261009/RESULTS.md)
-for subsequent corrections and final regression evidence. No paid requests were made.
+The verification and follow-up review (counts, source hashes, exclusions and final
+regression evidence) were recorded with the deployment. No paid requests were made.
 Production and rollback images/configurations remain unchanged. A coordinated
 release and any further paid generation verification remain separate decisions.

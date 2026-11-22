@@ -28,16 +28,16 @@ CAPS = {
 }
 
 THRESHOLD = {
-    "read": {"capability": "ac.read", "target": "hugo"},
+    "read": {"capability": "ac.read", "target": "caio"},
     "metric_path": "state.current_temperature",
     "op": "<",
     "value": 25,
     "action": {
         "capability": "remote.press",
-        "target": "ventilador_hugo",
+        "target": "ventilador_caio",
         "input": {"button": "desligar"},
     },
-    "notify": "Quarto do Hugo a {value} °C: desliguei o ventilador.",
+    "notify": "Quarto do Caio a {value} °C: desliguei o ventilador.",
     "interval_seconds": 600,
     "window_seconds": 3600,
 }
@@ -200,7 +200,7 @@ def test_fiat_variation_reads_exchange_rate():
 
 def test_presence_reminder_keeps_its_original_contract():
     found = requested_template(
-        {"presence_reminder": {"person_alias": "thiago", "message": "lixo", "channel": "telegram"}}
+        {"presence_reminder": {"person_alias": "ana", "message": "lixo", "channel": "telegram"}}
     )
     assert found[0] == "presence_reminder"
     assert WorkflowValidator(CAPS).validate(build_template(*found, BASE)) == []
@@ -261,10 +261,10 @@ def presence_clock(definition, prefix):
 
 
 def test_arrival_waits_for_a_real_transition():
-    # "me avisa quando a Jaque chegar": already home at start must not fire.
+    # "me avisa quando a Bia chegar": already home at start must not fire.
     definition = built(
         "presence_change",
-        {"people": ["jaque"], "event": "any_home", "notify": "A Jaque chegou."},
+        {"people": ["bia"], "event": "any_home", "notify": "A Bia chegou."},
     )
     deadline = presence_clock(definition, "before")
     sim = WorkflowSimulator(
@@ -285,7 +285,7 @@ def test_everyone_leaving_runs_each_action_once_after_the_delay():
     definition = built(
         "presence_change",
         {
-            "people": ["thiago", "jaque"],
+            "people": ["ana", "bia"],
             "event": "all_away",
             "delay_seconds": 900,
             "actions": [
@@ -314,7 +314,7 @@ def test_without_transition_an_already_true_state_fires_at_once():
     definition = built(
         "presence_change",
         {
-            "people": ["thiago"],
+            "people": ["ana"],
             "event": "all_away",
             "require_transition": False,
             "notify": "Casa vazia.",
@@ -328,7 +328,7 @@ def test_without_transition_an_already_true_state_fires_at_once():
 def test_presence_change_stops_at_the_deadline_without_acting():
     definition = built(
         "presence_change",
-        {"people": ["jaque"], "event": "any_home", "require_transition": False, "notify": "x"},
+        {"people": ["bia"], "event": "any_home", "require_transition": False, "notify": "x"},
     )
     deadline = presence_clock(definition, "after")
     sim = WorkflowSimulator(
@@ -348,7 +348,7 @@ def test_presence_change_stops_at_the_deadline_without_acting():
     ],
 )
 def test_presence_change_params_are_closed(change):
-    params = {"people": ["thiago"], "event": "all_away", "notify": "x", **change}
+    params = {"people": ["ana"], "event": "all_away", "notify": "x", **change}
     with pytest.raises(ValidationError):
         requested_template({"template": {"name": "presence_change", "params": params}})
 
@@ -369,7 +369,7 @@ def test_every_six_months_from_a_local_date():
     # The 2026-11-21 request: "15/05/2027 às 08:00, then every 6 months, on Telegram".
     spec, definition = reminder(
         {
-            "message": "Colocar crédito no celular do Hugo.",
+            "message": "Colocar crédito no celular do Caio.",
             "first_at": "2027-05-15T08:00",
             "repeat": {"every": 6, "unit": "months"},
             "count": 3,
@@ -449,7 +449,7 @@ def test_presence_reminder_with_schedule_fields_is_refused():
             {
                 "schedule_hours": 4380,
                 "presence_reminder": {
-                    "person_alias": "thiago",
+                    "person_alias": "ana",
                     "message": "x",
                     "channel": "telegram",
                 },
@@ -476,10 +476,10 @@ def test_threshold_action_runs_every_action_in_order():
         **THRESHOLD,
         "action": None,
         "actions": [
-            {"capability": "ac.turn_off", "target": "hugo"},
+            {"capability": "ac.turn_off", "target": "caio"},
             {
                 "capability": "remote.press",
-                "target": "ventilador_hugo",
+                "target": "ventilador_caio",
                 "input": {"button": "velocidade 3"},
             },
         ],

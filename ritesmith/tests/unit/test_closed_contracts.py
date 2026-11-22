@@ -1,7 +1,7 @@
 """Closed capability contracts: generation-time validation, the /trama/execute bridge and
 the capability registry agree on the real provider schemas.
 
-Regressions for two r2d2 workflows (2026-10-11) that were accepted and then failed in
+Regressions for two production workflows (2026-10-11) that were accepted and then failed in
 Trama: an extra `previous_state` argument to llm.evaluate (HTTP 500 from the callable)
 and a reference to `output.result` on market.exchange_rate, whose field is `rate`.
 """

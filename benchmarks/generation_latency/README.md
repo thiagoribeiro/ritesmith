@@ -114,7 +114,7 @@ files and each changed verdict; it never rewrites responses or timings. Results
 must identify their evaluator version. These checks remain a limited semantic
 assessment; full live workflow execution is not certified by this harness.
 
-## Isolated r2d2 evaluation (extended protocol available)
+## Isolated staging evaluation (extended protocol available)
 
 `benchmarks.generation_latency.app:app` is a staging-only entrypoint. Run it in a
 separate container/database bound to loopback; never import it in production.
@@ -209,7 +209,7 @@ functional/strict certification rates regress relative to a comparable baseline.
 Each new response records the staging software hash. Capture its full source
 and runtime manifest with `python -m benchmarks.generation_latency.version`.
 
-The r2d2 evaluations and the reduced protocol are documented in [RESULTS.md](RESULTS.md).
+Results are written under `results/` (not tracked).
 
 ## Monitoring after promotion
 

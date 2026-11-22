@@ -1,4 +1,4 @@
-"""One-shot arrival reminders using LoomHarbor's existing phone detector."""
+"""One-shot arrival reminders using the home provider's presence detector (presence.read)."""
 
 from typing import Literal
 
