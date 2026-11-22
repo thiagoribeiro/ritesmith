@@ -208,6 +208,28 @@ class LoomHarborProvider(ToolProvider):
     risk_level = "medium"
     side_effects = "physical_world"
 
+    virtual_device_types = frozenset({"person", "tracker", "adapter"})
+
+    def prompt_hints(self) -> dict[str, str]:
+        return {
+            "ambiguity_example": "Qual ar-condicionado? suite, escritório, sala, hugo",
+            "person_examples": "thiago, jaque",
+        }
+
+    def normalize_device(self, raw: dict) -> dict:
+        return {
+            "target": raw.get("alias") or raw.get("id"),
+            "name": raw.get("name"),
+            "type": raw.get("type"),
+            "room": (raw.get("meta") or {}).get("room"),
+            "capabilities": raw.get("capabilities"),
+            "online": raw.get("online"),
+            "state": raw.get("state"),
+        }
+
+    def reset_caches(self) -> None:
+        _ready_cache.clear()
+
     def is_available(self) -> bool:
         if get_settings().loomharbor_url is None:
             return False
