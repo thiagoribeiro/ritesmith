@@ -44,7 +44,7 @@ jobs:
       # Luau scripts run on LunarDyson in production; without it every luau test is skipped.
       - name: Install LunarDyson
         env:
-          LUNARDYSON_VERSION: "0.1.2"
+          LUNARDYSON_VERSION: "0.1.3"
         run: |
           pip install "https://github.com/thiagoribeiro/lunardyson/releases/download/v${LUNARDYSON_VERSION}/lunardyson-${LUNARDYSON_VERSION}-py3-none-linux_x86_64.whl"
           python -c "import lunardyson; print('lunardyson', lunardyson.version())"
