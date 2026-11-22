@@ -8,9 +8,10 @@ isolates the language rather than the prompt.
 
 import json
 
+from benchmarks.luau_codegen import pytypes
 from benchmarks.luau_codegen.preamble import task_types
 
-LANG_NAME = {"lua": "Lua", "luau": "Luau"}
+LANG_NAME = {"lua": "Lua", "luau": "Luau", "python": "Python"}
 
 _FORBIDDEN = {
     "lua": "require, os, io, debug, load, loadfile, dofile,\n  rawget, rawset, package, collectgarbage, newproxy",
@@ -21,6 +22,17 @@ _LANGUAGE = {
     "lua": """\
 LANGUAGE: standard Lua 5.4
   - Only the standard string, table and math libraries are available""",
+    "python": """\
+LANGUAGE: Python, run by Monty — a sandboxed SUBSET of Python 3.14, not CPython
+  - `tools` is already imported; do not import it again
+  - Available: functions, f-strings, comprehensions, dicts/lists/sets/tuples, slicing,
+    sorted/min/max/sum/len/round/abs/enumerate/zip/range, str methods, try/except,
+    and the modules json, re, math, datetime (import them if you need them)
+  - NOT available: generators/yield, del, classes with @property/@staticmethod/
+    @classmethod or super(), user-defined exception classes, callable(), enum, abc,
+    os, sys, io, open(), eval/exec, globals()
+  - Type annotations are optional, but the script is type-checked with ty against the
+    predeclared types, so any annotation you write must be correct""",
     "luau": """\
 LANGUAGE: Luau (the typed Lua dialect from Roblox) — NOT Lua 5.x
   - Not available: goto, labels, <const>/<close>, math.tointeger, math.type, io, os
@@ -55,7 +67,48 @@ REPAIR_SCHEMA = {
 }
 
 
+_PY_SYSTEM = """\
+You are a Python script generator for RiteSmith, a sandboxed execution runtime.
+
+MANDATORY RULES
+- Define exactly ONE top-level entry point: def run(input, context) — helpers are other
+  top-level functions
+- No recursion, no infinite loops
+- FORBIDDEN: imports of os, sys, subprocess, socket, io, pathlib; open, eval, exec,
+  compile, __import__, globals, getattr, setattr
+- External effects happen ONLY through the tools.* functions listed in the user message —
+  nothing else exists
+- Always return a dict — never None, never a bare primitive
+- Be deterministic
+- context["now"] is the current time as an ISO-8601 UTC string
+
+TOOL CALLING CONVENTION
+  Every tool takes a single dict argument and returns a dict:
+    {"ok": True, ...} on success
+    {"ok": False, "error": <code>, "message": <text>} on failure
+  Always check result["ok"] before using the other fields.
+
+ERROR HANDLING CONVENTION
+  On recoverable error, return a dict with an "error" field:
+    return {"error": "not_found", "message": "item does not exist"}
+  Never raise and never use assert — an uncaught exception wastes an attempt.
+
+OUTPUT CONTRACT
+  The return value must be plain data (dict/list/str/number/bool/None).
+  Every field required by the goal and output schema must be present and typed correctly.
+
+{language}
+
+STYLE GUIDE
+  - One responsibility per script
+  - Comments only when the logic would not be obvious to a reader
+
+Respond with valid JSON matching the schema in the user message — nothing else."""
+
+
 def generation_system(target: str) -> str:
+    if target == "python":
+        return _PY_SYSTEM.replace("{language}", _LANGUAGE["python"])
     lang = LANG_NAME[target]
     return f"""\
 You are a {lang} script generator for RiteSmith, a sandboxed execution runtime.
@@ -95,13 +148,17 @@ STYLE GUIDE
 Respond with valid JSON matching the schema in the user message — nothing else."""
 
 
-def _tool_lines(task: dict, typed: bool) -> list[str]:
+def _tool_lines(task: dict, typed: bool, target: str = "luau") -> list[str]:
     lines = []
+    py_sigs = pytypes.tool_signatures(task) if target == "python" and typed else {}
     for tool in task.get("tools", []):
         budget = (
             f" (at most {tool['max_calls']} calls per execution)" if "max_calls" in tool else ""
         )
-        if typed:
+        if py_sigs:
+            lines.append(f"  - {py_sigs[tool['name']]}{budget}")
+            lines.append(f"      # {_py_doc(tool['description'])}")
+        elif typed:
             lines.append(f"  - tools.{tool['name']}: {tool['signature']}{budget}")
             lines.append(f"      -- {tool['description']}")
         else:
@@ -109,8 +166,18 @@ def _tool_lines(task: dict, typed: bool) -> list[str]:
     return lines
 
 
+def _py_doc(text: str) -> str:
+    """Tool docs are written with Lua table literals; show them as Python dicts."""
+    return (
+        text.replace("{ok = true", '{"ok": True')
+        .replace("{ok = false", '{"ok": False')
+        .replace("error = <code>", '"error": <code>')
+        .replace("message = <text>", '"message": <text>')
+    )
+
+
 def generation_user(task: dict, target: str, variant: str) -> str:
-    typed = target == "luau" and variant == "typed"
+    typed = target in ("luau", "python") and variant == "typed"
     parts = [f"GOAL: {task['goal']}"]
     parts.append(f"INPUT SCHEMA:\n{json.dumps(task['input_schema'], indent=2)}")
     parts.append(
@@ -118,14 +185,21 @@ def generation_user(task: dict, target: str, variant: str) -> str:
         f"{json.dumps(task['output_schema'], indent=2)}"
     )
 
-    if typed:
+    if typed and target == "python":
+        parts.append(
+            "PREDECLARED TYPES (already in scope — use them, do NOT redeclare or import them):\n"
+            f"{pytypes.prompt_types(task)}\n\n"
+            "Names from `typing` (Any, Literal…) are NOT in scope: import them if you use them.\n"
+            "Annotate the entry point exactly as: def run(input: Input, context: Context) -> Output:"
+        )
+    elif typed:
         parts.append(
             "PREDECLARED TYPES (already in scope — use them, do NOT redeclare them):\n"
             f"{task_types(task)}\n\n"
             "Annotate the entry point exactly as: function run(input: Input, context: Context): Output"
         )
 
-    tool_lines = _tool_lines(task, typed)
+    tool_lines = _tool_lines(task, typed, target)
     if tool_lines:
         parts.append("AVAILABLE TOOLS (only these — nothing else):\n" + "\n".join(tool_lines))
     else:
@@ -136,6 +210,22 @@ def generation_user(task: dict, target: str, variant: str) -> str:
 
 
 def repair_system(target: str) -> str:
+    if target == "python":
+        return f"""\
+You are a Python script repair specialist for RiteSmith.
+Your sole job: fix the listed validation errors while preserving the original logic.
+
+REPAIR RULES
+- Keep the function signature: run(input, context)
+- Do NOT add new features or change the script's purpose
+- Fix ONLY the problems listed — do not refactor unrelated code
+- Forbidden stays forbidden: system imports, open, eval, exec, __import__, globals
+- Do NOT raise and do NOT use assert
+- Return a dict — never None, never a bare primitive
+
+{_LANGUAGE["python"]}
+
+Respond with valid JSON matching the schema in the user message — nothing else."""
     lang = LANG_NAME[target]
     extra = (
         "\n- The script must remain valid Luau (see the language notes)" if target == "luau" else ""

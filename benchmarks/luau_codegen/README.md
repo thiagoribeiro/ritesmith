@@ -80,3 +80,26 @@ Lua/Luau subset), `test_cases` and `reference`. Then run the selftest.
 - Best Luau variant's pass final is at most **5 pp below** Lua, measured on the primary model (the first `--models` entry)
 - Strict typecheck is clean on at least **80 %** of the passing Luau scripts
 - typed vs untyped is reported too: if typed wins, the production prompt should carry Luau signatures
+
+## Python target (Monty)
+
+`--targets python` runs the same tasks as Python in [Monty](https://github.com/pydantic/monty)
+(`pip install pydantic-monty`, optional; MIT). The Luau types are translated to `TypedDict`
+stubs ([pytypes.py](pytypes.py)) and checked with Monty's bundled `ty`; with `--typecheck-gate`
+other than `none`, ty errors feed the repair loop. Tool stubs stay in Lua and run through lupa,
+so both targets see the same data ([monty_exec.py](monty_exec.py)). `selftest.py` covers it with
+[py_references.py](py_references.py) and negative cases (generators, `import socket`, runaway
+loop, `max_calls`). [monty_overhead.py](monty_overhead.py) measures per-execution overhead
+against LunarDyson.
+
+Result 2026-11-22 (`gpt-6.1-terra`, 31 tasks × 3, gate nonstrict, run on a Cortex-A53):
+
+| target | pass@1 | pass final | avg attempts | cost/sample | latency |
+|---|---|---|---|---|---|
+| luau/typed | 100% | 100% | 1.00 | US$ 0.0029 | 5.4 s |
+| python/typed (Monty 1.6.0) | 99% | 100% | 1.01 | US$ 0.0026 | 4.4 s |
+
+Per execution on the A53 (median): empty 0.92 ms vs 1.71 ms; 13 tool calls 2.98 ms vs
+6.01 ms; 200k-iteration loop 19 ms vs 81 ms (LunarDyson vs Monty, warm pool, one checkout
+per execution). Monty worker RSS ~10 MB; both stop a 200 ms runaway loop inside try/pcall.
+Verdict: no generation gain with the current model, ~2× slower per execution — Luau stays.

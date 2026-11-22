@@ -198,6 +198,86 @@ end""",
     return samples
 
 
+def check_python() -> list[dict]:
+    """python target (Monty): references pass and ty-check; Monty's gaps are caught."""
+    try:
+        from benchmarks.luau_codegen.py_references import PY_REFERENCES
+    except ImportError as e:  # pydantic-monty is optional
+        print(f"SKIP  python target ({e})")
+        return []
+    import ast
+
+    from benchmarks.luau_codegen import pytypes
+
+    for task in ALL_TASKS:  # every translated contract must be valid Python (keyword fields…)
+        try:
+            ast.parse(pytypes.task_stubs(task))
+            for stub in pytypes.tool_module_stubs(task).values():
+                ast.parse(stub)
+            ok = True
+        except SyntaxError as e:
+            ok, err = False, str(e)
+        expect(f"python stubs parse: {task['id']}", ok, "" if ok else err)
+    samples = []
+    for task_id, ref in PY_REFERENCES.items():
+        task = TASKS_BY_ID[task_id]
+        check = validate(task, ref.strip(), "python")
+        expect(
+            f"python reference {task_id}",
+            check.passed and check.typecheck["ty"]["passed"],
+            json.dumps(check.to_dict())[:600],
+        )
+        samples.append(
+            {
+                "model": "reference",
+                "target": "python",
+                "variant": "typed",
+                "task_id": task_id,
+                "tier": task["tier"],
+                "repeat": 1,
+                "passed": check.passed,
+                "attempts": [{"attempt": 1, "script": ref, "check": check.to_dict()}],
+            }
+        )
+
+    notify = TASKS_BY_ID["t3_notify_inactive"]
+    ref = PY_REFERENCES["t3_notify_inactive"]
+    unchecked = ref.replace(
+        '    if not r["ok"]:\n        return {"error": r["error"], "message": r["message"]}\n', ""
+    )
+    c = validate(notify, unchecked, "python")
+    expect("python: ty flags a result used without checking ok", not c.typecheck["ty"]["passed"])
+    for label, code in (
+        ("generator", "def run(input, context):\n    def g():\n        yield 1\n    return {}\n"),
+        ("syntax", "def run(input, context:\n    return {}\n"),
+    ):
+        c = validate(notify, code, "python")
+        expect(f"python: {label} → compile error", not c.compiled, str(c.compile_errors))
+    c = validate(notify, "import socket\ndef run(input, context):\n    return {}\n", "python")
+    expect("python: import socket fails", not c.passed and bool(c.exec_error), str(c.exec_error))
+    c = validate(
+        notify,
+        "def run(input, context):\n    while True:\n        try:\n            pass\n        except Exception:\n            pass\n",
+        "python",
+    )
+    expect(
+        "python: infinite loop stops",
+        not c.passed and all(not x["passed"] for x in c.cases),
+        str(c.cases)[:200],
+    )
+    budget = ref.replace('if c["last_seen_days"] >= input["inactive_days"]:', "if True:")
+    c = validate(
+        notify, budget.replace('for c in r["customers"]:', 'for c in r["customers"] * 5:'), "python"
+    )
+    expect(
+        "python: max_calls budget enforced",
+        not c.passed and "budget exceeded" in json.dumps(c.cases),
+    )
+    c = validate(notify, "x = 1\n", "python")
+    expect("python: missing run → contract error", "must define" in (c.exec_error or ""))
+    return samples
+
+
 def check_report(samples: list[dict]) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)
@@ -211,6 +291,7 @@ def main() -> int:
     samples = check_references()
     check_negative_cases()
     samples += check_lua_baseline()
+    samples += check_python()
     check_report(samples)
     print()
     if _failures:
