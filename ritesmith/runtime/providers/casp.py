@@ -1,14 +1,14 @@
 """casp.* host functions — CASP protocol provider for semantic device control.
 
 These host functions are registered under the 'trusted_internal' profile.
-They call CASP provider endpoints (e.g. LoomHarbor) directly via Python
+They call CASP provider endpoints (e.g. a home-automation API) directly via Python
 httpx — NOT through the Lua http.* functions. This means _BLOCKED_PATTERNS
 does not apply to these calls; they are trusted structured internal calls
 to configured provider URLs.
 
 Lua usage:
   local resources = casp.query("smart-switch", {room="cozinha"}, {"turn-off"})
-  local resolved  = casp.resolve("smart-switch", "turn-off", "led do painel")
+  local resolved  = casp.resolve("smart-switch", "turn-off", "luz da mesa")
   local result    = casp.execute(resolved.resource.id, "smart-switch", "turn-off", {})
 
   -- Always check status before using resolve result:
@@ -111,7 +111,7 @@ class CASPProvider(ToolProvider):
                 callable=_casp_resolve,
                 description=(
                     "Resolve a natural-language hint to a resource ID. "
-                    "USE when the user names a specific device (e.g. 'led do painel', 'ventilador da suíte'). "
+                    "USE when the user names a specific device (e.g. 'luz da mesa', 'ventilador do quarto'). "
                     "Returns {status, resource: {id, displayName}, confidence} or {status: 'ambiguous', candidates}. "
                     "ALWAYS check result.status == 'resolved' before using result.resource.id."
                 ),

@@ -1,7 +1,7 @@
 """CASP host functions — registered under 'trusted_internal' profile.
 
 These are Python callables exposed to Lua scripts as casp.* functions.
-They call LoomHarbor (or any CASP provider) via the internal httpx client
+They call a CASP provider via the internal httpx client
 and bypass _BLOCKED_PATTERNS by design (structured internal calls only).
 """
 

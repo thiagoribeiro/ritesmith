@@ -15,7 +15,7 @@ REPS=${REPS:-3}
 PORT=${PORT:-18081}
 PG_PORT=${PG_PORT:-45432}
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-PY=${PY:-/home/thiago/Documents/projects/ritesmith/.venv/bin/python}
+PY=${PY:-.venv/bin/python}
 OUT=${OUT:-$ROOT/benchmarks/generation_latency/results/scorecard-$(date +%Y%m%d)-$(git -C "$ROOT" rev-parse --short HEAD)}
 DB=postgresql+asyncpg://ritesmith:ritesmith@127.0.0.1:$PG_PORT/ritesmith_eval
 mkdir -p "$OUT"

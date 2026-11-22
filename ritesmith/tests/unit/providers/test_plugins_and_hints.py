@@ -82,8 +82,8 @@ def test_hints_defaults_are_neutral(monkeypatch):
     )
     h = hints.hints()
     assert h == hints.DEFAULTS
-    banned = ("hugo", "jaque", "thiago", "suite")
-    assert not any(b in v.lower() for v in h.values() for b in banned)
+    # defaults only name the example house (home_example.py)
+    assert "alice" in h["person_examples"] and "quarto" in h["ambiguity_example"]
 
 
 def test_hints_merge_order(monkeypatch, tmp_path):

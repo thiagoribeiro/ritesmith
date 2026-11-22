@@ -1,6 +1,6 @@
 """One frozen, twelve-request comparison; never run against production storage.
 
-The CLI runs production HTTP paths in-process on r2d2. Every paid nested call
+The CLI runs production HTTP paths in-process on a staging host. Every paid nested call
 shares a durable ledger. Existing benchmark stubs are replaced by fixture-only
 production validation sessions, with an additional hidden functional oracle.
 

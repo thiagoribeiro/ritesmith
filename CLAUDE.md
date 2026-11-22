@@ -76,7 +76,7 @@ Ordered rule evaluation, first match wins (`ritesmith/core/policy.py`): shell sc
 
 ### Tool providers — the dual Lua/MCP surface
 
-`ritesmith/runtime/providers/` implements one class per namespace (`market`, `web`, `telegram`, `calendar`, `email`, `duckdb`, `obsidian`, `grafana`, `loomharbor`, `casp`, `reports`, `stat`...), each a `ToolProvider` subclass (`ritesmith/runtime/providers/base.py`). A provider is the **single source of truth** for both surfaces:
+`ritesmith/runtime/providers/` implements one class per namespace (`market`, `web`, `telegram`, `calendar`, `email`, `duckdb`, `obsidian`, `grafana`, `home` (example; real deployments ship a plugin), `casp`, `reports`, `stat`...), each a `ToolProvider` subclass (`ritesmith/runtime/providers/base.py`). A provider is the **single source of truth** for both surfaces:
 - `lua_functions()` → injected into the Lua sandbox as `namespace.function` globals, gated by `profile` (see below).
 - `mcp_tools()` → registered directly in the standalone MCP server (`mcp-server/server.py`).
 
@@ -90,7 +90,7 @@ Every Lua capability is a single `function run(input, context)` — input/output
 
 ### CASP subsystem
 
-`ritesmith/runtime/casp/` is a protocol client for external "CASP providers" (e.g. LoomHarbor — device/resource control). `client.py` does HTTP discovery/query/resolve/execute against `RITESMITH_CASP_PROVIDERS` (a JSON list of `{url, resource_types, weight, priority}`), routed by resource type and priority; `host_bridge.py` registers `casp.*` as `trusted_internal`-profile Lua host functions. When any CASP provider is configured, `PlanBuilder._handle_lua_artifact` unconditionally uses the `trusted_internal` profile so generated scripts *can* reach `casp.*` (the LLM decides whether to use it). `home.*` was the legacy LoomHarbor namespace; app startup scans persisted artifacts and logs a warning if any still reference it (see `_lifespan` in `app.py`).
+`ritesmith/runtime/casp/` is a protocol client for external "CASP providers" (e.g. a home-automation API — device/resource control). `client.py` does HTTP discovery/query/resolve/execute against `RITESMITH_CASP_PROVIDERS` (a JSON list of `{url, resource_types, weight, priority}`), routed by resource type and priority; `host_bridge.py` registers `casp.*` as `trusted_internal`-profile Lua host functions. When any CASP provider is configured, `PlanBuilder._handle_lua_artifact` unconditionally uses the `trusted_internal` profile so generated scripts *can* reach `casp.*` (the LLM decides whether to use it). `home.*` is the device namespace a deployment supplies as a plugin (entry point `ritesmith.providers`, see `docs/home-capability-contract.md`); app startup scans persisted artifacts and logs a warning if any still reference it (see `_lifespan` in `app.py`).
 
 ### Registry / storage
 

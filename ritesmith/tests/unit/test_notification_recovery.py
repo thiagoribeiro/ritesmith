@@ -22,8 +22,8 @@ from ritesmith.runtime.validation_session import FixtureError, LuauValidationSes
 from ritesmith.schemas.test_spec import bind_known_fixtures
 
 EVIDENCE = (
-    Path(__file__).resolve().parents[3]
-    / "benchmarks/generation_latency/results/reliability-native-20261008/stage1-spending.json"
+    Path(__file__).resolve().parents[1]
+    / "fixtures/llm_evidence/reliability-native-20261008-stage1-spending.json"
 )
 EVIDENCE_SHA = "6f33c55a792583e14d7b1636b113ab1e43ed31e5b094bc81bd7032125489b720"
 TASK = BY_ID["t3_notify_inactive"]

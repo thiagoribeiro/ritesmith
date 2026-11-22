@@ -9,9 +9,9 @@ from ritesmith.config import Settings, get_settings
 from ritesmith.core.intent_verification import verify_intent
 from ritesmith.tests.unit.test_plans_api import MockPlanLLM
 
-PRESENCE = {"person_alias": "thiago", "message": "Crédito do Hugo.", "channel": "telegram"}
+PRESENCE = {"person_alias": "ana", "message": "Crédito do Caio.", "channel": "telegram"}
 USER = [
-    "Me lembra de 6 em 6 meses de colocar mais crédito no celular do Hugo",
+    "Me lembra de 6 em 6 meses de colocar mais crédito no celular do Caio",
     "A primeira data é hoje + 6 meses. Lembra no telegram",
     "Bota 15 de maio de 2027 as 8 da manha",
 ]
@@ -82,13 +82,13 @@ async def create(make_client, llm, mode):
 async def test_shadow_records_the_mismatch_without_blocking(make_client):
     responses = FakeResponses("mismatch")
     plan = await create(make_client, llm_with(responses), "shadow")
-    assert plan["readback"].startswith("• Quando thiago chegar em casa")
+    assert plan["readback"].startswith("• Quando ana chegar em casa")
     assert plan["verification"]["verdict"] == "mismatch"
     assert plan["verification"]["mode"] == "shadow" and plan["status"] != "blocked"
     sent = responses.calls[0]
     assert sent["model"] == "gpt-6.1-terra" and sent["reasoning"] == {"effort": "low"}
     content = sent["input"][0]["content"]
-    assert "Bota 15 de maio de 2027" in content and "Quando thiago chegar em casa" in content
+    assert "Bota 15 de maio de 2027" in content and "Quando ana chegar em casa" in content
 
 
 @pytest.mark.asyncio(loop_scope="session")

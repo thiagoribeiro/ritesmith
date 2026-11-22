@@ -261,7 +261,7 @@ counts as a match.
 | `presence_reminder` | A one-shot text reminder on arrival (`context.presence_reminder` is still accepted) | `person_alias`, `message`, `channel: "telegram"` |
 | `scheduled_reminder` | "Remind me at a date and time", optionally repeating on the calendar. Every occurrence is computed when the plan is built (months clamp to the month's last day and return to the anchor day) and each gap is one durable Trama sleep | `message`, `first_at` (local ISO), `timezone` (default `America/Sao_Paulo`), `repeat{every, unit: days/weeks/months/years}?`, `count?` or `until?` (an open series stops after 10 years and says so in its last message) |
 
-Device recipes read and act through `home.execute` (LoomHarbor), and notifications go
+Device recipes read and act through `home.execute` (the [home capability contract](docs/home-capability-contract.md)), and notifications go
 through `telegram.send`. The plan is refused if the required providers are not
 configured.
 
@@ -319,7 +319,7 @@ Providers are the single source of truth for both surfaces: Lua host functions (
 | `report` | render/list HTML reports | `RITESMITH_REPORTS_PATH` |
 | `grafana` | dashboards, Prometheus queries | `RITESMITH_GRAFANA_URL` |
 | `casp` | device/resource control (query/resolve/execute) | `RITESMITH_CASP_PROVIDERS` |
-| `home` | LoomHarbor device control, findtag zones | `RITESMITH_LOOMHARBOR_URL` |
+| `home` | device control through a deployment plugin ([contract](docs/home-capability-contract.md)); built-in example house | a plugin, or `RITESMITH_HOME_PROVIDER=example` |
 | `stat` | running min/max, counters (pure) | — |
 | `llm` | `llm.evaluate`: judge or summarize text inside a workflow | `OPENAI_API_KEY` |
 
@@ -732,7 +732,9 @@ ssh user@host "cd ~/ritesmith/deploy && docker compose build && docker compose u
 | `RITESMITH_GOOGLE_CALENDAR_IDS` | — | `"personal:primary,family:id@..."` |
 | `RITESMITH_DUCKDB_PATH` | — | DuckDB file path |
 | `RITESMITH_OBSIDIAN_VAULT_PATH` | — | Obsidian vault root |
-| `RITESMITH_LOOMHARBOR_URL` | — | LoomHarbor endpoint (`home` provider, devices for agent mode) |
+| `RITESMITH_HOME_PROVIDER` | — | `example` activates the built-in example house (`home` provider) when no plugin supplies one |
+| `RITESMITH_PROMPT_HINTS` | — | JSON file with deployment examples for the prompts (see `ritesmith/llm/hints.py`) |
+| `RITESMITH_DISABLED_PROVIDERS` | — | comma-separated provider namespaces to drop |
 
 All variables use the `RITESMITH_` prefix (loaded from `.env` via pydantic-settings).
 
@@ -881,28 +883,18 @@ baseline results. It does not establish a full-corpus SLO.
 
 ### Generation improvements and controlled validation
 
-See [generation improvements](docs/generation-improvements.md) for independent
-fixture tests, bounded recovery, optional Luau body assembly and semantic Trama
-plans. [The staging overlay](deploy/generation-staging.env.example) enables the
+Generation adds independent fixture tests, bounded recovery, optional Luau body
+assembly and semantic Trama plans. [The staging overlay](deploy/generation-staging.env.example) enables the
 new formats on an isolated instance. Performance/cost targets remain unqualified;
 historical benchmark evidence remains separate from subsequent improvements.
 
-The optional [typed decisions experiment](docs/typed-decisions-validation.md)
-adds schema-constrained responses and parameterized Trama constructors, disabled
-by default, with a frozen comparison capped at twelve requests and US$1.
-The [comparison report](benchmarks/generation_latency/results/typed-decisions-20261008/RESULTS.md)
-records its early accounting stop, observed failures and experimental recommendation.
+An optional typed-decisions experiment adds schema-constrained responses and
+parameterized Trama constructors, disabled by default.
 
-The subsequent [reliability corrections](docs/generation-reliability-validation.md)
-reject unusable artifacts with diagnostics and preserve strict certification.
+Reliability corrections reject unusable artifacts with diagnostics and preserve strict certification.
 [The Trama integration](docs/trama-typed-json-integration.md) uses mandatory typed
 JSON with explicit initial state and retained continuation work, requiring the
-compatible engine revision. The [final offline review](benchmarks/generation_latency/results/integration-review-20261009/RESULTS.md)
-records 992 passing tests; it does not establish LLM accuracy or latency/cost targets.
-
-For the owner's direct r2d2 update and the executable image/configuration rollback,
-see [generation deployment on r2d2](docs/generation-deployment-r2d2.md). The rollback
-retains current application data; a separate database backup is available for recovery.
+compatible engine revision.
 
 ---
 

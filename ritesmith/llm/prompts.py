@@ -59,7 +59,7 @@ HOME DEVICE CONTROL (only when profile = trusted_internal)
 
   casp.resolve(resource_type: string, capability: string, hint: string) -> table
     -- Returns {status="resolved", resource={id,type,displayName}} or {status="ambiguous", candidates=[...]}
-    -- Use when user names a specific device: hint = "led do painel"
+    -- Use when user names a specific device: hint = "luz da mesa"
 
   casp.execute(resource_id: string, resource_type: string, capability: string, input: table) -> table
     -- Returns {status="ok"} or {status="failed", errorCode, error}
@@ -67,7 +67,7 @@ HOME DEVICE CONTROL (only when profile = trusted_internal)
 
 CASP SELECTION RULES
   - casp.query when user says a room/area ("cozinha", "sala", "varanda")
-  - casp.resolve when user names a specific device ("led do painel", "ventilador da suite")
+  - casp.resolve when user names a specific device ("luz da mesa", "ventilador do quarto")
   - Always check result.status or result.error before calling casp.execute
   - For query: iterate result.resources and call casp.execute for each
   - For resolve: only call casp.execute if result.status == "resolved"

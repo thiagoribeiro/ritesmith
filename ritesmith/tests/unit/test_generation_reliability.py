@@ -28,8 +28,8 @@ from ritesmith.workflows.simulation import UnsupportedSimulation, logic
 from ritesmith.workflows.validator import WorkflowValidator
 
 EVIDENCE = (
-    Path(__file__).resolve().parents[3]
-    / "benchmarks/generation_latency/results/typed-decisions-20261008/spending.json"
+    Path(__file__).resolve().parents[1]
+    / "fixtures/llm_evidence/typed-decisions-20261008-spending.json"
 )
 RAW_CALLS = json.loads(EVIDENCE.read_text())["calls"]
 
