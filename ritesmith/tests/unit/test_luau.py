@@ -534,3 +534,33 @@ async def test_async_driver_non_json_tool_result_is_a_tool_error(slow_slugify, m
     assert result.error is None
     assert result.output["ok"] is False
     assert "not JSON-serializable" in result.output["err"]
+
+
+@pytest.mark.skipif(luau._observer() is None, reason="lunardyson < 0.1.3 has no observer")
+def test_executions_reach_the_metrics_registry():
+    from prometheus_client import REGISTRY
+
+    def count(outcome):
+        v = REGISTRY.get_sample_value(
+            "lunardyson_executions_total",
+            {"runtime": "transform_only", "outcome": outcome, "error_kind": "none"},
+        )
+        return v or 0.0
+
+    before = count("ok")
+    out, err, _, _ = luau.run_luau(
+        "function run(input) return {doubled = input.n * 2} end",
+        {"n": 21},
+        {},
+        "transform_only",
+        1000,
+        16,
+    )
+    assert err is None and out == {"doubled": 42}
+    assert count("ok") == before + 1
+    assert (
+        REGISTRY.get_sample_value(
+            "lunardyson_execution_seconds_count", {"runtime": "transform_only"}
+        )
+        >= 1
+    )

@@ -315,10 +315,25 @@ def _adapter(fn: Callable, positional: list[str] | None) -> Callable:
     return call
 
 
+@functools.cache
+def _observer():
+    """LunarDyson's Prometheus observer on the registry /metrics already serves
+    (``lunardyson_*`` series, labelled by profile). None on bindings older than 0.1.3."""
+    try:
+        from lunardyson.observe import PrometheusObserver
+    except ImportError:
+        return None
+    return PrometheusObserver()
+
+
 def build_runtime(profile: str, cpu_time_ms: int, memory_mb: float, type_decls: str | None = None):
     import lunardyson as ld
 
-    rt = ld.Runtime(memory_mb=memory_mb, cpu_time_ms=cpu_time_ms)
+    obs = _observer()
+    if obs is not None:
+        rt = ld.Runtime(memory_mb=memory_mb, cpu_time_ms=cpu_time_ms, observer=obs, label=profile)
+    else:
+        rt = ld.Runtime(memory_mb=memory_mb, cpu_time_ms=cpu_time_ms)
     if type_decls:
         rt.declare_types(type_decls)
     for name, fn_def in sorted(luau_tools_for_profile(profile).items()):
