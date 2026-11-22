@@ -157,6 +157,10 @@ def _short(value, limit: int = 300) -> str:
 
 
 def compile_errors(script: str, target: str) -> list[str]:
+    if target == "python":
+        from benchmarks.luau_codegen import monty_exec
+
+        return monty_exec.compile_errors(script)
     with tempfile.TemporaryDirectory() as tmp:
         cwd = Path(tmp)
         if target == "luau":
@@ -181,12 +185,34 @@ def compile_errors(script: str, target: str) -> list[str]:
         return [proc.stderr.strip() or "load failed"] if proc.returncode != 0 else []
 
 
+_PY_FORBIDDEN = [
+    (re.compile(r"^\s*(from|import)\s+(os|sys|subprocess|socket|shutil|pathlib|io)\b", re.M),
+     "import de módulo de sistema é proibido"),
+    (re.compile(r"\b(open|eval|exec|compile|__import__|globals|locals|getattr|setattr)\s*\("),
+     "builtin proibido"),
+]
+
+
 def forbidden_tokens(script: str, target: str) -> list[str]:
+    if target == "python":
+        return [msg for pattern, msg in _PY_FORBIDDEN if pattern.search(script)]
     patterns = _FORBIDDEN_PATTERNS + (_LUAU_FORBIDDEN if target == "luau" else [])
     return [msg for pattern, msg in patterns if pattern.search(script)]
 
 
+_CPYTHON_ISMS = [  # full-CPython features Monty lacks (diagnostic only)
+    (re.compile(r"\byield\b"), "generator"),
+    (re.compile(r"^\s*@(property|staticmethod|classmethod)", re.M), "method decorator"),
+    (re.compile(r"\bsuper\(\)"), "super()"),
+    (re.compile(r"^\s*del\s", re.M), "del"),
+    (re.compile(r"^\s*(from|import)\s+(enum|abc|collections|itertools|functools)\b", re.M), "stdlib import"),
+    (re.compile(r"\bcallable\("), "callable()"),
+]
+
+
 def dialect_slips(script: str, target: str) -> list[str]:
+    if target == "python":
+        return [label for pattern, label in _CPYTHON_ISMS if pattern.search(script)]
     patterns = _LUA_ISMS if target == "luau" else _LUAU_ISMS
     return [label for pattern, label in patterns if pattern.search(script)]
 
@@ -273,6 +299,13 @@ def compare(expected, actual, path: str = "$") -> str | None:
 
 def execute(task: dict, script: str, target: str) -> tuple[list[CaseResult], str | None]:
     cases = task["test_cases"]
+    if target == "python":
+        from benchmarks.luau_codegen import monty_exec
+
+        outcomes, load_error = monty_exec.execute(task, script)
+        if load_error:
+            return [], load_error
+        return _grade(cases, outcomes, lambda m: m), None
     source, offset = exec_source(task, script, target, cases)
     with tempfile.TemporaryDirectory() as tmp:
         cwd = Path(tmp)
@@ -300,11 +333,15 @@ def execute(task: dict, script: str, target: str) -> tuple[list[CaseResult], str
     if "load_error" in payload:
         return [], "top-level error: " + _remap_lines(payload["load_error"], offset)
 
+    return _grade(cases, payload["cases"], lambda m: _remap_lines(m, offset)), None
+
+
+def _grade(cases: list[dict], outcomes: list[dict], remap) -> list[CaseResult]:
     results = []
-    for i, (case, outcome) in enumerate(zip(cases, payload["cases"], strict=True), start=1):
+    for i, (case, outcome) in enumerate(zip(cases, outcomes, strict=True), start=1):
         label = f"Test case {i} (input={_short(case['input'], 200)})"
         if not outcome["ok"]:
-            msg = _remap_lines(outcome.get("error", ""), offset)
+            msg = remap(outcome.get("error", ""))
             results.append(CaseResult(i, False, f"{label} raised: {msg}"))
             continue
         mismatch = compare(case["expected"], outcome.get("output"))
@@ -320,7 +357,7 @@ def execute(task: dict, script: str, target: str) -> tuple[list[CaseResult], str
             results.append(CaseResult(i, False, f"{label} failed: {mismatch} (full output: {got})"))
         else:
             results.append(CaseResult(i, True))
-    return results, None
+    return results
 
 
 def validate(task: dict, script: str, target: str, typecheck_gate: str = "none") -> SampleCheck:
@@ -336,6 +373,13 @@ def validate(task: dict, script: str, target: str, typecheck_gate: str = "none")
     check.forbidden = forbidden_tokens(script, target)
     check.dialect_slips = dialect_slips(script, target)
 
+    if target == "python" and check.compiled:
+        from benchmarks.luau_codegen import monty_exec
+
+        errors = monty_exec.typecheck(task, script)
+        check.typecheck["ty"] = {"passed": not errors, "errors": errors, "lints": []}
+        if typecheck_gate != "none":
+            check.gated_type_errors = errors
     if target == "luau" and check.compiled:
         for mode in ("nonstrict", "strict"):
             tc = typecheck(task, script, mode)

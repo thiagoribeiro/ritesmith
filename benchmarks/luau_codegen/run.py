@@ -31,7 +31,7 @@ _FENCE = re.compile(r"^\s*```[a-zA-Z]*\s*\n(.*?)\n\s*```\s*$", re.DOTALL)
 _LLM_RETRIES = 4
 # Mirrors the production OpenAIProvider: gpt-5*/o* reasoning models reject
 # `temperature` on Chat Completions and want `max_completion_tokens`.
-_REASONING_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+_REASONING_PREFIXES = ("gpt-5", "gpt-6", "o1", "o3", "o4")
 
 
 def _strip_fences(code: str) -> str:
@@ -134,6 +134,15 @@ async def run_sample(
     }
 
 
+def _monty_version() -> str | None:
+    try:
+        from benchmarks.luau_codegen.monty_exec import monty_version
+
+        return monty_version()
+    except ImportError:
+        return None
+
+
 def _select_tasks(spec: str) -> list[dict]:
     if spec == "all":
         return ALL_TASKS
@@ -155,7 +164,7 @@ def _configs(targets: list[str], variants: list[str]) -> list[tuple[str, str]]:
         if target == "lua":
             configs.append(("lua", "untyped"))  # no type system to exercise
         else:
-            configs += [("luau", v) for v in variants]
+            configs += [(target, v) for v in variants]
     return configs
 
 
@@ -196,6 +205,7 @@ async def main() -> int:
     meta = {
         "started_at": datetime.now(UTC).isoformat(),
         "luau_version": luau_version(),
+        "monty_version": _monty_version(),
         "models": models,
         "configs": configs,
         "tasks": [t["id"] for t in tasks],

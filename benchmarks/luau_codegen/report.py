@@ -22,6 +22,11 @@ GO_MAX_GAP_PP = 5.0
 GO_MIN_STRICT = 0.80
 
 
+
+def _strict(typecheck: dict) -> dict | None:
+    """Luau strict analysis, or ty for the python target (one mode only)."""
+    return typecheck.get("strict") or typecheck.get("ty")
+
 def _load(run_dir: Path) -> tuple[dict, list[dict]]:
     meta_path = run_dir / "meta.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
@@ -63,11 +68,14 @@ def summarize(samples: list[dict]) -> list[dict]:
         passed = [s for s in group if s["passed"]]
         passed_finals = [_checked(s)[-1] for s in passed]
 
-        strict_known = [a for a in passed_finals if "strict" in a["check"]["typecheck"]]
-        strict_ok = [a for a in strict_known if a["check"]["typecheck"]["strict"]["passed"]]
-        luau_finals = [a for a in finals if a and "strict" in a["check"]["typecheck"]]
-        strict_errs = [len(a["check"]["typecheck"]["strict"]["errors"]) for a in luau_finals]
-        nonstrict_ok = [a for a in luau_finals if a["check"]["typecheck"]["nonstrict"]["passed"]]
+        strict_known = [a for a in passed_finals if _strict(a["check"]["typecheck"])]
+        strict_ok = [a for a in strict_known if _strict(a["check"]["typecheck"])["passed"]]
+        luau_finals = [a for a in finals if a and _strict(a["check"]["typecheck"])]
+        strict_errs = [len(_strict(a["check"]["typecheck"])["errors"]) for a in luau_finals]
+        nonstrict_ok = [
+            a for a in luau_finals
+            if (a["check"]["typecheck"].get("nonstrict") or _strict(a["check"]["typecheck"]))["passed"]
+        ]
 
         slips = sum(1 for s in group if any(a["check"]["dialect_slips"] for a in _checked(s)))
         over = sum(1 for a in finals if a and a["check"]["exceeds_prod_limits"])
@@ -156,7 +164,7 @@ def _top_errors(samples: list[dict], target: str, limit: int = 10) -> tuple[Coun
                 msgs.append(f"exec: {c['exec_error']}")
             msgs += [case["message"] for case in c["cases"] if not case["passed"]]
             runtime.update(_normalize(m) for m in msgs)
-            strict = c["typecheck"].get("strict")
+            strict = _strict(c["typecheck"])
             if strict:
                 types.update(_normalize(e) for e in strict["errors"])
     return Counter(dict(runtime.most_common(limit))), Counter(dict(types.most_common(limit)))
@@ -251,7 +259,7 @@ def write_report(run_dir: Path) -> Path:
         )
     md += ["", "## By tier", "", *_tier_table(samples)]
     md += ["", "## Hardest tasks (all configs)", "", *_task_failures(samples)]
-    for target in ("luau", "lua"):
+    for target in ("luau", "lua", "python"):
         runtime, types = _top_errors(samples, target)
         if runtime:
             md += ["", f"## Top validation errors — {target}", ""]
