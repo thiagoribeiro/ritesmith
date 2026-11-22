@@ -23,10 +23,12 @@ import multiprocessing
 import time
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+from functools import cache
 from typing import Any
 
 from ritesmith.core.exceptions import LLMError
 from ritesmith.core.generation_budget import current_budget
+from ritesmith.llm import hints
 from ritesmith.llm.base import (
     GenerationProposal,
     IntentAnalysis,
@@ -76,7 +78,7 @@ home.execute. Unknown metric names, API fields or units are discovered with try_
 Ambiguous targets: if the request names a kind of device ("o ar", "a luz") and more than one
 device of that kind matches without a room or name in the request, do NOT pick one — a
 wrong physical action is worse than a question. submit(kind="refuse") with a reason that
-lists the options (e.g. "Qual ar-condicionado? suite, escritório, sala, hugo"). Act on all of
+lists the options (e.g. "__HINT_ambiguity_example__"). Act on all of
 them only when the request says so ("todos", plural).
 Devices: person/tracker/adapter entries are virtual; their "online" flag does not matter and
 presence.read on a person works. Offline physical devices are skipped (say so in the
@@ -174,7 +176,7 @@ _TOOLS: list[dict] = [
                 "price_variation params: kind (crypto|fiat), symbol, currency, percent, "
                 "direction (up|down|both), interval_seconds, window_seconds, label?. "
                 "presence_change = 'when people arrive/leave, act and/or notify ONCE, then end': "
-                "params people[] (person targets from list_devices, e.g. thiago, jaque), event "
+                "params people[] (person targets from list_devices, e.g. __HINT_person_examples__), event "
                 "(all_away = everyone listed is out; any_home = someone listed is home), "
                 "require_transition (default true: first see the opposite state, so 'when X "
                 "arrives' waits for a real arrival), delay_seconds (e.g. 900 = 15 min after), "
@@ -298,16 +300,19 @@ _TOOLS: list[dict] = [
 
 
 # Responses API shape; strict=False because plan/params/responses are open objects.
-_RESPONSE_TOOLS: list[dict] = [
-    {
-        "type": "function",
-        "name": t["function"]["name"],
-        "description": t["function"]["description"],
-        "parameters": t["function"]["parameters"],
-        "strict": False,
-    }
-    for t in _TOOLS
-]
+@cache
+def _response_tools() -> list[dict]:
+    """Tool definitions with deployment hints filled in (resolved once: prompt-cache stable)."""
+    return [
+        {
+            "type": "function",
+            "name": t["function"]["name"],
+            "description": hints.fill(t["function"]["description"]),
+            "parameters": json.loads(hints.fill(json.dumps(t["function"]["parameters"]))),
+            "strict": False,
+        }
+        for t in _TOOLS
+    ]
 
 
 def _static_system() -> str:
@@ -316,7 +321,7 @@ def _static_system() -> str:
     examples = {p: semantic_example(p) for p in ("linear", "bounded_polling", "parallel")}
     return "\n".join(
         [
-            AGENT_SYSTEM,
+            hints.fill(AGENT_SYSTEM),
             "SEMANTIC PLAN RULES:" + SEMANTIC_RULES,
             "PLAN EXAMPLES: " + json.dumps(examples, separators=(",", ":")),
             "LUAU RULES:\n"
@@ -377,8 +382,12 @@ class AgentGeneration:
 
     def list_devices(self, filter: str = "") -> dict:
         from ritesmith.runtime.host_functions import get_capability
-        from ritesmith.runtime.providers.base import invoke_capability
+        from ritesmith.runtime.providers import provider_for
+        from ritesmith.runtime.providers.base import invoke_capability, normalize_device
 
+        home = provider_for("home")
+        normalize = home.normalize_device if home is not None else normalize_device
+        virtual = home.virtual_device_types if home is not None else frozenset()
         cap = get_capability("home.devices")
         if cap is None:
             return {"error": "home.devices unavailable"}
@@ -388,25 +397,18 @@ class AgentGeneration:
         wanted = filter.lower().strip()
         rows = []
         for d in devices if isinstance(devices, list) else []:
-            row = {
-                "target": d.get("alias") or d.get("id"),
-                "name": d.get("name"),
-                "type": d.get("type"),
-                "room": (d.get("meta") or {}).get("room"),
-                "capabilities": d.get("capabilities"),
-                "online": d.get("online"),
-            }
-            if d.get("type") in _VIRTUAL_DEVICE_TYPES:
-                # LoomHarbor reports these as offline; their reads still work.
+            row = normalize(d)
+            state = row.pop("state", None)
+            if row.get("type") in virtual:
+                # virtual devices (people, trackers) report offline; their reads still work.
                 row["online"] = "virtual"
             blob = json.dumps(row, ensure_ascii=False).lower()
             if wanted and not all(w in blob for w in wanted.split()):
                 continue
             # The current state shows the exact fields a read returns under result.state.
-            state = d.get("state")
             if isinstance(state, dict) and state:
                 row["state_example"] = dict(list(state.items())[:12])
-            if execute is not None and "remote.buttons" in (d.get("capabilities") or []):
+            if execute is not None and "remote.buttons" in (row.get("capabilities") or []):
                 try:  # read-only: the button names remote.press accepts
                     out = invoke_capability(
                         execute.callable,
@@ -728,7 +730,7 @@ class AgentGeneration:
                 "model": model,
                 "instructions": instructions,
                 "input": pending,
-                "tools": _RESPONSE_TOOLS,
+                "tools": _response_tools(),
                 "parallel_tool_calls": True,
                 "max_output_tokens": self.settings.generation_agent_turn_tokens,
                 "store": True,
@@ -861,7 +863,6 @@ class AgentGeneration:
 # excluded because it costs model calls.
 _PROBE_NAMESPACES = frozenset({"grafana", "web", "market", "runtime", "stat"})
 _MAX_PROBES = 6
-_VIRTUAL_DEVICE_TYPES = frozenset({"person", "tracker", "adapter"})
 _ISOLATED = ("validate_workflow", "simulate_workflow", "check_script", "compile_workflow")
 _POOL: ProcessPoolExecutor | None = None
 _POOL_LIMIT_MB: int | None = None

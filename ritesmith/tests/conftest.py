@@ -64,14 +64,19 @@ def _reset_global_state():
     from ritesmith.api.limiter import limiter
     from ritesmith.core import execution
     from ritesmith.runtime.casp import client as casp_client
-    from ritesmith.runtime.providers import loomharbor, market
+    from ritesmith.runtime.providers import PROVIDERS, market
 
     caches = [
         casp_client._discovery_cache,
         market._last_fetch,
-        loomharbor._ready_cache,
         execution._repair_in_flight,
     ]
+    from ritesmith.llm import agent_loop, hints
+
+    for provider in PROVIDERS:
+        provider.reset_caches()
+    hints.hints.cache_clear()
+    agent_loop._response_tools.cache_clear()
     limiter.enabled = False
     limiter.reset()
     for cache in caches:
@@ -79,6 +84,8 @@ def _reset_global_state():
     get_settings.cache_clear()
     yield
     limiter.enabled = True
+    for provider in PROVIDERS:
+        provider.reset_caches()
     for cache in caches:
         cache.clear()
     get_settings.cache_clear()

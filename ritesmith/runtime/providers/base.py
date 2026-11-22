@@ -32,6 +32,19 @@ def invoke_capability(fn, args: dict):
     return fn(**args)
 
 
+def normalize_device(raw: dict) -> dict:
+    """A home.devices entry in the contract's shape (docs/home-capability-contract.md)."""
+    return {
+        "target": raw.get("target") or raw.get("id"),
+        "name": raw.get("name"),
+        "type": raw.get("type"),
+        "room": raw.get("room"),
+        "capabilities": raw.get("capabilities"),
+        "online": raw.get("online"),
+        "state": raw.get("state"),
+    }
+
+
 @dataclass
 class MCPToolDef:
     """A single tool exposed via the MCP server."""
@@ -70,9 +83,31 @@ class ToolProvider(ABC):
         """Return MCP tool definitions for the standalone MCP server."""
         ...
 
+    # ---- Optional hooks for a `home` provider (device control). Defaults do nothing. ----
+
+    #: device types that are not physical (people, trackers…): "online" does not apply.
+    virtual_device_types: frozenset[str] = frozenset()
+
+    def prompt_hints(self) -> dict[str, str]:
+        """Deployment-specific examples for the generation prompts (see ritesmith.llm.hints).
+
+        Static data only — called without checking is_available()."""
+        return {}
+
+    def normalize_device(self, raw: dict) -> dict:
+        """One entry of home.devices → the row the agent sees (target, name, type, room,
+        capabilities, online, state). The default reads those fields as-is."""
+        return normalize_device(raw)
+
+    def reset_caches(self) -> None:
+        """Clear module-level caches (tests)."""
+
     def manifest(self) -> dict[str, Any]:
+        from ritesmith.runtime.providers import PLUGIN_SOURCES
+
         return {
             "namespace": self.namespace,
+            "plugin": PLUGIN_SOURCES.get(self.namespace),
             "profile": self.profile,
             "risk_level": self.risk_level,
             "side_effects": self.side_effects,
