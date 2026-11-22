@@ -22,10 +22,10 @@ GO_MAX_GAP_PP = 5.0
 GO_MIN_STRICT = 0.80
 
 
-
 def _strict(typecheck: dict) -> dict | None:
     """Luau strict analysis, or ty for the python target (one mode only)."""
     return typecheck.get("strict") or typecheck.get("ty")
+
 
 def _load(run_dir: Path) -> tuple[dict, list[dict]]:
     meta_path = run_dir / "meta.json"
@@ -73,8 +73,11 @@ def summarize(samples: list[dict]) -> list[dict]:
         luau_finals = [a for a in finals if a and _strict(a["check"]["typecheck"])]
         strict_errs = [len(_strict(a["check"]["typecheck"])["errors"]) for a in luau_finals]
         nonstrict_ok = [
-            a for a in luau_finals
-            if (a["check"]["typecheck"].get("nonstrict") or _strict(a["check"]["typecheck"]))["passed"]
+            a
+            for a in luau_finals
+            if (a["check"]["typecheck"].get("nonstrict") or _strict(a["check"]["typecheck"]))[
+                "passed"
+            ]
         ]
 
         slips = sum(1 for s in group if any(a["check"]["dialect_slips"] for a in _checked(s)))

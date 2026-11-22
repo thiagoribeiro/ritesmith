@@ -168,8 +168,12 @@ def _tool_lines(task: dict, typed: bool, target: str = "luau") -> list[str]:
 
 def _py_doc(text: str) -> str:
     """Tool docs are written with Lua table literals; show them as Python dicts."""
-    return (text.replace("{ok = true", '{"ok": True').replace("{ok = false", '{"ok": False')
-            .replace("error = <code>", '"error": <code>').replace("message = <text>", '"message": <text>'))
+    return (
+        text.replace("{ok = true", '{"ok": True')
+        .replace("{ok = false", '{"ok": False')
+        .replace("error = <code>", '"error": <code>')
+        .replace("message = <text>", '"message": <text>')
+    )
 
 
 def generation_user(task: dict, target: str, variant: str) -> str:

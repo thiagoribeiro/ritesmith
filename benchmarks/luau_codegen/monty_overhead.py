@@ -29,7 +29,11 @@ STOCK = {"A": 10, "B": 3, "C": 2}
 
 def orders_get(args):
     order = ORDERS.get(args["id"])
-    return {"ok": True, "order": order} if order else {"ok": False, "error": "not_found", "message": "no order"}
+    return (
+        {"ok": True, "order": order}
+        if order
+        else {"ok": False, "error": "not_found", "message": "no order"}
+    )
 
 
 TOOLS = {
@@ -96,21 +100,43 @@ def run(input, context):
 """
 
 SCENARIOS = [
-    ("empty run", "function run(input, context) return { ok = true } end",
-     "def run(input, context):\n    return {'ok': True}\n", {}, 1000),
-    ("1 tool call",
-     "function run(input, context) local p = tools.market.get_price({ symbol = input.symbol }) "
-     "return { price = p.price } end",
-     "def run(input, context):\n    p = tools.market.get_price({'symbol': input['symbol']})\n"
-     "    return {'price': p['price']}\n",
-     {"symbol": "BTC"}, 1000),
-    ("T3 order fulfillment (13 tool calls)", LUAU_T3, PY_T3,
-     {"order_ids": ["o1", "o2", "o3", "o9", "o4"]}, 500),
-    ("CPU: 200k loop iterations",
-     "function run(input) local s = 0 for i = 1, 200000 do s = s + i % 7 end return { s = s } end",
-     "def run(input, context):\n    s = 0\n    for i in range(1, 200001):\n        s = s + i % 7\n"
-     "    return {'s': s}\n",
-     {}, 50),
+    (
+        "empty run",
+        "function run(input, context) return { ok = true } end",
+        "def run(input, context):\n    return {'ok': True}\n",
+        {},
+        1000,
+    ),
+    (
+        "1 tool call",
+        (
+            "function run(input, context) local p = tools.market.get_price({ symbol = input.symbol }) "
+            "return { price = p.price } end"
+        ),
+        (
+            "def run(input, context):\n    p = tools.market.get_price({'symbol': input['symbol']})\n"
+            "    return {'price': p['price']}\n"
+        ),
+        {"symbol": "BTC"},
+        1000,
+    ),
+    (
+        "T3 order fulfillment (13 tool calls)",
+        LUAU_T3,
+        PY_T3,
+        {"order_ids": ["o1", "o2", "o3", "o9", "o4"]},
+        500,
+    ),
+    (
+        "CPU: 200k loop iterations",
+        "function run(input) local s = 0 for i = 1, 200000 do s = s + i % 7 end return { s = s } end",
+        (
+            "def run(input, context):\n    s = 0\n    for i in range(1, 200001):\n        s = s + i % 7\n"
+            "    return {'s': s}\n"
+        ),
+        {},
+        50,
+    ),
 ]
 LIMITS: pm.ResourceLimits = {"max_feed_duration_secs": 5.0, "max_memory": 16 * 1024 * 1024}
 
@@ -175,8 +201,11 @@ def main() -> int:
             s.feed_run("import tools\n" + src + "\nrun(__i, {'now': 'x'})", inputs={"__i": inp})
 
     for label, luau, py, inp, n in SCENARIOS:
-        fns = {"lunardyson": lambda: ld_once(luau, inp), "monty": lambda: monty_once(py, inp),
-               "monty 1-feed": lambda: monty_single(py, inp)}
+        fns = {
+            "lunardyson": lambda luau=luau, inp=inp: ld_once(luau, inp),
+            "monty": lambda py=py, inp=inp: monty_once(py, inp),
+            "monty 1-feed": lambda py=py, inp=inp: monty_single(py, inp),
+        }
         for fn in fns.values():
             for _ in range(min(20, n)):
                 fn()
@@ -187,11 +216,17 @@ def main() -> int:
                 fn()
                 samples[k].append(time.perf_counter() - t)
         for k, xs in samples.items():
-            rows.append({"scenario": label, "engine": k, "median_us": round(statistics.median(xs) * 1e6, 1)})
+            rows.append(
+                {"scenario": label, "engine": k, "median_us": round(statistics.median(xs) * 1e6, 1)}
+            )
             print(f"{label:40s} {k:12s} {statistics.median(xs) * 1e6:10.1f} µs")
 
     workers = children(os.getpid())
-    rss = {"host_python_mb": rss_mb([os.getpid()]), "monty_workers_mb": rss_mb(workers), "workers": len(workers)}
+    rss = {
+        "host_python_mb": rss_mb([os.getpid()]),
+        "monty_workers_mb": rss_mb(workers),
+        "workers": len(workers),
+    }
 
     loop = {}
     with pool.checkout(limits={"max_feed_duration_secs": 0.2}) as s:
@@ -199,16 +234,27 @@ def main() -> int:
         try:
             s.feed_run("try:\n    while True:\n        pass\nexcept Exception:\n    pass\n")
         except pm.MontyError as e:
-            loop["monty"] = {"stopped_ms": round((time.perf_counter() - t) * 1000, 1), "error": type(e).__name__}
+            loop["monty"] = {
+                "stopped_ms": round((time.perf_counter() - t) * 1000, 1),
+                "error": type(e).__name__,
+            }
     rt2 = ld.Runtime(cpu_time_ms=200)
     t = time.perf_counter()
     r = rt2.execute("function run() while true do pcall(function() end) end end", {})
-    loop["lunardyson"] = {"stopped_ms": round((time.perf_counter() - t) * 1000, 1), "error": r.error_kind}
+    loop["lunardyson"] = {
+        "stopped_ms": round((time.perf_counter() - t) * 1000, 1),
+        "error": r.error_kind,
+    }
     pool.__exit__(None, None, None)
 
-    meta = {"machine": platform.machine(), "python": platform.python_version(),
-            "monty": __import__("importlib.metadata").metadata.version("pydantic-monty"),
-            "monty_cold_pool_ms": round(cold_ms, 1), "rss": rss, "runaway_loop_200ms": loop}
+    meta = {
+        "machine": platform.machine(),
+        "python": platform.python_version(),
+        "monty": __import__("importlib.metadata").metadata.version("pydantic-monty"),
+        "monty_cold_pool_ms": round(cold_ms, 1),
+        "rss": rss,
+        "runaway_loop_200ms": loop,
+    }
     print(json.dumps(meta, indent=2))
     if len(sys.argv) > 1:
         with open(sys.argv[1], "w") as f:

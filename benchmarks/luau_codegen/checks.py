@@ -186,10 +186,16 @@ def compile_errors(script: str, target: str) -> list[str]:
 
 
 _PY_FORBIDDEN = [
-    (re.compile(r"^\s*(from|import)\s+(os|sys|subprocess|socket|shutil|pathlib|io)\b", re.M),
-     "import de módulo de sistema é proibido"),
-    (re.compile(r"\b(open|eval|exec|compile|__import__|globals|locals|getattr|setattr)\s*\("),
-     "builtin proibido"),
+    (
+        re.compile(
+            r"^\s*(from|import)\s+(os|sys|subprocess|socket|shutil|pathlib|io)\b", re.MULTILINE
+        ),
+        "import de módulo de sistema é proibido",
+    ),
+    (
+        re.compile(r"\b(open|eval|exec|compile|__import__|globals|locals|getattr|setattr)\s*\("),
+        "builtin proibido",
+    ),
 ]
 
 
@@ -202,10 +208,15 @@ def forbidden_tokens(script: str, target: str) -> list[str]:
 
 _CPYTHON_ISMS = [  # full-CPython features Monty lacks (diagnostic only)
     (re.compile(r"\byield\b"), "generator"),
-    (re.compile(r"^\s*@(property|staticmethod|classmethod)", re.M), "method decorator"),
+    (re.compile(r"^\s*@(property|staticmethod|classmethod)", re.MULTILINE), "method decorator"),
     (re.compile(r"\bsuper\(\)"), "super()"),
-    (re.compile(r"^\s*del\s", re.M), "del"),
-    (re.compile(r"^\s*(from|import)\s+(enum|abc|collections|itertools|functools)\b", re.M), "stdlib import"),
+    (re.compile(r"^\s*del\s", re.MULTILINE), "del"),
+    (
+        re.compile(
+            r"^\s*(from|import)\s+(enum|abc|collections|itertools|functools)\b", re.MULTILINE
+        ),
+        "stdlib import",
+    ),
     (re.compile(r"\bcallable\("), "callable()"),
 ]
 

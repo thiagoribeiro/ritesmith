@@ -21,7 +21,7 @@ def _tokens(text: str) -> list[str]:
     while pos < len(text):
         m = _TOKEN.match(text, pos)
         if not m:
-            raise ValueError(f"cannot tokenize Luau type near {text[pos:pos + 20]!r}")
+            raise ValueError(f"cannot tokenize Luau type near {text[pos : pos + 20]!r}")
         out.append(m.group(1))
         pos = m.end()
     return out
@@ -38,7 +38,7 @@ class _Translator:
         self.toks, self.i = _tokens(text), 0
         py = self._union(hint)
         if self.i != len(self.toks):
-            raise ValueError(f"trailing tokens in {text!r}: {self.toks[self.i:]}")
+            raise ValueError(f"trailing tokens in {text!r}: {self.toks[self.i :]}")
         return py
 
     def _peek(self) -> str | None:
@@ -71,7 +71,7 @@ class _Translator:
 
     def _union_ahead(self) -> bool:
         depth = 0
-        for tok in self.toks[self.i:]:
+        for tok in self.toks[self.i :]:
             if tok in "{([":
                 depth += 1
             elif tok in "})]":
@@ -211,6 +211,8 @@ def tool_module_stubs(task: dict) -> dict[str, str]:
     block, sigs = _types_block(task)
     out = {}
     for ns, tools in _tools_by_namespace(task).items():
-        defs = [f"def {t['fn']}(args: {sigs[t['name']][0]}) -> {sigs[t['name']][1]}: ..." for t in tools]
+        defs = [
+            f"def {t['fn']}(args: {sigs[t['name']][0]}) -> {sigs[t['name']][1]}: ..." for t in tools
+        ]
         out[ns] = block + "\n\n" + "\n".join(defs) + "\n"
     return out
