@@ -146,3 +146,14 @@ def test_every_provider_has_the_optional_hooks(provider):
     assert isinstance(provider.prompt_hints(), dict)
     assert isinstance(provider.virtual_device_types, frozenset)
     provider.reset_caches()
+
+
+def test_plugin_api_does_not_build_the_registry():
+    """A plugin imports its base class first; that must not load plugins (it would load
+    itself half-imported). Checked in a fresh interpreter."""
+    import subprocess
+    import sys
+
+    code = "import sys, ritesmith.plugin_api; print('ritesmith.runtime.providers' in sys.modules)"
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "False"
