@@ -25,6 +25,9 @@ def preflight(cases, tools, input_schema=None, output_schema=None):
         if input_schema:
             jsonschema.validate(spec.input, input_schema)
         if output_schema and spec.expected_output is not None:
+            # A case written as JSON may say {} for an empty list; the script's output is
+            # normalized the same way before the comparison, so both sides agree.
+            spec.expected_output = normalize_output(spec.expected_output, output_schema)
             jsonschema.validate(spec.expected_output, output_schema)
         known_ids = set()
 
@@ -110,6 +113,7 @@ class LuauValidationSession:
         )
         self.runtime.declare_types(self.types)
         self.spec = None
+        self.last_output = None  # normalized output of the last execute()
         self.counts = Counter()
         self.used = Counter()
         self.fixture_error = None
@@ -187,6 +191,7 @@ class LuauValidationSession:
         self.fixture_error = None
         result = self.runtime.execute(content, spec.input, spec.context)
         output = normalize_output(result.output, self.output_schema) if result.ok else None
+        self.last_output = output
         errors = assertion_errors(spec, output, self.counts) if result.ok else []
         if result.ok and self.output_schema:
             try:

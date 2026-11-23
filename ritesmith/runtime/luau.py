@@ -130,16 +130,32 @@ def _optional(t: str) -> str:
     return f"({t})?" if "|" in t else f"{t}?"
 
 
-def schema_to_luau(schema: dict | None, *, fields_present: bool = False, _depth: int = 0) -> str:
+def schema_to_luau(
+    schema: dict | None,
+    *,
+    fields_present: bool = False,
+    literal_enums: bool = True,
+    _depth: int = 0,
+) -> str:
     """Converts a JSON Schema into a Luau type.
 
     fields_present=True treats every object property as present (used for tool
     results, whose schemas rarely list `required`); otherwise properties outside
     `required` are optional.
+
+    literal_enums=False maps a string enum to `string` instead of a union of literals.
+    Used for what a script returns: a list built in a loop or a value taken from a
+    tool is `string` to the checker, and the literal union rejects it. jsonschema
+    still enforces the enum when the output is validated.
     """
     if not isinstance(schema, dict) or _depth > 6:
         return "any"
-    recurse = functools.partial(schema_to_luau, fields_present=fields_present, _depth=_depth + 1)
+    recurse = functools.partial(
+        schema_to_luau,
+        fields_present=fields_present,
+        literal_enums=literal_enums,
+        _depth=_depth + 1,
+    )
 
     for key in ("anyOf", "oneOf"):
         if isinstance(schema.get(key), list):
@@ -152,7 +168,7 @@ def schema_to_luau(schema: dict | None, *, fields_present: bool = False, _depth:
         and enum
         and all(isinstance(v, str) and _IDENT.match(v) for v in enum)
     ):
-        return " | ".join(f'"{v}"' for v in enum)
+        return " | ".join(f'"{v}"' for v in enum) if literal_enums else "string"
 
     t = schema.get("type")
     if isinstance(t, list):
@@ -195,22 +211,28 @@ def _output_type(output_schema: dict | None) -> str:
     rejects `{ message = "x" }` where `message: string?` is expected. A union also
     rejects literals that omit an optional field, so schemas with optional fields get
     a single table where every field is optional — weaker, but no false positives;
-    jsonschema still validates the real contract at execution time.
+    jsonschema still validates the real contract at execution time. String enums are
+    plain `string` here for the same reason (see schema_to_luau's literal_enums).
     """
     props = (output_schema or {}).get("properties")
     if not isinstance(props, dict) or not props:
         return f"{{ [string]: any }} | {{ {_ERROR_FIELDS} }}"
-    table = schema_to_luau({k: v for k, v in output_schema.items() if k != "required"})
+    table = schema_to_luau(
+        {k: v for k, v in output_schema.items() if k != "required"}, literal_enums=False
+    )
     if table.startswith("{ ["):  # names that are not valid Luau identifiers
         return f"{table} | {{ {_ERROR_FIELDS} }}"
     required = set(output_schema.get("required") or [])
     fields = []
     for name, sub in props.items():
-        ftype = schema_to_luau(sub)
+        ftype = schema_to_luau(sub, literal_enums=False)
         fields.append(f"read {name}: {ftype if name in required else _optional(ftype)}")
     if required >= set(props):
         return "{ " + ", ".join(fields) + f" }} | {{ {_ERROR_FIELDS} }}"
-    fields = [f"read {name}: {_optional(schema_to_luau(sub))}" for name, sub in props.items()]
+    fields = [
+        f"read {name}: {_optional(schema_to_luau(sub, literal_enums=False))}"
+        for name, sub in props.items()
+    ]
     return "{ " + ", ".join(fields + [_ERROR_FIELDS.replace("string,", "string?,")]) + " }"
 
 

@@ -316,6 +316,57 @@ def test_check_script_applies_the_pipeline_size_limit_first():
     assert any("linhas" in e for e in result["static_errors"])
 
 
+TAGS_SCHEMA = {
+    "type": "object",
+    "required": ["tags", "level"],
+    "properties": {
+        "tags": {"type": "array", "items": {"type": "string", "enum": ["hot", "cold"]}},
+        "level": {"type": "string", "enum": ["low", "high"]},
+    },
+}
+TAGS_SCRIPT = """
+function run(input: Input, context: Context): Output
+  local tags: {string} = {}
+  if (input.t or 0) > 30 then table.insert(tags, "hot") end
+  local level: string = if #tags > 0 then "high" else "low"
+  return { tags = tags, level = level }
+end
+"""
+
+
+def _contract_agent(**settings):
+    gen, _ = agent([], **settings)
+    gen.input_schema, gen.output_schema = None, TAGS_SCHEMA
+    return gen
+
+
+@pytest.mark.parametrize("expected_tags", [[], {}])
+def test_check_script_normalizes_empty_lists_like_the_pipeline(expected_tags):
+    # Bug report 2026-11-23: without the output schema, check_script saw {} for an empty
+    # list, the model rewrote its case to {}, and the pipeline then rejected that case.
+    gen = _contract_agent()
+    case = {"input": {"t": 10}, "expected_output": {"tags": expected_tags, "level": "low"}}
+    result = gen.check_script(TAGS_SCRIPT, [case])
+    assert result == {"ok": True, "cases": 1, "failures": []}
+
+
+def test_check_script_enforces_the_output_contract():
+    gen = _contract_agent()
+    bad = TAGS_SCRIPT.replace('"hot")', '"warm")')
+    result = gen.check_script(bad, [{"input": {"t": 40}}])
+    assert result["ok"] is False
+    assert any("Output contract" in e for e in result["failures"][0]["errors"])
+    assert result["failures"][0]["output"]["tags"] == ["warm"]
+
+
+@pytest.mark.asyncio
+async def test_isolated_check_script_receives_the_contract():
+    gen = _contract_agent(generation_agent_isolate_tools=True)
+    case = {"input": {"t": 10}, "expected_output": {"tags": [], "level": "low"}}
+    result = await gen._dispatch("check_script", {"script": TAGS_SCRIPT, "cases": [case]})
+    assert result["ok"] is True, result
+
+
 @pytest.mark.asyncio
 async def test_isolated_tool_over_budget_becomes_feedback_and_pool_recovers():
     # 2026-11-20: a generation froze the host; heavy tools now run in a capped child.
