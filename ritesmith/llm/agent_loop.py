@@ -893,7 +893,14 @@ def _limit_memory(megabytes: int) -> None:
 
     # Soft limit only: nothing in the worker (validators, sandboxed Luau) can raise it.
     _, hard = resource.getrlimit(resource.RLIMIT_DATA)
-    resource.setrlimit(resource.RLIMIT_DATA, (megabytes * 1024 * 1024, hard))
+    soft = megabytes * 1024 * 1024
+    if hard != resource.RLIM_INFINITY:
+        soft = min(soft, hard)  # a soft limit above the hard one raises (macOS)
+    try:
+        resource.setrlimit(resource.RLIMIT_DATA, (soft, hard))
+    except (ValueError, OSError) as exc:
+        # Some platforms refuse RLIMIT_DATA outright; run uncapped rather than fail every tool.
+        log.warning("agent tool worker: RLIMIT_DATA not applied (%s)", exc)
 
 
 def _tool_pool(megabytes: int) -> ProcessPoolExecutor:
