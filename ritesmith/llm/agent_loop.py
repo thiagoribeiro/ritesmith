@@ -42,7 +42,7 @@ from ritesmith.workflows.semantic import SEMANTIC_RULES
 
 log = logging.getLogger(__name__)
 
-AGENT_VERSION = "agent-loop-v2"
+AGENT_VERSION = "agent-loop-v3"
 _RESULT_LIMIT = 6000  # characters of a tool result shown back to the model
 
 AGENT_SYSTEM = """\
@@ -334,7 +334,16 @@ def _static_system() -> str:
 
 
 class AgentGeneration:
-    def __init__(self, provider, *, capabilities: list[dict], profile: str, language: str):
+    def __init__(
+        self,
+        provider,
+        *,
+        capabilities: list[dict],
+        profile: str,
+        language: str,
+        input_schema: dict | None = None,
+        output_schema: dict | None = None,
+    ):
         self.provider = provider
         self.settings = provider.settings
         self.base_url = self.settings.public_url or "http://ritesmith:8081"
@@ -345,6 +354,10 @@ class AgentGeneration:
         self.template_name: str | None = None
         self.transcript: list[dict] = []
         self.probes = 0
+        # The script contract: check_script validates against it exactly as the
+        # pipeline does after submit (empty-table normalization, Output type, enums).
+        self.input_schema = input_schema
+        self.output_schema = output_schema
 
     # ── tools ────────────────────────────────────────────────────────────────────
     def find_capabilities(self, query: str) -> dict:
@@ -530,14 +543,16 @@ class AgentGeneration:
         if static:
             # Same gate the pipeline applies after submit; failing it there costs the run.
             return {"ok": False, "static_errors": static}
-        session = LuauValidationSession(self.settings, self.profile)
+        session = LuauValidationSession(
+            self.settings, self.profile, self.input_schema, self.output_schema
+        )
         try:
             diagnostics = session.check(script)
             errors = [d.get("message", str(d)) for mode in diagnostics.values() for d in mode]
             if errors:
                 return {"ok": False, "type_errors": errors[:15]}
             try:
-                specs = preflight(cases, session.tools)
+                specs = preflight(cases, session.tools, self.input_schema, self.output_schema)
             except Exception as exc:
                 return {"ok": False, "case_errors": [f"invalid cases: {str(exc)[:600]}"]}
             failures = []
@@ -549,7 +564,8 @@ class AgentGeneration:
                             "case": index,
                             "fixture_error": fixture_error,
                             "errors": errs[:5],
-                            "output": getattr(result, "output", None),
+                            # What the comparison saw: {} already normalized to [].
+                            "output": session.last_output,
                         }
                     )
             return {"ok": not failures, "cases": len(specs), "failures": failures[:5]}
@@ -624,6 +640,8 @@ class AgentGeneration:
                     self.registry,
                     self.profile,
                     self.language,
+                    self.input_schema,
+                    self.output_schema,
                     name,
                     args,
                 ),
@@ -694,6 +712,8 @@ class AgentGeneration:
         return None, {"ok": False, "errors": [f"unknown kind {kind!r}"]}
 
     async def run(self, *, goal, constraints, context, input_schema, output_schema):
+        self.input_schema = input_schema
+        self.output_schema = output_schema
         from ritesmith.runtime.luau import describe_tools_for_prompt
 
         model, effort = self.provider.operation_config(self.provider.model, "proposal_workflow")
@@ -911,13 +931,18 @@ def _run_tool(gen: AgentGeneration, name: str, args: dict) -> Any:
         return {"error": f"{type(exc).__name__}: {str(exc)[:800]}"}
 
 
-def _isolated_tool(settings, registry, profile, language, name, args):
+def _isolated_tool(settings, registry, profile, language, input_schema, output_schema, name, args):
     """Worker-process entry: rebuild a provider-less generator and run one tool."""
     from ritesmith.llm.openai_provider import OpenAIProvider
 
     provider = OpenAIProvider(settings, client=object())
     gen = AgentGeneration(
-        provider, capabilities=list(registry.values()), profile=profile, language=language
+        provider,
+        capabilities=list(registry.values()),
+        profile=profile,
+        language=language,
+        input_schema=input_schema,
+        output_schema=output_schema,
     )
     return _run_tool(gen, name, args)
 

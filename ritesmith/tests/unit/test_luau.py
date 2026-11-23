@@ -85,6 +85,55 @@ def test_schema_to_luau(schema, expected):
     assert luau.schema_to_luau(schema) == expected
 
 
+ENUM_OUTPUT = {
+    "type": "object",
+    "required": ["tags", "level"],
+    "properties": {
+        "tags": {"type": "array", "items": {"type": "string", "enum": ["hot", "cold"]}},
+        "level": {"type": "string", "enum": ["low", "high"]},
+    },
+}
+
+
+def test_output_type_widens_enums_but_inputs_keep_literals():
+    assert luau.schema_to_luau({"enum": ["up", "down"]}, literal_enums=False) == "string"
+    decls = luau.script_type_declarations(ENUM_OUTPUT, ENUM_OUTPUT)
+    output = next(line for line in decls.splitlines() if line.startswith("type Output"))
+    assert "read tags: { string }" in output and "read level: string" in output
+    inp = next(line for line in decls.splitlines() if line.startswith("type Input"))
+    assert '"hot" | "cold"' in inp
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        'local t: {string} = {}\ntable.insert(t, "hot")\nreturn { tags = t, level = "low" }',
+        'local t = {}\ntable.insert(t, "hot")\nreturn { tags = t, level = "low" }',
+        'local t = {}\ntable.insert(t, tostring(input.x))\nreturn { tags = t, level = "low" }',
+        "local l: string = tostring(input.x)\nreturn { tags = {}, level = l }",
+    ],
+)
+def test_enum_outputs_built_at_runtime_pass_the_strict_check(body):
+    # Bug report 2026-11-23: enums became literal unions in Output, so a list built in a
+    # loop ({string}) never type-checked. jsonschema still enforces the enum.
+    from ritesmith.runtime.validation_session import LuauValidationSession
+
+    session = LuauValidationSession(get_settings(), "transform_only", None, ENUM_OUTPUT)
+    try:
+        src = f"function run(input: Input, context: Context): Output\n{body}\nend"
+        assert session.check(src) == {"nonstrict": [], "strict": []}
+    finally:
+        session.close()
+
+
+def test_preflight_normalizes_expected_empty_lists():
+    from ritesmith.runtime.validation_session import preflight
+
+    case = {"input": {}, "expected_output": {"tags": {}, "level": "low"}}
+    (spec,) = preflight([case], {}, None, ENUM_OUTPUT)
+    assert spec.expected_output == {"tags": [], "level": "low"}
+
+
 def test_tool_results_treat_properties_as_present():
     schema = {"type": "object", "properties": {"price": {"type": "number"}}}
     assert luau.schema_to_luau(schema, fields_present=True) == "{ price: number }"
