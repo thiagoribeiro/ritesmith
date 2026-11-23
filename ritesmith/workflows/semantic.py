@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ritesmith.workflows.compact import compile_workflow
+from ritesmith.workflows.compact import DEFAULT_FAILURE_HANDLING, compile_workflow
 from ritesmith.workflows.expressions import expression_errors
 
 FORMAT_VERSION = "workflow-plan-v1"
@@ -799,17 +799,23 @@ class PlanCompiler:
             "name": self.plan.name,
             "entrypoint": entry,
             "nodes": list(reversed(self.nodes)),
+            # Trama rejects a definition without it; the HTTP adapter used to be the only
+            # place that added it, so direct compile_plan callers got an invalid definition.
+            "failureHandling": deepcopy(self.plan.failureHandling or DEFAULT_FAILURE_HANDLING),
         }
         if self.loop_limits:
             definition["max_iterations"] = max(self.loop_limits)
-        if self.plan.failureHandling:
-            definition["failureHandling"] = self.plan.failureHandling
         return compile_workflow(definition, self.base_url)
 
 
 def compile_plan(
     plan, base_url, *, contract_version="", continuation=None, intent=None, constraints=None
 ):
+    """Compile a semantic plan into RiteSmith's compact workflow.
+
+    The result still uses RiteSmith shorthands (`next: "end"`, `durationSeconds`); pass it
+    through `ritesmith.workflows.compact.to_trama_definition` before posting it to Trama.
+    """
     return PlanCompiler(
         plan, base_url, contract_version, continuation, intent, constraints
     ).compile()

@@ -398,6 +398,32 @@ def test_worker_memory_limit_is_a_data_segment_cap():
         resource.setrlimit(resource.RLIMIT_DATA, (soft, hard))
 
 
+def test_worker_memory_limit_never_exceeds_the_hard_limit(monkeypatch):
+    # macOS: a soft RLIMIT_DATA above the hard one raised and broke isolated check_script.
+    import resource
+
+    from ritesmith.llm.agent_loop import _limit_memory
+
+    calls = []
+    monkeypatch.setattr(resource, "getrlimit", lambda _: (1 << 20, 64 * 1024 * 1024))
+    monkeypatch.setattr(resource, "setrlimit", lambda _, limits: calls.append(limits))
+    _limit_memory(4096)
+    assert calls == [(64 * 1024 * 1024, 64 * 1024 * 1024)]
+
+
+def test_worker_memory_limit_failure_is_not_fatal(monkeypatch):
+    import resource
+
+    from ritesmith.llm.agent_loop import _limit_memory
+
+    def refuse(*_):
+        raise ValueError("not allowed")
+
+    monkeypatch.setattr(resource, "getrlimit", lambda _: (resource.RLIM_INFINITY,) * 2)
+    monkeypatch.setattr(resource, "setrlimit", refuse)
+    _limit_memory(4096)  # must not raise
+
+
 @pytest.mark.asyncio
 async def test_try_capability_runs_read_only_and_refuses_effects():
     gen, _ = agent([])

@@ -173,3 +173,78 @@ def compact_workflow(definition: dict, base_url: str) -> dict:
             node[targets[0]] = body[targets[0]]
             node["input"] = body["input"]
     return result
+
+
+DEFAULT_FAILURE_HANDLING = {"type": "retry", "maxAttempts": 1, "delayMillis": 0}
+TERMINAL_KEYWORDS = {"end", "done", "finish", "terminal", "stop", "complete"}
+TERMINAL_NODE_ID = "rs_end"
+
+
+def to_trama_definition(definition: dict) -> dict:
+    """Turn RiteSmith's compact workflow (compile_workflow / compile_plan output) into a
+    definition Trama accepts.
+
+    - Injects default failureHandling when absent.
+    - Replaces terminal keyword strings in 'next' fields with null (Trama uses null for terminal).
+    - Points switch targets/defaults that mean "finish" at a terminal node: Trama accepts
+      null only for `next`, and a switch must name an existing node. compile_plan emits
+      "end" there for a condition that ends the plan or a parallel branch; RiteSmith's
+      completion step rewires top-level ones to rs_complete, but direct compile_plan
+      callers and branch-final conditions reached Trama with "end" and were rejected.
+      The terminal is a 1 ms sleep, the only node kind that ends a path with no effect.
+    """
+    if not isinstance(definition, dict):
+        return definition
+
+    out = dict(definition)
+
+    if "failureHandling" not in out:
+        out["failureHandling"] = deepcopy(DEFAULT_FAILURE_HANDLING)
+
+    if "nodes" in out and isinstance(out["nodes"], list):
+        normalized_nodes = []
+        for node in out["nodes"]:
+            if not isinstance(node, dict):
+                normalized_nodes.append(node)
+                continue
+            n = dict(node)
+            # Terminal node references must be null, not a keyword string
+            if n.get("next") in TERMINAL_KEYWORDS:
+                n["next"] = None
+            # Sleep nodes: convert durationSeconds → durationMillis if needed
+            if n.get("kind") == "sleep" and "durationSeconds" in n and "durationMillis" not in n:
+                n["durationMillis"] = int(n.pop("durationSeconds") * 1000)
+            normalized_nodes.append(n)
+        terminal = _route_switch_finishes(normalized_nodes)
+        if terminal:
+            normalized_nodes.append(
+                {"id": terminal, "kind": "sleep", "durationMillis": 1, "next": None}
+            )
+        out["nodes"] = normalized_nodes
+
+    return out
+
+
+def _route_switch_finishes(nodes: list) -> str | None:
+    """Rewrite switch exits that finish to one terminal id; return it if any was needed."""
+    taken = {n.get("id") for n in nodes if isinstance(n, dict)}
+    terminal = TERMINAL_NODE_ID
+    suffix = 1
+    while terminal in taken:
+        terminal = f"{TERMINAL_NODE_ID}_{suffix}"
+        suffix += 1
+    used = False
+    for node in nodes:
+        if not isinstance(node, dict) or node.get("kind") != "switch":
+            continue
+        cases = [dict(c) if isinstance(c, dict) else c for c in node.get("cases") or []]
+        for case in cases:
+            if isinstance(case, dict) and case.get("target") in TERMINAL_KEYWORDS:
+                case["target"] = terminal
+                used = True
+        if "cases" in node:
+            node["cases"] = cases
+        if node.get("default") in TERMINAL_KEYWORDS:
+            node["default"] = terminal
+            used = True
+    return terminal if used else None
